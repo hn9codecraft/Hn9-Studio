@@ -1,0 +1,106 @@
+{
+  "primary": {
+    "name": "HN9 Deep Blue",
+    "hex": "#0D365C",
+    "rgb": "13, 54, 92",
+    "usage": "Primary brand color for headers, key surfaces, and primary buttons."
+  },
+  "secondary": {
+    "name": "HN9 Amber",
+    "hex": "#F0A80B",
+    "rgb": "240, 168, 11",
+    "usage": "Accent color for highlights, CTAs, and emphasis."
+  },
+  "background": {
+    "light": {
+      "name": "Surface Light",
+      "hex": "#FFFFFF",
+      "rgb": "255, 255, 255"
+    },
+    "subtle": {
+      "name": "Surface Subtle",
+      "hex": "#F5F7FA",
+      "rgb": "245, 247, 250"
+    },
+    "dark": {
+      "name": "Surface Dark",
+      "hex": "#0A2540",
+      "rgb": "10, 37, 64"
+    }
+  },
+  "status": {
+    "success": {
+      "name": "Success Green",
+      "hex": "#1FA971",
+      "rgb": "31, 169, 113"
+    },
+    "warning": {
+      "name": "Warning Amber",
+      "hex": "#F0A80B",
+      "rgb": "240, 168, 11"
+    },
+    "danger": {
+      "name": "Danger Red",
+      "hex": "#E03B3B",
+      "rgb": "224, 59, 59"
+    },
+    "info": {
+      "name": "Info Blue",
+      "hex": "#2F80ED",
+      "rgb": "47, 128, 237"
+    }
+  },
+  "text": {
+    "primary": {
+      "name": "Text Primary",
+      "hex": "#0D365C",
+      "rgb": "13, 54, 92"
+    },
+    "secondary": {
+      "name": "Text Secondary",
+      "hex": "#4A5B6B",
+      "rgb": "74, 91, 107"
+    },
+    "muted": {
+      "name": "Text Muted",
+      "hex": "#8A97A6",
+      "rgb": "138, 151, 166"
+    },
+    "onPrimary": {
+      "name": "Text On Primary",
+      "hex": "#FFFFFF",
+      "rgb": "255, 255, 255"
+    },
+    "onSecondary": {
+      "name": "Text On Secondary",
+      "hex": "#0D365C",
+      "rgb": "13, 54, 92"
+    }
+  },
+  "gradients": {
+    "primary": {
+      "name": "HN9 Primary Gradient",
+      "stops": ["#0D365C", "#1E5A8C"],
+      "angle": "135deg",
+      "css": "linear-gradient(135deg, #0D365C 0%, #1E5A8C 100%)"
+    },
+    "accent": {
+      "name": "HN9 Accent Gradient",
+      "stops": ["#F0A80B", "#FFC94D"],
+      "angle": "135deg",
+      "css": "linear-gradient(135deg, #F0A80B 0%, #FFC94D 100%)"
+    },
+    "premium": {
+      "name": "HN9 Premium Gradient",
+      "stops": ["#0D365C", "#F0A80B"],
+      "angle": "120deg",
+      "css": "linear-gradient(120deg, #0D365C 0%, #F0A80B 100%)"
+    }
+  },
+  "accessibility": {
+    "minContrastRatio": "4.5:1",
+    "notes": "Primary Deep Blue on white and white on Deep Blue both pass WCAG AA. Amber must use dark text (#0D365C), never white, for body-size text."
+  },
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

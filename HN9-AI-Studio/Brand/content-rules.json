@@ -1,0 +1,56 @@
+{
+  "globalRules": [
+    "No fake promises or guarantees.",
+    "Use clear, professional English.",
+    "Keep paragraphs short (1-3 sentences).",
+    "Always include a strong, brand-approved CTA.",
+    "No clickbait or misleading claims.",
+    "Never invent services HN9 does not offer.",
+    "Never mention or brand competitors.",
+    "Always stay on-brand in tone and vocabulary.",
+    "Prefer benefits and outcomes over feature lists.",
+    "Use active voice.",
+    "Do not use banned vocabulary from tone.json.",
+    "Fact-check any numbers, stats or claims before publishing."
+  ],
+  "formatting": {
+    "maxParagraphSentences": 3,
+    "preferBulletsOver": 4,
+    "useEmoji": "sparingly and only where the channel and tone allow",
+    "headingStyle": "Sentence case, clear and benefit-driven",
+    "readingLevel": "Grade 7-9 (clear and accessible)"
+  },
+  "writing": {
+    "voice": "active",
+    "person": "second person (you) for the audience, first person plural (we) for HN9",
+    "sentenceLength": "short to medium",
+    "language": "en-US"
+  },
+  "prohibited": [
+    "Fake urgency (e.g. 'only 1 spot left')",
+    "Unverifiable superlatives ('the best in the world')",
+    "Guarantees of ranking, revenue or results",
+    "Plagiarized or unattributed content",
+    "Discriminatory, political or offensive content",
+    "Competitor names or trademarks"
+  ],
+  "required": [
+    "Brand-approved CTA from cta.json",
+    "On-brand tone from tone.json",
+    "Correct company name: HN9 Codecraft",
+    "Correct brand name: HN9 / HN9 AI Studio"
+  ],
+  "review": {
+    "requireHumanReview": true,
+    "checklist": [
+      "On-brand tone?",
+      "Contains an approved CTA?",
+      "No fake promises or clickbait?",
+      "Only real HN9 services mentioned?",
+      "No competitor branding?",
+      "Facts verified?"
+    ]
+  },
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

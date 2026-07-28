@@ -1,0 +1,149 @@
+{
+  "services": [
+    {
+      "id": "svc-website-development",
+      "name": "Website Development",
+      "slug": "website-development",
+      "category": "Software Development",
+      "shortDescription": "High-performance, responsive websites built to convert and scale.",
+      "longDescription": "We design and engineer fast, secure and SEO-ready websites tailored to your brand and business goals. From marketing sites to complex web platforms, HN9 delivers pixel-perfect, responsive experiences with clean, maintainable code and analytics built in from day one.",
+      "keywords": ["website development", "web design", "responsive website", "custom website", "web development company"],
+      "targetAudience": ["Startups", "Small Businesses", "Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Book Free Consultation"
+    },
+    {
+      "id": "svc-mobile-app-development",
+      "name": "Mobile App Development",
+      "slug": "mobile-app-development",
+      "category": "Software Development",
+      "shortDescription": "Native and cross-platform mobile apps users love.",
+      "longDescription": "HN9 builds robust iOS and Android applications using modern frameworks like Flutter and React Native. We handle everything from UX and architecture to store deployment, delivering apps that are fast, reliable and ready to scale with your user base.",
+      "keywords": ["mobile app development", "ios app", "android app", "cross-platform app", "app development company"],
+      "targetAudience": ["Startups", "Small Businesses", "Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Book Free Consultation"
+    },
+    {
+      "id": "svc-ui-ux-design",
+      "name": "UI/UX Design",
+      "slug": "ui-ux-design",
+      "category": "Design",
+      "shortDescription": "Design-led experiences that are beautiful and usable.",
+      "longDescription": "Our designers craft intuitive, conversion-focused interfaces backed by research and a scalable design system. From wireframes to high-fidelity prototypes, HN9 ensures every product feels premium, on-brand and effortless to use.",
+      "keywords": ["ui ux design", "product design", "user experience", "interface design", "design system"],
+      "targetAudience": ["Startups", "Small Businesses", "Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Schedule Demo"
+    },
+    {
+      "id": "svc-seo",
+      "name": "SEO",
+      "slug": "seo",
+      "category": "Digital Marketing",
+      "shortDescription": "Rank higher, get found and grow organic traffic.",
+      "longDescription": "HN9's SEO service combines technical optimization, content strategy and authority building to grow qualified organic traffic. We audit, optimize and track measurable improvements in rankings, visibility and conversions.",
+      "keywords": ["seo services", "search engine optimization", "organic traffic", "technical seo", "seo agency"],
+      "targetAudience": ["Startups", "Small Businesses", "Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Book Free Consultation"
+    },
+    {
+      "id": "svc-ai-automation",
+      "name": "AI Automation",
+      "slug": "ai-automation",
+      "category": "AI Automation",
+      "shortDescription": "Automate repetitive work with AI-powered workflows.",
+      "longDescription": "We identify high-impact processes and automate them with AI, saving your team hours every week. From lead handling to content and operations, HN9 designs, builds and maintains reliable automation pipelines that scale with your business.",
+      "keywords": ["ai automation", "workflow automation", "business process automation", "ai workflows", "automation agency"],
+      "targetAudience": ["Small Businesses", "Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Let's Build Together"
+    },
+    {
+      "id": "svc-ai-agents",
+      "name": "AI Agents",
+      "slug": "ai-agents",
+      "category": "AI Automation",
+      "shortDescription": "Custom AI agents that work alongside your team.",
+      "longDescription": "HN9 designs and deploys intelligent AI agents for support, sales, content and internal operations. Each agent is grounded in your brand, integrated with your tools and built to act reliably and safely at scale.",
+      "keywords": ["ai agents", "custom ai agent", "autonomous agents", "ai assistant", "llm agents"],
+      "targetAudience": ["Startups", "Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Let's Build Together"
+    },
+    {
+      "id": "svc-crm-development",
+      "name": "CRM Development",
+      "slug": "crm-development",
+      "category": "Software Development",
+      "shortDescription": "Custom CRMs that fit how you actually sell.",
+      "longDescription": "We build tailored CRM systems that centralize your leads, customers and pipelines. HN9 delivers CRMs with automation, reporting and integrations that match your exact sales process instead of forcing you into rigid off-the-shelf tools.",
+      "keywords": ["crm development", "custom crm", "sales crm", "crm software", "crm integration"],
+      "targetAudience": ["Small Businesses", "Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Schedule Demo"
+    },
+    {
+      "id": "svc-erp-development",
+      "name": "ERP Development",
+      "slug": "erp-development",
+      "category": "Software Development",
+      "shortDescription": "Unified ERP platforms to run your entire operation.",
+      "longDescription": "HN9 develops custom ERP solutions that connect finance, inventory, HR and operations into one system. We streamline complex workflows with automation and real-time reporting so leadership can make faster, data-driven decisions.",
+      "keywords": ["erp development", "custom erp", "erp software", "enterprise resource planning", "erp system"],
+      "targetAudience": ["Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Schedule Demo"
+    },
+    {
+      "id": "svc-laravel-development",
+      "name": "Laravel Development",
+      "slug": "laravel-development",
+      "category": "Software Development",
+      "shortDescription": "Scalable backends and web apps built with Laravel.",
+      "longDescription": "Our Laravel experts build secure, high-performance backends, APIs and web applications. HN9 uses clean architecture and best practices to deliver maintainable Laravel systems that scale confidently as your product grows.",
+      "keywords": ["laravel development", "laravel developer", "php development", "laravel api", "laravel web app"],
+      "targetAudience": ["Startups", "Small Businesses", "Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Book Free Consultation"
+    },
+    {
+      "id": "svc-react-development",
+      "name": "React Development",
+      "slug": "react-development",
+      "category": "Software Development",
+      "shortDescription": "Fast, modern web interfaces powered by React.",
+      "longDescription": "HN9 builds dynamic, component-driven frontends with React and Next.js. We deliver responsive, accessible and performant user interfaces backed by robust state management and clean, reusable code.",
+      "keywords": ["react development", "react developer", "next.js development", "frontend development", "react web app"],
+      "targetAudience": ["Startups", "Small Businesses", "Mid-size Companies", "Enterprise Companies"],
+      "callToAction": "Book Free Consultation"
+    },
+    {
+      "id": "svc-flutter-development",
+      "name": "Flutter Development",
+      "slug": "flutter-development",
+      "category": "Software Development",
+      "shortDescription": "One codebase, beautiful apps on every platform.",
+      "longDescription": "We use Flutter to build cross-platform apps that look and feel native on iOS, Android and web from a single codebase. HN9 delivers smooth, polished experiences with faster time-to-market and lower maintenance cost.",
+      "keywords": ["flutter development", "flutter developer", "cross-platform app", "flutter app", "dart development"],
+      "targetAudience": ["Startups", "Small Businesses", "Mid-size Companies"],
+      "callToAction": "Book Free Consultation"
+    },
+    {
+      "id": "svc-shopify-development",
+      "name": "Shopify Development",
+      "slug": "shopify-development",
+      "category": "Software Development",
+      "shortDescription": "High-converting Shopify stores built to sell.",
+      "longDescription": "HN9 designs and develops custom Shopify stores, themes and apps optimized for conversions and speed. From setup to custom Liquid development and integrations, we help brands launch and scale their ecommerce with confidence.",
+      "keywords": ["shopify development", "shopify store", "shopify theme", "ecommerce development", "shopify expert"],
+      "targetAudience": ["Startups", "Small Businesses", "Mid-size Companies"],
+      "callToAction": "Book Free Consultation"
+    },
+    {
+      "id": "svc-wordpress-development",
+      "name": "WordPress Development",
+      "slug": "wordpress-development",
+      "category": "Software Development",
+      "shortDescription": "Flexible, manageable WordPress websites done right.",
+      "longDescription": "We build custom WordPress websites and themes that are fast, secure and easy to manage. HN9 delivers everything from marketing sites to custom plugins, giving your team full control over content without sacrificing performance.",
+      "keywords": ["wordpress development", "wordpress developer", "custom wordpress theme", "wordpress website", "wordpress plugin"],
+      "targetAudience": ["Startups", "Small Businesses", "Mid-size Companies"],
+      "callToAction": "Book Free Consultation"
+    }
+  ],
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

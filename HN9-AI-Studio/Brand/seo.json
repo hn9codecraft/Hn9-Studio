@@ -1,0 +1,123 @@
+{
+  "metaTitleTemplates": {
+    "home": "HN9 | All Your Digital Needs Under One Roof",
+    "service": "{{serviceName}} Company | HN9 Codecraft",
+    "servicePlusValue": "{{serviceName}} That Scales | HN9",
+    "blog": "{{postTitle}} | HN9 Blog",
+    "location": "{{serviceName}} in {{location}} | HN9",
+    "rules": {
+      "maxLength": 60,
+      "includeBrand": true,
+      "brandSeparator": "|",
+      "case": "Title Case"
+    }
+  },
+  "metaDescriptionTemplates": {
+    "home": "HN9 is a premium digital studio for software development, design, SEO and AI automation. All your digital needs under one roof. Book a free consultation.",
+    "service": "Need {{serviceKeyword}}? HN9 delivers premium, scalable {{serviceName}} for startups to enterprises. Book your free consultation today.",
+    "blog": "{{postSummary}} Read more on the HN9 blog.",
+    "rules": {
+      "minLength": 120,
+      "maxLength": 160,
+      "includeCta": true,
+      "includePrimaryKeyword": true
+    }
+  },
+  "ogTemplates": {
+    "type": "website",
+    "siteName": "HN9",
+    "titleTemplate": "{{title}}",
+    "descriptionTemplate": "{{description}}",
+    "image": "https://hn9.io/og/hn9-og-default.png",
+    "imageWidth": 1200,
+    "imageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "twitterSite": "@hn9studio",
+    "locale": "en_US"
+  },
+  "schemaTemplates": {
+    "organization": {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "HN9 Codecraft",
+      "alternateName": "HN9",
+      "url": "https://hn9.io",
+      "logo": "https://hn9.io/logo.png",
+      "slogan": "All your digital needs under one roof",
+      "sameAs": [
+        "https://instagram.com/hn9studio",
+        "https://linkedin.com/company/hn9",
+        "https://youtube.com/@hn9studio",
+        "https://x.com/hn9studio"
+      ]
+    },
+    "service": {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "serviceType": "{{serviceName}}",
+      "provider": { "@type": "Organization", "name": "HN9 Codecraft" },
+      "areaServed": "Global",
+      "url": "https://hn9.io/services/{{slug}}"
+    },
+    "article": {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "{{postTitle}}",
+      "author": { "@type": "Organization", "name": "HN9 Codecraft" },
+      "publisher": { "@type": "Organization", "name": "HN9 Codecraft" },
+      "datePublished": "{{datePublished}}",
+      "dateModified": "{{dateModified}}"
+    },
+    "breadcrumb": {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList"
+    },
+    "faq": {
+      "@context": "https://schema.org",
+      "@type": "FAQPage"
+    }
+  },
+  "urlRules": {
+    "protocol": "https",
+    "domain": "hn9.io",
+    "structure": "https://hn9.io/{{section}}/{{slug}}",
+    "lowercase": true,
+    "wordsSeparator": "-",
+    "noTrailingSlash": true,
+    "noStopWords": true,
+    "maxSegments": 3
+  },
+  "slugRules": {
+    "case": "lowercase",
+    "separator": "-",
+    "removeStopWords": true,
+    "maxWords": 6,
+    "asciiOnly": true,
+    "example": "ai-automation-for-startups"
+  },
+  "headingRules": {
+    "singleH1": true,
+    "h1IncludesPrimaryKeyword": true,
+    "logicalHierarchy": "H1 > H2 > H3 (no skipping levels)",
+    "keywordInSomeH2": true,
+    "case": "Sentence case"
+  },
+  "internalLinkingRules": {
+    "minLinksPerPage": 2,
+    "maxLinksPerPage": 8,
+    "useDescriptiveAnchors": true,
+    "avoidGenericAnchors": ["click here", "read more (as sole anchor)"],
+    "linkServicesToRelatedBlogs": true,
+    "linkBlogsToRelevantServices": true,
+    "noBrokenLinks": true
+  },
+  "technical": {
+    "canonicalRequired": true,
+    "mobileFriendly": true,
+    "sitemap": "https://hn9.io/sitemap.xml",
+    "robots": "index, follow",
+    "imageAltRequired": true
+  },
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

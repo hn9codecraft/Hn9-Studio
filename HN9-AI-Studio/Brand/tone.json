@@ -1,0 +1,40 @@
+{
+  "coreVoice": "Professional, modern and premium — confident without being arrogant, friendly without being casual, and always trustworthy.",
+  "attributes": ["Professional", "Modern", "Premium", "Simple", "Friendly", "Trustworthy", "Innovative"],
+  "writingTone": {
+    "description": "Clear, confident and concise. Short sentences and paragraphs. Focus on outcomes and clarity over jargon.",
+    "do": ["Lead with value", "Use plain English", "Keep paragraphs short", "Be specific and factual"],
+    "dont": ["Use heavy jargon", "Overpromise", "Write long walls of text", "Sound robotic"]
+  },
+  "speakingTone": {
+    "description": "Warm, articulate and assured — like a trusted expert explaining things simply to a client.",
+    "do": ["Sound human and calm", "Explain benefits clearly", "Be encouraging"],
+    "dont": ["Rush", "Use filler", "Sound scripted"]
+  },
+  "videoTone": {
+    "description": "Energetic yet premium. Modern pacing, clean visuals and confident narration that keeps viewers engaged.",
+    "do": ["Hook in the first 3 seconds", "Keep it punchy", "End with a clear CTA"],
+    "dont": ["Be slow or dull", "Use cheap effects", "Overload with text"]
+  },
+  "socialTone": {
+    "description": "Friendly, modern and value-first. Approachable and conversational while staying professional.",
+    "do": ["Start with a hook", "Add value fast", "Use tasteful emojis where appropriate"],
+    "dont": ["Use clickbait", "Spam hashtags", "Be overly salesy"]
+  },
+  "emailTone": {
+    "description": "Personal, respectful and direct. Feels one-to-one, gets to the point, and always offers a clear next step.",
+    "do": ["Personalize", "Be concise", "Include one clear CTA"],
+    "dont": ["Be pushy", "Send walls of text", "Use spammy language"]
+  },
+  "seoTone": {
+    "description": "Helpful, authoritative and natural. Optimized for search intent while reading naturally for humans.",
+    "do": ["Answer intent directly", "Use keywords naturally", "Be genuinely useful"],
+    "dont": ["Keyword stuff", "Write for bots", "Use thin content"]
+  },
+  "vocabulary": {
+    "preferredTerms": ["under one roof", "premium", "scalable", "AI-first", "outcome-driven", "trusted partner", "modern"],
+    "avoidTerms": ["cheap", "guaranteed", "revolutionary", "world's best", "hack", "cutting-edge (overused)"]
+  },
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

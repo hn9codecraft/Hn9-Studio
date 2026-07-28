@@ -1,0 +1,62 @@
+{
+  "cameraStyle": {
+    "description": "Clean, modern and premium framing with intentional movement.",
+    "shots": ["Steady close-ups for talking head", "Smooth push-ins for emphasis", "Screen recordings for product", "Dynamic b-roll for energy"],
+    "movement": "Subtle and smooth (gimbal-like); avoid shaky or excessive motion.",
+    "framing": "Rule of thirds, generous headroom, subject on brand-colored or clean backgrounds."
+  },
+  "animationStyle": {
+    "description": "Modern motion graphics with brand colors and smooth easing.",
+    "principles": ["Ease-in-out timing", "Snappy but not jittery", "Purposeful, not decorative"],
+    "textAnimation": "Kinetic typography for key phrases; fade/slide for supporting text."
+  },
+  "transitions": {
+    "preferred": ["Clean cut", "Smooth fade", "Whip pan (sparingly)", "Mask/shape wipe with brand color"],
+    "avoid": ["Cheesy effects", "Star wipes", "Excessive glitch", "Overused zoom transitions"],
+    "pacing": "Fast enough to retain attention, slow enough to comprehend."
+  },
+  "backgroundMusic": {
+    "mood": ["Modern", "Uplifting", "Premium", "Corporate-tech"],
+    "energy": "Medium-high for reels/shorts, medium for explainers",
+    "volume": "Keep under narration; duck to ~15-20% when voice is present",
+    "licensing": "Only royalty-free or licensed tracks (see /Assets/Music)"
+  },
+  "subtitleRules": {
+    "enabled": true,
+    "style": "Bold, high-contrast, centered lower-third",
+    "font": "Poppins SemiBold",
+    "colors": { "text": "#FFFFFF", "highlight": "#F0A80B", "outline": "#0D365C" },
+    "maxLinesOnScreen": 2,
+    "maxCharsPerLine": 32,
+    "timing": "Word or phrase level sync with narration",
+    "punctuation": "Minimal; keep it readable"
+  },
+  "voiceRules": {
+    "tone": "Confident, warm, premium (see tone.json videoTone)",
+    "pace": "Clear and moderate; not rushed",
+    "gender": "Neutral / brand-consistent; keep consistent per series",
+    "provider": "ElevenLabs (see /Voice/ElevenLabs)",
+    "pronunciation": "Always pronounce brand as 'H-N-9'"
+  },
+  "reelStructure": {
+    "totalDurationSeconds": "15-45",
+    "sections": [
+      { "name": "Hook", "durationSeconds": "0-3", "purpose": "Grab attention with a bold problem or promise" },
+      { "name": "Value", "durationSeconds": "3-30", "purpose": "Deliver the core insight or solution clearly" },
+      { "name": "Proof", "durationSeconds": "optional", "purpose": "Add credibility (result, example, mini demo)" },
+      { "name": "CTA", "durationSeconds": "last 3-5", "purpose": "End with a brand-approved CTA from cta.json" }
+    ],
+    "aspectRatios": {
+      "reelsShorts": "9:16",
+      "youtubeLong": "16:9",
+      "square": "1:1"
+    }
+  },
+  "branding": {
+    "logoPlacement": "Subtle corner watermark or intro/outro sting",
+    "colorGrade": "Clean, slightly premium; keep brand colors accurate",
+    "endCard": "HN9 logo + tagline + CTA"
+  },
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

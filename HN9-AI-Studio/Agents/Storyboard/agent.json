@@ -1,0 +1,16 @@
+﻿{
+  "id": "storyboard",
+  "name": "Storyboard Agent",
+  "role": "Storyboard",
+  "description": "",
+  "responsibility": "",
+  "model": "",
+  "temperature": null,
+  "inputs": [],
+  "outputs": [],
+  "promptRef": "",
+  "dependsOn": [],
+  "tools": [],
+  "enabled": true,
+  "version": "1.0.0"
+}

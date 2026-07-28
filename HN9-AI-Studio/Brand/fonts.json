@@ -1,0 +1,54 @@
+{
+  "heading": {
+    "family": "Poppins",
+    "source": "Google Fonts",
+    "url": "https://fonts.google.com/specimen/Poppins",
+    "weights": [500, 600, 700],
+    "defaultWeight": 600,
+    "usage": "All headings, titles and display text."
+  },
+  "body": {
+    "family": "Inter",
+    "source": "Google Fonts",
+    "url": "https://fonts.google.com/specimen/Inter",
+    "weights": [400, 500, 600],
+    "defaultWeight": 400,
+    "usage": "Body copy, UI labels and long-form text."
+  },
+  "mono": {
+    "family": "JetBrains Mono",
+    "source": "Google Fonts",
+    "url": "https://fonts.google.com/specimen/JetBrains+Mono",
+    "weights": [400, 500],
+    "usage": "Code snippets and technical content."
+  },
+  "fallbacks": {
+    "sans": ["Poppins", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+    "mono": ["JetBrains Mono", "Menlo", "Consolas", "Courier New", "monospace"]
+  },
+  "sizes": {
+    "displayXl": { "px": 64, "rem": "4rem", "lineHeight": 1.1 },
+    "displayLg": { "px": 48, "rem": "3rem", "lineHeight": 1.15 },
+    "h1": { "px": 40, "rem": "2.5rem", "lineHeight": 1.2 },
+    "h2": { "px": 32, "rem": "2rem", "lineHeight": 1.25 },
+    "h3": { "px": 24, "rem": "1.5rem", "lineHeight": 1.3 },
+    "h4": { "px": 20, "rem": "1.25rem", "lineHeight": 1.35 },
+    "bodyLg": { "px": 18, "rem": "1.125rem", "lineHeight": 1.6 },
+    "body": { "px": 16, "rem": "1rem", "lineHeight": 1.6 },
+    "small": { "px": 14, "rem": "0.875rem", "lineHeight": 1.5 },
+    "caption": { "px": 12, "rem": "0.75rem", "lineHeight": 1.4 }
+  },
+  "weights": {
+    "regular": 400,
+    "medium": 500,
+    "semibold": 600,
+    "bold": 700
+  },
+  "letterSpacing": {
+    "tight": "-0.02em",
+    "normal": "0em",
+    "wide": "0.04em"
+  },
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

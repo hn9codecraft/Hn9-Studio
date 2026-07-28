@@ -1,0 +1,68 @@
+{
+  "brandId": "hn9-ai-studio",
+  "projectName": "HN9 AI Studio",
+  "brandName": "HN9",
+  "legalEntity": "HN9 Codecraft",
+  "tagline": "All your digital needs under one roof!!!",
+  "shortTagline": "All your digital needs under one roof",
+  "website": "https://hn9.io",
+  "logo": {
+    "primary": "/Logos/HN9/hn9-logo-primary.svg",
+    "mono": "/Logos/HN9/hn9-logo-mono.svg",
+    "reversed": "/Logos/HN9/hn9-logo-reversed.svg",
+    "icon": "/Logos/HN9/hn9-icon.svg",
+    "clearSpace": "Minimum clear space equal to the height of the '9' on all sides.",
+    "minWidthPx": 96
+  },
+  "brandColors": {
+    "primary": "#0D365C",
+    "secondary": "#F0A80B"
+  },
+  "industry": [
+    "Software Development",
+    "Digital Marketing",
+    "AI Automation"
+  ],
+  "positioning": "A premium one-stop digital studio combining software engineering, design, marketing and AI automation to deliver end-to-end digital transformation for businesses of every size.",
+  "valueProposition": "From strategy to launch, HN9 unifies development, design, SEO and AI automation under one roof so clients ship faster with a single accountable partner.",
+  "personality": [
+    "Professional",
+    "Modern",
+    "Premium",
+    "Simple",
+    "Friendly",
+    "Trustworthy",
+    "Innovative"
+  ],
+  "brandPillars": [
+    "Engineering excellence",
+    "Design-led experiences",
+    "AI-first automation",
+    "Measurable growth"
+  ],
+  "differentiators": [
+    "Full-stack digital capability under one roof",
+    "AI automation built into every engagement",
+    "Premium delivery with startup speed",
+    "Transparent, outcome-driven process"
+  ],
+  "references": {
+    "company": "company.json",
+    "services": "services.json",
+    "colors": "colors.json",
+    "fonts": "fonts.json",
+    "audience": "audience.json",
+    "tone": "tone.json",
+    "socialMedia": "social-media.json",
+    "contentRules": "content-rules.json",
+    "videoStyle": "video-style.json",
+    "designSystem": "design-system.json",
+    "cta": "cta.json",
+    "keywords": "keywords.json",
+    "seo": "seo.json",
+    "aiRules": "ai-rules.json"
+  },
+  "version": "1.0.0",
+  "status": "active",
+  "lastUpdated": "2026-07-18"
+}

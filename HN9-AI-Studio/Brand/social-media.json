@@ -1,0 +1,75 @@
+{
+  "platforms": {
+    "instagram": {
+      "handle": "@hn9studio",
+      "url": "https://instagram.com/hn9studio",
+      "primaryFormats": ["Reels", "Carousels", "Stories"],
+      "postingFrequency": "5-7 posts per week (min. 3 Reels)",
+      "bestTimes": ["Tue-Thu 11:00", "18:00-20:00 local"],
+      "captionLength": "Short hook + 1-2 value lines + CTA",
+      "toneRef": "socialTone",
+      "aspectRatios": { "reel": "9:16", "carousel": "4:5", "story": "9:16" }
+    },
+    "linkedin": {
+      "handle": "HN9",
+      "url": "https://linkedin.com/company/hn9",
+      "primaryFormats": ["Text posts", "Document carousels", "Case studies", "Videos"],
+      "postingFrequency": "3-5 posts per week",
+      "bestTimes": ["Tue-Thu 08:00-10:00", "12:00 local"],
+      "captionLength": "Hook line + short value paragraphs + CTA",
+      "toneRef": "writingTone",
+      "aspectRatios": { "video": "1:1 or 16:9", "document": "4:5" }
+    },
+    "facebook": {
+      "handle": "HN9 Studio",
+      "url": "https://facebook.com/hn9studio",
+      "primaryFormats": ["Posts", "Reels", "Link shares"],
+      "postingFrequency": "3-5 posts per week",
+      "bestTimes": ["Mon-Fri 12:00-15:00 local"],
+      "captionLength": "Friendly hook + value + CTA",
+      "toneRef": "socialTone"
+    },
+    "youtube": {
+      "handle": "@hn9studio",
+      "url": "https://youtube.com/@hn9studio",
+      "primaryFormats": ["Shorts", "Long-form tutorials", "Case studies"],
+      "postingFrequency": "1-2 long videos + 3-5 Shorts per week",
+      "bestTimes": ["Tue-Sat 15:00-18:00 local"],
+      "toneRef": "videoTone",
+      "aspectRatios": { "short": "9:16", "long": "16:9" }
+    },
+    "x": {
+      "handle": "@hn9studio",
+      "url": "https://x.com/hn9studio",
+      "primaryFormats": ["Threads", "Short posts", "Tips"],
+      "postingFrequency": "5-10 posts per week",
+      "bestTimes": ["Weekdays 09:00-11:00 local"],
+      "captionLength": "Under 280 characters",
+      "toneRef": "socialTone"
+    }
+  },
+  "hashtags": {
+    "brand": ["#HN9", "#HN9Studio", "#HN9AIStudio", "#DigitalUnderOneRoof"],
+    "coreTopics": ["#WebDevelopment", "#AppDevelopment", "#UIUXDesign", "#SEO", "#AIAutomation", "#AIAgents"],
+    "tech": ["#Laravel", "#ReactJS", "#Flutter", "#Shopify", "#WordPress"],
+    "audience": ["#Startups", "#SmallBusiness", "#DigitalTransformation"],
+    "usageRules": {
+      "instagram": "8-15 relevant hashtags, mix brand + topic + niche",
+      "linkedin": "3-5 professional hashtags",
+      "x": "1-3 hashtags",
+      "facebook": "2-4 hashtags",
+      "avoid": ["Banned/spammy tags", "Irrelevant trending tags", "Overstuffing"]
+    }
+  },
+  "emojiRules": {
+    "usage": "Use tastefully to add warmth and scannability, never to replace words.",
+    "allowedContexts": ["Social captions", "Reels text"],
+    "restrictedContexts": ["LinkedIn thought-leadership (minimal)", "Formal emails", "Legal/technical docs"],
+    "preferred": ["✅", "🚀", "💡", "⚡", "📈", "🔧", "🤖"],
+    "avoid": ["Excessive emojis in a row", "Ambiguous or off-brand emojis", "Emojis in headlines/meta titles"],
+    "maxPerPost": 5
+  },
+  "handleConsistency": "@hn9studio across all platforms where available",
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

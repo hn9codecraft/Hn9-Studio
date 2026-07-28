@@ -1,0 +1,16 @@
+﻿{
+  "id": "video-prompt",
+  "name": "Video Prompt Agent",
+  "role": "Video Prompt",
+  "description": "",
+  "responsibility": "",
+  "model": "",
+  "temperature": null,
+  "inputs": [],
+  "outputs": [],
+  "promptRef": "",
+  "dependsOn": [],
+  "tools": [],
+  "enabled": true,
+  "version": "1.0.0"
+}

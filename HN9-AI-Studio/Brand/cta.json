@@ -1,0 +1,85 @@
+{
+  "primary": [
+    {
+      "id": "cta-book-consultation",
+      "label": "Book Free Consultation",
+      "intent": "lead",
+      "url": "https://hn9.io/contact",
+      "usage": "Top-of-funnel; websites, reels, blogs, ads."
+    },
+    {
+      "id": "cta-schedule-demo",
+      "label": "Schedule Demo",
+      "intent": "demo",
+      "url": "https://hn9.io/demo",
+      "usage": "Product-focused services (CRM, ERP, UI/UX)."
+    },
+    {
+      "id": "cta-lets-build",
+      "label": "Let's Build Together",
+      "intent": "partnership",
+      "url": "https://hn9.io/contact",
+      "usage": "AI automation, AI agents, custom builds."
+    },
+    {
+      "id": "cta-contact-today",
+      "label": "Contact HN9 Today",
+      "intent": "contact",
+      "url": "https://hn9.io/contact",
+      "usage": "General closing CTA across channels."
+    }
+  ],
+  "secondary": [
+    {
+      "id": "cta-get-quote",
+      "label": "Get a Free Quote",
+      "intent": "quote",
+      "url": "https://hn9.io/contact",
+      "usage": "Pricing-curious visitors."
+    },
+    {
+      "id": "cta-see-work",
+      "label": "See Our Work",
+      "intent": "portfolio",
+      "url": "https://hn9.io/work",
+      "usage": "Mid-funnel proof and credibility."
+    },
+    {
+      "id": "cta-learn-more",
+      "label": "Learn More",
+      "intent": "info",
+      "url": "https://hn9.io/services",
+      "usage": "Soft CTA for informational content."
+    },
+    {
+      "id": "cta-talk-expert",
+      "label": "Talk to an Expert",
+      "intent": "lead",
+      "url": "https://hn9.io/contact",
+      "usage": "Consultative services."
+    }
+  ],
+  "microCtas": [
+    { "id": "cta-dm-us", "label": "DM us 'HN9'", "channel": "social" },
+    { "id": "cta-comment-below", "label": "Comment below 👇", "channel": "social" },
+    { "id": "cta-follow", "label": "Follow for more", "channel": "social" },
+    { "id": "cta-subscribe", "label": "Subscribe", "channel": "youtube" },
+    { "id": "cta-read-blog", "label": "Read the full guide", "channel": "blog" }
+  ],
+  "channelDefaults": {
+    "website": "cta-book-consultation",
+    "blog": "cta-book-consultation",
+    "instagram": "cta-dm-us",
+    "linkedin": "cta-contact-today",
+    "youtube": "cta-subscribe",
+    "email": "cta-schedule-demo"
+  },
+  "rules": [
+    "Every piece of content must include one brand-approved CTA.",
+    "Use only CTAs defined in this file.",
+    "Match CTA intent to the funnel stage and channel.",
+    "Never use fake-urgency or misleading CTAs."
+  ],
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

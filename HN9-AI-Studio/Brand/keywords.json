@@ -1,0 +1,74 @@
+{
+  "primaryKeywords": [
+    "software development company",
+    "web development agency",
+    "mobile app development",
+    "ai automation services",
+    "ai agents development",
+    "digital marketing agency",
+    "ui ux design agency",
+    "custom software development"
+  ],
+  "secondaryKeywords": [
+    "laravel development services",
+    "react development company",
+    "flutter app development",
+    "shopify development agency",
+    "wordpress development services",
+    "crm development",
+    "erp development",
+    "seo services",
+    "workflow automation",
+    "business process automation"
+  ],
+  "lsiKeywords": [
+    "digital transformation",
+    "product design",
+    "responsive website",
+    "cross-platform app",
+    "api development",
+    "cloud application",
+    "conversion rate optimization",
+    "technical seo",
+    "ai workflow",
+    "custom web application",
+    "scalable software",
+    "ecommerce store development"
+  ],
+  "industryKeywords": [
+    "software development",
+    "digital marketing",
+    "ai automation",
+    "saas development",
+    "enterprise software",
+    "startup mvp development",
+    "fintech development",
+    "ecommerce solutions"
+  ],
+  "brandedKeywords": [
+    "hn9",
+    "hn9 codecraft",
+    "hn9 ai studio",
+    "hn9 io"
+  ],
+  "longTailKeywords": [
+    "affordable mobile app development for startups",
+    "ai automation services for small business",
+    "custom crm development company",
+    "laravel developers for enterprise",
+    "shopify store development agency",
+    "how to automate business with ai agents"
+  ],
+  "negativeKeywords": [
+    "free",
+    "cheap",
+    "jobs",
+    "salary",
+    "internship",
+    "tutorial download",
+    "crack"
+  ],
+  "usageNotes": "Use keywords naturally per content-rules.json and seo.json. Never keyword-stuff. Map primary keywords to service pages, long-tail to blogs.",
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

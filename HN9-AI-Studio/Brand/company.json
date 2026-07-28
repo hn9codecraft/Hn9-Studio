@@ -1,0 +1,74 @@
+{
+  "legalName": "HN9 Codecraft",
+  "displayName": "HN9",
+  "brandName": "HN9 AI Studio",
+  "website": "https://hn9.io",
+  "tagline": "All your digital needs under one roof!!!",
+  "foundedYear": "2021",
+  "industry": [
+    "Software Development",
+    "Digital Marketing",
+    "AI Automation"
+  ],
+  "mission": "To put every digital capability a business needs — software, design, marketing and AI automation — under one roof, so our clients can build, launch and grow without juggling multiple vendors.",
+  "vision": "To become the most trusted digital studio for ambitious companies, where world-class engineering and AI-driven automation turn ideas into measurable growth.",
+  "values": [
+    {
+      "name": "Craftsmanship",
+      "description": "We treat every product like our own, engineering with care, precision and pride."
+    },
+    {
+      "name": "Trust",
+      "description": "We communicate transparently, set honest expectations and deliver what we promise."
+    },
+    {
+      "name": "Innovation",
+      "description": "We adopt AI and modern technology early to give our clients a competitive edge."
+    },
+    {
+      "name": "Simplicity",
+      "description": "We remove complexity so clients experience one team, one process and one point of accountability."
+    },
+    {
+      "name": "Partnership",
+      "description": "We measure our success by our clients' growth, not just deliverables shipped."
+    }
+  ],
+  "companyStory": "HN9 Codecraft started as a small team of engineers and designers who were tired of watching businesses stitch together freelancers and agencies to get a single product live. We built HN9 to be the opposite: one accountable studio that handles development, design, SEO, and AI automation end to end. Today HN9 AI Studio blends senior engineering talent with an AI-first workflow, helping startups, small businesses, mid-size companies and enterprises ship faster and grow with confidence — all under one roof.",
+  "differentiators": [
+    "One partner for development, design, marketing and AI automation",
+    "AI automation embedded into every engagement",
+    "Senior talent with premium delivery standards",
+    "Outcome and growth focused, not just deliverables"
+  ],
+  "headquarters": {
+    "addressLine1": "",
+    "addressLine2": "",
+    "city": "",
+    "state": "",
+    "country": "",
+    "postalCode": ""
+  },
+  "contact": {
+    "email": "hello@hn9.io",
+    "sales": "sales@hn9.io",
+    "support": "support@hn9.io",
+    "phone": "",
+    "whatsapp": "",
+    "bookingUrl": "https://hn9.io/contact"
+  },
+  "registration": {
+    "gstin": "",
+    "cin": "",
+    "pan": ""
+  },
+  "socialProfiles": {
+    "instagram": "https://instagram.com/hn9studio",
+    "linkedin": "https://linkedin.com/company/hn9",
+    "facebook": "https://facebook.com/hn9studio",
+    "youtube": "https://youtube.com/@hn9studio",
+    "x": "https://x.com/hn9studio"
+  },
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

@@ -1,0 +1,16 @@
+﻿{
+  "id": "seo",
+  "name": "SEO Agent",
+  "role": "SEO",
+  "description": "",
+  "responsibility": "",
+  "model": "",
+  "temperature": null,
+  "inputs": [],
+  "outputs": [],
+  "promptRef": "",
+  "dependsOn": [],
+  "tools": [],
+  "enabled": true,
+  "version": "1.0.0"
+}

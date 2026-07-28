@@ -1,0 +1,112 @@
+{
+  "personas": [
+    {
+      "id": "persona-startup-founder",
+      "name": "The Startup Founder",
+      "segment": "Startups",
+      "role": "Founder / CEO",
+      "companySize": "1-10 employees",
+      "industries": ["Technology", "SaaS", "E-commerce", "Fintech"],
+      "description": "An ambitious early-stage founder who needs to launch an MVP quickly, validate the market, and impress investors — with limited budget and no in-house tech team.",
+      "problems": [
+        "No technical co-founder or in-house engineering team",
+        "Needs to launch fast before running out of runway",
+        "Juggling multiple freelancers with inconsistent quality"
+      ],
+      "goals": [
+        "Launch a polished MVP quickly",
+        "Look credible to investors and early users",
+        "Find one reliable technical partner"
+      ],
+      "painPoints": [
+        "Limited budget",
+        "Fear of building the wrong thing",
+        "Slow, unreliable freelancers"
+      ],
+      "preferredChannels": ["Instagram", "LinkedIn", "YouTube"]
+    },
+    {
+      "id": "persona-small-business-owner",
+      "name": "The Small Business Owner",
+      "segment": "Small Businesses",
+      "role": "Owner / Manager",
+      "companySize": "10-50 employees",
+      "industries": ["Retail", "Services", "Hospitality", "Local B2B"],
+      "description": "A hands-on business owner who wants a professional online presence and simple automation to save time, without needing to understand the technology.",
+      "problems": [
+        "Outdated or no website",
+        "Manual, repetitive daily operations",
+        "Low online visibility and few inbound leads"
+      ],
+      "goals": [
+        "Get more leads and customers online",
+        "Automate repetitive tasks",
+        "Look as professional as bigger competitors"
+      ],
+      "painPoints": [
+        "Not tech-savvy",
+        "Limited time",
+        "Wary of overspending on tech"
+      ],
+      "preferredChannels": ["Facebook", "Instagram", "Google Search"]
+    },
+    {
+      "id": "persona-growth-lead",
+      "name": "The Growth Lead",
+      "segment": "Mid-size Companies",
+      "role": "Marketing / Product / Operations Lead",
+      "companySize": "50-250 employees",
+      "industries": ["SaaS", "E-commerce", "Healthcare", "Education"],
+      "description": "A department lead at a growing company who needs to scale digital operations, ship new products and adopt automation to keep up with demand.",
+      "problems": [
+        "Existing systems can't scale",
+        "Too much manual work across teams",
+        "Slow delivery from current vendors"
+      ],
+      "goals": [
+        "Scale systems and processes reliably",
+        "Introduce AI automation to boost efficiency",
+        "Ship new features and campaigns faster"
+      ],
+      "painPoints": [
+        "Vendor coordination overhead",
+        "Technical debt",
+        "Pressure to show ROI"
+      ],
+      "preferredChannels": ["LinkedIn", "YouTube", "Email"]
+    },
+    {
+      "id": "persona-enterprise-decision-maker",
+      "name": "The Enterprise Decision Maker",
+      "segment": "Enterprise Companies",
+      "role": "Director / VP / CTO",
+      "companySize": "250+ employees",
+      "industries": ["Finance", "Manufacturing", "Enterprise SaaS", "Logistics"],
+      "description": "A senior executive responsible for large digital transformation initiatives who values reliability, security, compliance and a partner who can deliver at scale.",
+      "problems": [
+        "Legacy systems slowing the business",
+        "Complex, siloed operations (CRM/ERP)",
+        "Need for secure, compliant, scalable delivery"
+      ],
+      "goals": [
+        "Modernize and unify core systems",
+        "Adopt AI automation strategically",
+        "Reduce operational cost and risk"
+      ],
+      "painPoints": [
+        "High stakes and low risk tolerance",
+        "Long procurement and approval cycles",
+        "Integration with existing enterprise stack"
+      ],
+      "preferredChannels": ["LinkedIn", "Email", "Website"]
+    }
+  ],
+  "segments": ["Startups", "Small Businesses", "Mid-size Companies", "Enterprise Companies"],
+  "companySizes": ["1-10 employees", "10-50 employees", "50-250 employees", "250+ employees"],
+  "industriesServed": [
+    "Technology", "SaaS", "E-commerce", "Fintech", "Retail", "Services",
+    "Hospitality", "Healthcare", "Education", "Finance", "Manufacturing", "Logistics"
+  ],
+  "version": "1.0.0",
+  "lastUpdated": "2026-07-18"
+}

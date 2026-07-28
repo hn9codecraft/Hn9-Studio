@@ -1,0 +1,16 @@
+﻿{
+  "id": "script-writer",
+  "name": "Script Writer Agent",
+  "role": "Script Writer",
+  "description": "",
+  "responsibility": "",
+  "model": "",
+  "temperature": null,
+  "inputs": [],
+  "outputs": [],
+  "promptRef": "",
+  "dependsOn": [],
+  "tools": [],
+  "enabled": true,
+  "version": "1.0.0"
+}
