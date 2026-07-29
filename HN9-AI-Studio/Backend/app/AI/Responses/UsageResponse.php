@@ -17,6 +17,7 @@ final readonly class UsageResponse
         public int $totalTokens = 0,
         public float $cost = 0.0,
         public string $currency = 'USD',
+        public ?int $executionTimeMs = null,
     ) {}
 
     public static function empty(): self
@@ -39,6 +40,7 @@ final readonly class UsageResponse
             totalTokens: $total,
             cost: (float) ($data['cost'] ?? 0.0),
             currency: (string) ($data['currency'] ?? 'USD'),
+            executionTimeMs: isset($data['execution_time_ms']) ? (int) $data['execution_time_ms'] : null,
         );
     }
 
@@ -53,6 +55,7 @@ final readonly class UsageResponse
             'total_tokens' => $this->totalTokens,
             'cost' => $this->cost,
             'currency' => $this->currency,
+            'execution_time_ms' => $this->executionTimeMs,
         ];
     }
 }
