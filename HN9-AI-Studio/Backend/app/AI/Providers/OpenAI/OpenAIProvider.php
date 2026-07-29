@@ -135,9 +135,4 @@ final class OpenAIProvider extends AbstractProvider
 
         return [...$payload, ...$request->options];
     }
-
-    private function elapsedMilliseconds(int $startedAt): int
-    {
-        return (int) round((hrtime(true) - $startedAt) / 1_000_000);
-    }
 }

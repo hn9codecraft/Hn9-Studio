@@ -47,7 +47,7 @@ final class ClaudeProvider extends AbstractProvider
         $messages = $request->messages !== [] ? $request->messages : [['role' => 'user', 'content' => $request->prompt]];
         $payload = array_filter(['model' => $model, 'max_tokens' => $request->maxTokens, 'system' => $request->system, 'messages' => $messages, 'temperature' => $request->temperature, 'top_p' => $request->topP, 'stream' => $request->stream, 'tools' => $request->tools ?: null, 'stop_sequences' => $request->stop ?: null], static fn (mixed $value): bool => $value !== null);
 
-        return $this->normalizer->text($this->client->messages([...$payload, ...$request->options]), $model, $this->elapsed($started));
+        return $this->normalizer->text($this->client->messages([...$payload, ...$request->options]), $model, $this->elapsedMilliseconds($started));
     }
 
     public function generateImage(ImageRequest $request): ImageResponse
@@ -99,14 +99,9 @@ final class ClaudeProvider extends AbstractProvider
             $started = hrtime(true);
             $this->client->messages(['model' => $model, 'max_tokens' => 1, 'messages' => [['role' => 'user', 'content' => 'health check']]]);
 
-            return ProviderHealthDTO::healthy('claude', $this->elapsed($started), now()->toIso8601String());
+            return ProviderHealthDTO::healthy('claude', $this->elapsedMilliseconds($started), now()->toIso8601String());
         } catch (Throwable $exception) {
             return ProviderHealthDTO::unavailable('claude', $exception->getMessage(), now()->toIso8601String());
         }
-    }
-
-    private function elapsed(int $started): int
-    {
-        return (int) round((hrtime(true) - $started) / 1_000_000);
     }
 }

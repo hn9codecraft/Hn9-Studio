@@ -5,18 +5,25 @@ declare(strict_types=1);
 namespace App\AI\Providers\Claude;
 
 use App\AI\Responses\UsageResponse;
+use App\AI\Support\AbstractUsageCalculator;
 
-final readonly class ClaudeUsageCalculator
+final readonly class ClaudeUsageCalculator extends AbstractUsageCalculator
 {
-    public function __construct(private ClaudeConfig $config) {}
+    public function __construct(ClaudeConfig $config)
+    {
+        parent::__construct($config->pricing);
+    }
 
-    /** @param array<string, mixed> $usage */
+    /**
+     * @param  array<string, mixed>  $usage  Anthropic `usage` block.
+     */
     public function fromUsage(array $usage, string $model, ?int $executionTimeMs = null): UsageResponse
     {
-        $input = (int) ($usage['input_tokens'] ?? 0);
-        $output = (int) ($usage['output_tokens'] ?? 0);
-        $rate = $this->config->pricing[$model] ?? [];
-
-        return new UsageResponse($input, $output, $input + $output, ($input * (float) ($rate['input'] ?? 0) + $output * (float) ($rate['output'] ?? 0)) / 1_000_000, 'USD', $executionTimeMs);
+        return $this->priced(
+            $model,
+            (int) ($usage['input_tokens'] ?? 0),
+            (int) ($usage['output_tokens'] ?? 0),
+            executionTimeMs: $executionTimeMs,
+        );
     }
 }

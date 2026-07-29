@@ -4,29 +4,12 @@ declare(strict_types=1);
 
 namespace App\AI\Providers\OpenAI;
 
-use App\AI\Exceptions\ProviderNotConfiguredException;
+use App\AI\Support\AbstractModelRegistry;
 
-final readonly class OpenAIModelRegistry
+final readonly class OpenAIModelRegistry extends AbstractModelRegistry
 {
-    public function __construct(private OpenAIConfig $config) {}
-
-    /** @return list<string> */
-    public function all(): array
+    public function __construct(OpenAIConfig $config)
     {
-        return $this->config->models;
-    }
-
-    public function resolve(?string $model): string
-    {
-        $resolved = $model ?? $this->config->defaultModel;
-        if (! is_string($resolved) || $resolved === '') {
-            throw ProviderNotConfiguredException::forKey('openai');
-        }
-
-        if (! in_array($resolved, $this->config->models, true)) {
-            throw ProviderNotConfiguredException::forKey('openai');
-        }
-
-        return $resolved;
+        parent::__construct('openai', $config->models, $config->defaultModel);
     }
 }
