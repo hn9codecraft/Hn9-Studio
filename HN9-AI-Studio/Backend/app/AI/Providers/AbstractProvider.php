@@ -94,4 +94,13 @@ abstract class AbstractProvider implements AIProviderInterface
     {
         return ProviderHealthDTO::unknown($this->providerName());
     }
+
+    /**
+     * Wall-clock milliseconds elapsed since an `hrtime(true)` marker. Shared so
+     * every provider reports execution time on one measurement basis.
+     */
+    protected function elapsedMilliseconds(int $startedAt): int
+    {
+        return (int) round((hrtime(true) - $startedAt) / 1_000_000);
+    }
 }

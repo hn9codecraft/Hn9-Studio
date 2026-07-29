@@ -20,6 +20,13 @@ use App\AI\Providers\Claude\ClaudeProvider;
 use App\AI\Providers\Claude\ClaudeResponseNormalizer;
 use App\AI\Providers\Claude\ClaudeTokenCounter;
 use App\AI\Providers\Claude\ClaudeUsageCalculator;
+use App\AI\Providers\Gemini\GeminiClient;
+use App\AI\Providers\Gemini\GeminiConfig;
+use App\AI\Providers\Gemini\GeminiModelRegistry;
+use App\AI\Providers\Gemini\GeminiProvider;
+use App\AI\Providers\Gemini\GeminiResponseNormalizer;
+use App\AI\Providers\Gemini\GeminiTokenCounter;
+use App\AI\Providers\Gemini\GeminiUsageCalculator;
 use App\AI\Providers\OpenAI\OpenAIClient;
 use App\AI\Providers\OpenAI\OpenAIConfig;
 use App\AI\Providers\OpenAI\OpenAIModelRegistry;
@@ -38,7 +45,8 @@ use Illuminate\Support\ServiceProvider;
  * The registry is a singleton so provider registrations persist for the
  * request/worker lifetime; the factory, health manager and manager are bound to
  * their contracts and resolved on demand. Every dependency is an interface, so
- * concrete providers (later sprints) plug in without touching this layer.
+ * concrete providers plug in here — and only here — without the manager,
+ * factory or registry gaining provider-specific knowledge.
  */
 class AIServiceProvider extends ServiceProvider
 {
@@ -56,19 +64,50 @@ class AIServiceProvider extends ServiceProvider
     {
         /** @var ProviderConfigResolver $resolver */
         $resolver = $this->app->make(ProviderConfigResolver::class);
-        $this->registerClaudeProvider($resolver);
-        $settings = config('ai.providers.openai', []);
 
-        if (! is_array($settings) || ! ($settings['enabled'] ?? false)) {
+        $this->registerClaudeProvider($resolver);
+        $this->registerOpenAIProvider($resolver);
+        $this->registerGeminiProvider($resolver);
+    }
+
+    private function registerClaudeProvider(ProviderConfigResolver $resolver): void
+    {
+        $settings = $this->settingsFor('claude');
+
+        if ($settings === null) {
             return;
         }
 
-        /** @var ProviderRegistryInterface $registry */
-        $registry = $this->app->make(ProviderRegistryInterface::class);
+        $config = ClaudeConfig::fromProviderConfig($resolver->resolve('claude'));
+        $models = new ClaudeModelRegistry($config);
+
+        $this->registry()->register(
+            'claude',
+            fn (ProviderConfigDTO $providerConfig): ClaudeProvider => new ClaudeProvider(
+                new ClaudeClient($this->app->make(Factory::class), ClaudeConfig::fromProviderConfig($providerConfig)),
+                $models,
+                new ClaudeUsageCalculator($config),
+                new ClaudeResponseNormalizer(new ClaudeUsageCalculator($config)),
+                new ClaudeTokenCounter,
+                $config,
+            ),
+            new ProviderCapabilityDTO('claude', 'Claude', ClaudeProvider::VERSION, text: true, streaming: $config->supportsStreaming, functionCalling: $config->supportsFunctionCalling, models: $models->all()),
+            priority: (int) ($settings['priority'] ?? 90),
+        );
+    }
+
+    private function registerOpenAIProvider(ProviderConfigResolver $resolver): void
+    {
+        $settings = $this->settingsFor('openai');
+
+        if ($settings === null) {
+            return;
+        }
+
         $config = OpenAIConfig::fromProviderConfig($resolver->resolve('openai'));
         $models = new OpenAIModelRegistry($config);
 
-        $registry->register(
+        $this->registry()->register(
             'openai',
             fn (ProviderConfigDTO $providerConfig): OpenAIProvider => new OpenAIProvider(
                 new OpenAIClient($this->app->make(Factory::class), OpenAIConfig::fromProviderConfig($providerConfig)),
@@ -87,29 +126,69 @@ class AIServiceProvider extends ServiceProvider
         );
     }
 
-    private function registerClaudeProvider(ProviderConfigResolver $resolver): void
+    private function registerGeminiProvider(ProviderConfigResolver $resolver): void
     {
-        $settings = config('ai.providers.claude', []);
-        if (! is_array($settings) || ! ($settings['enabled'] ?? false)) {
+        $settings = $this->settingsFor('gemini');
+
+        if ($settings === null) {
             return;
         }
 
-        $config = ClaudeConfig::fromProviderConfig($resolver->resolve('claude'));
-        $models = new ClaudeModelRegistry($config);
+        $config = GeminiConfig::fromProviderConfig($resolver->resolve('gemini'));
+        $models = new GeminiModelRegistry($config);
+
+        $this->registry()->register(
+            'gemini',
+            fn (ProviderConfigDTO $providerConfig): GeminiProvider => $this->makeGeminiProvider(
+                GeminiConfig::fromProviderConfig($providerConfig),
+            ),
+            new ProviderCapabilityDTO(
+                key: 'gemini', name: 'Gemini', version: GeminiProvider::VERSION,
+                // Image support is declared only when image-capable models are configured.
+                text: true, image: $config->imageModels !== [], streaming: $config->supportsStreaming,
+                functionCalling: $config->supportsFunctionCalling, models: $models->all(),
+            ),
+            priority: (int) ($settings['priority'] ?? 80),
+        );
+    }
+
+    private function makeGeminiProvider(GeminiConfig $config): GeminiProvider
+    {
+        $client = new GeminiClient($this->app->make(Factory::class), $config);
+        $usage = new GeminiUsageCalculator($config);
+        $normalizer = new GeminiResponseNormalizer($usage);
+
+        return new GeminiProvider(
+            $client,
+            new GeminiModelRegistry($config),
+            $usage,
+            $normalizer,
+            new GeminiTokenCounter($client, $normalizer, $config),
+            $config,
+        );
+    }
+
+    /**
+     * The provider's configuration block, or null when it is absent or disabled.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function settingsFor(string $key): ?array
+    {
+        $settings = config("ai.providers.{$key}", []);
+
+        if (! is_array($settings) || ! ($settings['enabled'] ?? false)) {
+            return null;
+        }
+
+        return $settings;
+    }
+
+    private function registry(): ProviderRegistryInterface
+    {
         /** @var ProviderRegistryInterface $registry */
         $registry = $this->app->make(ProviderRegistryInterface::class);
-        $registry->register(
-            'claude',
-            fn (ProviderConfigDTO $providerConfig): ClaudeProvider => new ClaudeProvider(
-                new ClaudeClient($this->app->make(Factory::class), ClaudeConfig::fromProviderConfig($providerConfig)),
-                $models,
-                new ClaudeUsageCalculator($config),
-                new ClaudeResponseNormalizer(new ClaudeUsageCalculator($config)),
-                new ClaudeTokenCounter,
-                $config,
-            ),
-            new ProviderCapabilityDTO('claude', 'Claude', ClaudeProvider::VERSION, text: true, streaming: $config->supportsStreaming, functionCalling: $config->supportsFunctionCalling, models: $models->all()),
-            priority: (int) ($settings['priority'] ?? 90),
-        );
+
+        return $registry;
     }
 }

@@ -4,25 +4,12 @@ declare(strict_types=1);
 
 namespace App\AI\Providers\Claude;
 
-use App\AI\Exceptions\ProviderNotConfiguredException;
+use App\AI\Support\AbstractModelRegistry;
 
-final readonly class ClaudeModelRegistry
+final readonly class ClaudeModelRegistry extends AbstractModelRegistry
 {
-    public function __construct(private ClaudeConfig $config) {}
-
-    /** @return list<string> */
-    public function all(): array
+    public function __construct(ClaudeConfig $config)
     {
-        return $this->config->models;
-    }
-
-    public function resolve(?string $model): string
-    {
-        $resolved = $model ?? $this->config->defaultModel;
-        if (! is_string($resolved) || $resolved === '' || ! in_array($resolved, $this->config->models, true)) {
-            throw ProviderNotConfiguredException::forKey('claude');
-        }
-
-        return $resolved;
+        parent::__construct('claude', $config->models, $config->defaultModel);
     }
 }

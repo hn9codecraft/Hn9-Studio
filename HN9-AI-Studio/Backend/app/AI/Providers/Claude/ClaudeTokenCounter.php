@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\AI\Providers\Claude;
 
-use App\AI\Responses\TokenResponse;
+use App\AI\Support\AbstractTokenCounter;
 
-final class ClaudeTokenCounter
-{
-    public function count(string $text, string $model): TokenResponse
-    {
-        return new TokenResponse($text === '' ? 0 : (int) ceil(mb_strlen($text) / 4), $model);
-    }
-}
+/**
+ * Preflight estimate for Claude requests using the shared character-ratio
+ * heuristic; Anthropic's reported usage is authoritative after execution.
+ */
+final readonly class ClaudeTokenCounter extends AbstractTokenCounter {}

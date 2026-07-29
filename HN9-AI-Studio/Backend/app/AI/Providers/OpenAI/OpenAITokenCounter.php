@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\AI\Providers\OpenAI;
 
-use App\AI\Responses\TokenResponse;
+use App\AI\Support\AbstractTokenCounter;
 
-/** Conservative local estimate for preflight accounting; OpenAI remains authoritative after execution. */
-final class OpenAITokenCounter
-{
-    public function count(string $text, string $model): TokenResponse
-    {
-        return new TokenResponse($text === '' ? 0 : (int) ceil(mb_strlen($text) / 4), $model);
-    }
-}
+/**
+ * Conservative local estimate for preflight accounting; OpenAI remains
+ * authoritative after execution. OpenAI exposes no token-counting endpoint, so
+ * the shared character-ratio estimate is used unchanged.
+ */
+final readonly class OpenAITokenCounter extends AbstractTokenCounter {}

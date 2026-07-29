@@ -34,16 +34,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | Per-provider configuration blocks, keyed by provider key. Resolved into a
-    | ProviderConfigDTO by ProviderConfigResolver. Intentionally empty for now.
+    | ProviderConfigDTO by ProviderConfigResolver, then into the provider's own
+    | typed settings object. Every block is environment-backed: credentials,
+    | endpoints, API versions, timeouts, retries, model lists and prices are
+    | supplied at deploy time, never hardcoded in the adapters.
     |
-    | Shape (for later sprints):
-    | 'openai' => [
-    |     'base_url'      => env('OPENAI_BASE_URL'),
-    |     'default_model' => env('OPENAI_DEFAULT_MODEL'),
-    |     'timeout'       => 30,
-    |     'max_retries'   => 2,
-    |     'options'       => [],
-    | ],
+    | A provider is only registered when its `enabled` flag is true.
     |
     */
 
@@ -60,6 +56,29 @@ return [
             'supports_streaming' => (bool) env('CLAUDE_SUPPORTS_STREAMING', true),
             'supports_function_calling' => (bool) env('CLAUDE_SUPPORTS_FUNCTION_CALLING', true),
             'pricing' => [],
+            'options' => [],
+        ],
+        'gemini' => [
+            'enabled' => (bool) env('GEMINI_ENABLED', false),
+            'api_key' => env('GEMINI_API_KEY'),
+            'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com'),
+            'version' => env('GEMINI_API_VERSION', 'v1beta'),
+            'default_model' => env('GEMINI_DEFAULT_MODEL'),
+            'timeout' => (int) env('GEMINI_TIMEOUT', 30),
+            'max_retries' => (int) env('GEMINI_MAX_RETRIES', 2),
+            // Comma-separated; no model identifier is hardcoded anywhere in the adapter.
+            'models' => array_values(array_filter(explode(',', (string) env('GEMINI_MODELS', '')))),
+            // Models permitted to return image output through generateContent.
+            'image_models' => array_values(array_filter(explode(',', (string) env('GEMINI_IMAGE_MODELS', '')))),
+            'image_default_model' => env('GEMINI_IMAGE_DEFAULT_MODEL'),
+            'image_response_modalities' => array_values(array_filter(explode(',', (string) env('GEMINI_IMAGE_RESPONSE_MODALITIES', 'IMAGE')))),
+            // Gemini publishes a tokenizer endpoint; disable to count locally only.
+            'remote_token_counting' => (bool) env('GEMINI_REMOTE_TOKEN_COUNTING', true),
+            'supports_streaming' => (bool) env('GEMINI_SUPPORTS_STREAMING', true),
+            'supports_function_calling' => (bool) env('GEMINI_SUPPORTS_FUNCTION_CALLING', true),
+            // Per-million-token USD prices, keyed by configured model identifier.
+            'pricing' => [],
+            'priority' => (int) env('GEMINI_PRIORITY', 80),
             'options' => [],
         ],
         'openai' => [
