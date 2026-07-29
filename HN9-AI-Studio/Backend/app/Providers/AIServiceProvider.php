@@ -8,10 +8,28 @@ use App\AI\Contracts\HealthManagerInterface;
 use App\AI\Contracts\ProviderFactoryInterface;
 use App\AI\Contracts\ProviderManagerInterface;
 use App\AI\Contracts\ProviderRegistryInterface;
+use App\AI\DTOs\ProviderCapabilityDTO;
+use App\AI\DTOs\ProviderConfigDTO;
 use App\AI\Factory\ProviderFactory;
 use App\AI\Health\HealthManager;
 use App\AI\Manager\ProviderManager;
+use App\AI\Providers\Claude\ClaudeClient;
+use App\AI\Providers\Claude\ClaudeConfig;
+use App\AI\Providers\Claude\ClaudeModelRegistry;
+use App\AI\Providers\Claude\ClaudeProvider;
+use App\AI\Providers\Claude\ClaudeResponseNormalizer;
+use App\AI\Providers\Claude\ClaudeTokenCounter;
+use App\AI\Providers\Claude\ClaudeUsageCalculator;
+use App\AI\Providers\OpenAI\OpenAIClient;
+use App\AI\Providers\OpenAI\OpenAIConfig;
+use App\AI\Providers\OpenAI\OpenAIModelRegistry;
+use App\AI\Providers\OpenAI\OpenAIProvider;
+use App\AI\Providers\OpenAI\OpenAIResponseNormalizer;
+use App\AI\Providers\OpenAI\OpenAITokenCounter;
+use App\AI\Providers\OpenAI\OpenAIUsageCalculator;
 use App\AI\Registry\ProviderRegistry;
+use App\AI\Support\ProviderConfigResolver;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -36,8 +54,62 @@ class AIServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Extension point: concrete provider packages register themselves on
-        // the ProviderRegistryInterface here in later sprints. No provider is
-        // registered in Sprint 5.3.1.
+        /** @var ProviderConfigResolver $resolver */
+        $resolver = $this->app->make(ProviderConfigResolver::class);
+        $this->registerClaudeProvider($resolver);
+        $settings = config('ai.providers.openai', []);
+
+        if (! is_array($settings) || ! ($settings['enabled'] ?? false)) {
+            return;
+        }
+
+        /** @var ProviderRegistryInterface $registry */
+        $registry = $this->app->make(ProviderRegistryInterface::class);
+        $config = OpenAIConfig::fromProviderConfig($resolver->resolve('openai'));
+        $models = new OpenAIModelRegistry($config);
+
+        $registry->register(
+            'openai',
+            fn (ProviderConfigDTO $providerConfig): OpenAIProvider => new OpenAIProvider(
+                new OpenAIClient($this->app->make(Factory::class), OpenAIConfig::fromProviderConfig($providerConfig)),
+                $models,
+                new OpenAIUsageCalculator($config),
+                new OpenAIResponseNormalizer(new OpenAIUsageCalculator($config)),
+                new OpenAITokenCounter,
+                $config,
+            ),
+            new ProviderCapabilityDTO(
+                key: 'openai', name: 'OpenAI', version: OpenAIProvider::VERSION,
+                text: true, image: true, streaming: $config->supportsStreaming,
+                functionCalling: $config->supportsFunctionCalling, models: $models->all(),
+            ),
+            priority: (int) ($settings['priority'] ?? 100),
+        );
+    }
+
+    private function registerClaudeProvider(ProviderConfigResolver $resolver): void
+    {
+        $settings = config('ai.providers.claude', []);
+        if (! is_array($settings) || ! ($settings['enabled'] ?? false)) {
+            return;
+        }
+
+        $config = ClaudeConfig::fromProviderConfig($resolver->resolve('claude'));
+        $models = new ClaudeModelRegistry($config);
+        /** @var ProviderRegistryInterface $registry */
+        $registry = $this->app->make(ProviderRegistryInterface::class);
+        $registry->register(
+            'claude',
+            fn (ProviderConfigDTO $providerConfig): ClaudeProvider => new ClaudeProvider(
+                new ClaudeClient($this->app->make(Factory::class), ClaudeConfig::fromProviderConfig($providerConfig)),
+                $models,
+                new ClaudeUsageCalculator($config),
+                new ClaudeResponseNormalizer(new ClaudeUsageCalculator($config)),
+                new ClaudeTokenCounter,
+                $config,
+            ),
+            new ProviderCapabilityDTO('claude', 'Claude', ClaudeProvider::VERSION, text: true, streaming: $config->supportsStreaming, functionCalling: $config->supportsFunctionCalling, models: $models->all()),
+            priority: (int) ($settings['priority'] ?? 90),
+        );
     }
 }

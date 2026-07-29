@@ -34,7 +34,10 @@ final readonly class ProviderConfigDTO
             defaultModel: isset($config['default_model']) ? (string) $config['default_model'] : null,
             timeout: (int) ($config['timeout'] ?? 30),
             maxRetries: (int) ($config['max_retries'] ?? 2),
-            options: (array) ($config['options'] ?? []),
+            options: array_merge(
+                (array) ($config['options'] ?? []),
+                array_diff_key($config, array_flip(['base_url', 'default_model', 'timeout', 'max_retries', 'options'])),
+            ),
         );
     }
 
