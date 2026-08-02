@@ -149,19 +149,30 @@ abstract readonly class AbstractProviderClient
     }
 
     /**
+     * Execute a request, converting a transport failure into the matching typed
+     * exception. Exposed to subclasses because not every vendor route answers
+     * with JSON — a binary payload, for instance, decodes itself but must still
+     * inherit this timeout/network taxonomy rather than restating it.
+     *
      * @param  Closure(PendingRequest): Response  $call
-     * @return array<string, mixed>
      */
-    private function send(Closure $call): array
+    protected function dispatch(Closure $call): Response
     {
         try {
-            $response = $call($this->pending());
+            return $call($this->pending());
         } catch (ConnectionException $exception) {
             throw str_contains(strtolower($exception->getMessage()), 'timed out')
                 ? ProviderTimeoutException::forProvider($this->providerKey, $exception)
                 : ProviderNetworkException::forProvider($this->providerKey, $exception);
         }
+    }
 
-        return $this->decode($response);
+    /**
+     * @param  Closure(PendingRequest): Response  $call
+     * @return array<string, mixed>
+     */
+    private function send(Closure $call): array
+    {
+        return $this->decode($this->dispatch($call));
     }
 }

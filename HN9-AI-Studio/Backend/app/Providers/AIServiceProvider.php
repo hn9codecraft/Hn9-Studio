@@ -20,6 +20,13 @@ use App\AI\Providers\Claude\ClaudeProvider;
 use App\AI\Providers\Claude\ClaudeResponseNormalizer;
 use App\AI\Providers\Claude\ClaudeTokenCounter;
 use App\AI\Providers\Claude\ClaudeUsageCalculator;
+use App\AI\Providers\ElevenLabs\ElevenLabsClient;
+use App\AI\Providers\ElevenLabs\ElevenLabsConfig;
+use App\AI\Providers\ElevenLabs\ElevenLabsProvider;
+use App\AI\Providers\ElevenLabs\ElevenLabsResponseNormalizer;
+use App\AI\Providers\ElevenLabs\ElevenLabsTokenCounter;
+use App\AI\Providers\ElevenLabs\ElevenLabsUsageCalculator;
+use App\AI\Providers\ElevenLabs\ElevenLabsVoiceRegistry;
 use App\AI\Providers\Gemini\GeminiClient;
 use App\AI\Providers\Gemini\GeminiConfig;
 use App\AI\Providers\Gemini\GeminiModelRegistry;
@@ -34,6 +41,13 @@ use App\AI\Providers\OpenAI\OpenAIProvider;
 use App\AI\Providers\OpenAI\OpenAIResponseNormalizer;
 use App\AI\Providers\OpenAI\OpenAITokenCounter;
 use App\AI\Providers\OpenAI\OpenAIUsageCalculator;
+use App\AI\Providers\OpenRouter\OpenRouterClient;
+use App\AI\Providers\OpenRouter\OpenRouterConfig;
+use App\AI\Providers\OpenRouter\OpenRouterModelRegistry;
+use App\AI\Providers\OpenRouter\OpenRouterProvider;
+use App\AI\Providers\OpenRouter\OpenRouterResponseNormalizer;
+use App\AI\Providers\OpenRouter\OpenRouterTokenCounter;
+use App\AI\Providers\OpenRouter\OpenRouterUsageCalculator;
 use App\AI\Registry\ProviderRegistry;
 use App\AI\Support\ProviderConfigResolver;
 use Illuminate\Http\Client\Factory;
@@ -68,6 +82,47 @@ class AIServiceProvider extends ServiceProvider
         $this->registerClaudeProvider($resolver);
         $this->registerOpenAIProvider($resolver);
         $this->registerGeminiProvider($resolver);
+        $this->registerOpenRouterProvider($resolver);
+        $this->registerElevenLabsProvider($resolver);
+    }
+
+    private function registerElevenLabsProvider(ProviderConfigResolver $resolver): void
+    {
+        $settings = $this->settingsFor('elevenlabs');
+
+        if ($settings === null) {
+            return;
+        }
+
+        $config = ElevenLabsConfig::fromProviderConfig($resolver->resolve('elevenlabs'));
+        $voices = new ElevenLabsVoiceRegistry($config);
+
+        $this->registry()->register(
+            'elevenlabs',
+            fn (ProviderConfigDTO $providerConfig): ElevenLabsProvider => $this->makeElevenLabsProvider(
+                ElevenLabsConfig::fromProviderConfig($providerConfig),
+            ),
+            new ProviderCapabilityDTO(
+                key: 'elevenlabs', name: 'ElevenLabs', version: ElevenLabsProvider::VERSION,
+                // Text-to-speech only; no other modality is declared.
+                voice: true, streaming: $config->supportsStreaming, models: $voices->all(),
+            ),
+            priority: (int) ($settings['priority'] ?? 60),
+        );
+    }
+
+    private function makeElevenLabsProvider(ElevenLabsConfig $config): ElevenLabsProvider
+    {
+        $usage = new ElevenLabsUsageCalculator($config);
+
+        return new ElevenLabsProvider(
+            new ElevenLabsClient($this->app->make(Factory::class), $config),
+            new ElevenLabsVoiceRegistry($config),
+            $usage,
+            new ElevenLabsResponseNormalizer($usage),
+            new ElevenLabsTokenCounter,
+            $config,
+        );
     }
 
     private function registerClaudeProvider(ProviderConfigResolver $resolver): void
@@ -149,6 +204,47 @@ class AIServiceProvider extends ServiceProvider
                 functionCalling: $config->supportsFunctionCalling, models: $models->all(),
             ),
             priority: (int) ($settings['priority'] ?? 80),
+        );
+    }
+
+    private function registerOpenRouterProvider(ProviderConfigResolver $resolver): void
+    {
+        $settings = $this->settingsFor('openrouter');
+
+        if ($settings === null) {
+            return;
+        }
+
+        $config = OpenRouterConfig::fromProviderConfig($resolver->resolve('openrouter'));
+        $models = new OpenRouterModelRegistry($config);
+
+        $this->registry()->register(
+            'openrouter',
+            fn (ProviderConfigDTO $providerConfig): OpenRouterProvider => $this->makeOpenRouterProvider(
+                OpenRouterConfig::fromProviderConfig($providerConfig),
+            ),
+            new ProviderCapabilityDTO(
+                key: 'openrouter', name: 'OpenRouter', version: OpenRouterProvider::VERSION,
+                text: true, streaming: $config->supportsStreaming,
+                functionCalling: $config->supportsFunctionCalling, models: $models->all(),
+                // Declared only when the default model's window is configured.
+                maxInputTokens: $models->defaultContextWindow(),
+            ),
+            priority: (int) ($settings['priority'] ?? 70),
+        );
+    }
+
+    private function makeOpenRouterProvider(OpenRouterConfig $config): OpenRouterProvider
+    {
+        $usage = new OpenRouterUsageCalculator($config);
+
+        return new OpenRouterProvider(
+            new OpenRouterClient($this->app->make(Factory::class), $config),
+            new OpenRouterModelRegistry($config),
+            $usage,
+            new OpenRouterResponseNormalizer($usage),
+            new OpenRouterTokenCounter,
+            $config,
         );
     }
 

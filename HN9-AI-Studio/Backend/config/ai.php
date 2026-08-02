@@ -44,6 +44,41 @@ return [
     */
 
     'providers' => [
+        'elevenlabs' => [
+            'enabled' => (bool) env('ELEVENLABS_ENABLED', false),
+            'api_key' => env('ELEVENLABS_API_KEY'),
+            'base_url' => env('ELEVENLABS_BASE_URL', 'https://api.elevenlabs.io/v1'),
+            'default_model' => env('ELEVENLABS_DEFAULT_MODEL'),
+            'timeout' => (int) env('ELEVENLABS_TIMEOUT', 30),
+            'max_retries' => (int) env('ELEVENLABS_MAX_RETRIES', 2),
+            // Comma-separated text-to-speech model identifiers; none is hardcoded.
+            'models' => array_values(array_filter(explode(',', (string) env('ELEVENLABS_MODELS', '')))),
+            /*
+             * Voices as `name:voice_id` pairs, e.g. "rachel:21m00…,adam:pNInz…".
+             * Stock, custom and future voices are all adopted here; the adapter
+             * names none. A request may ask for either the name or the id.
+             */
+            'voices' => env('ELEVENLABS_VOICES', ''),
+            'default_voice' => env('ELEVENLABS_DEFAULT_VOICE'),
+            // e.g. mp3_44100_128, pcm_16000, ulaw_8000.
+            'output_format' => env('ELEVENLABS_OUTPUT_FORMAT'),
+            // Optional allow-list; empty means any requested format is accepted.
+            'output_formats' => array_values(array_filter(explode(',', (string) env('ELEVENLABS_OUTPUT_FORMATS', '')))),
+            /*
+             * Default synthesis settings, overridable per request. Accepts the
+             * vendor spellings and the studio aliases:
+             *   stability, similarity (similarity_boost), style,
+             *   speaker_boost (use_speaker_boost), speed.
+             */
+            'voice_settings' => [],
+            // Credits billed per character, keyed by model (standard models: 1.0).
+            'credit_multipliers' => [],
+            'supports_streaming' => (bool) env('ELEVENLABS_SUPPORTS_STREAMING', true),
+            // Per-million-credit USD prices, keyed by configured model identifier.
+            'pricing' => [],
+            'priority' => (int) env('ELEVENLABS_PRIORITY', 60),
+            'options' => [],
+        ],
         'claude' => [
             'enabled' => (bool) env('CLAUDE_ENABLED', false),
             'api_key' => env('CLAUDE_API_KEY'),
@@ -94,6 +129,50 @@ return [
             'supports_function_calling' => (bool) env('OPENAI_SUPPORTS_FUNCTION_CALLING', true),
             // Per-million-token USD prices, keyed by configured model identifier.
             'pricing' => [],
+            'options' => [],
+        ],
+        'openrouter' => [
+            'enabled' => (bool) env('OPENROUTER_ENABLED', false),
+            'api_key' => env('OPENROUTER_API_KEY'),
+            'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+            'default_model' => env('OPENROUTER_DEFAULT_MODEL'),
+            'timeout' => (int) env('OPENROUTER_TIMEOUT', 30),
+            'max_retries' => (int) env('OPENROUTER_MAX_RETRIES', 2),
+            /*
+             * OpenRouter aggregates many upstream vendors behind one endpoint, so
+             * its catalogue is broad and moves constantly. Models are therefore
+             * supplied entirely here — comma-separated, namespaced `vendor/model`
+             * identifiers — and no identifier is hardcoded in the adapter:
+             * e.g. openai/…, anthropic/…, google/…, deepseek/…, meta-llama/…,
+             * mistralai/…, qwen/… and whatever is published next.
+             */
+            'models' => array_values(array_filter(explode(',', (string) env('OPENROUTER_MODELS', '')))),
+            // Optional attribution headers identifying this app to OpenRouter.
+            'http_referer' => env('OPENROUTER_HTTP_REFERER'),
+            'app_name' => env('OPENROUTER_APP_NAME'),
+            // Additional headers sent with every request, applied last.
+            'headers' => [],
+            // Asks OpenRouter to report the settled cost of each call.
+            'usage_accounting' => (bool) env('OPENROUTER_USAGE_ACCOUNTING', true),
+            'supports_streaming' => (bool) env('OPENROUTER_SUPPORTS_STREAMING', true),
+            'supports_function_calling' => (bool) env('OPENROUTER_SUPPORTS_FUNCTION_CALLING', true),
+            /*
+             * Per-model metadata, keyed by the identifiers listed above. Every
+             * key is optional and nothing is defaulted from a built-in table:
+             *
+             *   'vendor/model' => [
+             *       'provider' => 'vendor',        // defaults to the identifier namespace
+             *       'capabilities' => ['text'],
+             *       'streaming' => true,
+             *       'function_calling' => true,
+             *       'context_window' => 128000,
+             *       'max_output_tokens' => 16384,
+             *   ],
+             */
+            'model_metadata' => [],
+            // Per-million-token USD prices, keyed by configured model identifier.
+            'pricing' => [],
+            'priority' => (int) env('OPENROUTER_PRIORITY', 70),
             'options' => [],
         ],
     ],
