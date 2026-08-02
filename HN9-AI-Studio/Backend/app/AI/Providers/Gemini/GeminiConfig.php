@@ -6,6 +6,7 @@ namespace App\AI\Providers\Gemini;
 
 use App\AI\DTOs\ProviderConfigDTO;
 use App\AI\Exceptions\ProviderNotConfiguredException;
+use App\AI\Support\ConfigNormalizer;
 
 /**
  * Resolved, validated Gemini settings. Every value originates in
@@ -59,10 +60,10 @@ final readonly class GeminiConfig
             defaultModel: $config->defaultModel,
             timeout: $config->timeout,
             maxRetries: $config->maxRetries,
-            models: self::stringList($config->option('models', [])),
-            imageModels: self::stringList($config->option('image_models', [])),
+            models: ConfigNormalizer::stringList($config->option('models', [])),
+            imageModels: ConfigNormalizer::stringList($config->option('image_models', [])),
             imageDefaultModel: is_string($imageDefault) && $imageDefault !== '' ? $imageDefault : null,
-            imageResponseModalities: self::stringList($config->option('image_response_modalities', [])),
+            imageResponseModalities: ConfigNormalizer::stringList($config->option('image_response_modalities', [])),
             remoteTokenCounting: (bool) $config->option('remote_token_counting', false),
             supportsStreaming: (bool) $config->option('supports_streaming', false),
             supportsFunctionCalling: (bool) $config->option('supports_function_calling', false),
@@ -76,20 +77,5 @@ final readonly class GeminiConfig
     public function endpoint(): string
     {
         return "{$this->baseUrl}/{$this->version}";
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function stringList(mixed $value): array
-    {
-        if (! is_array($value)) {
-            return [];
-        }
-
-        return array_values(array_filter(
-            array_map(static fn (mixed $item): string => is_string($item) ? trim($item) : '', $value),
-            static fn (string $item): bool => $item !== '',
-        ));
     }
 }
