@@ -4,15 +4,32 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\AI\Cache\CachedHealthManager;
+use App\AI\Cache\ProviderInstanceCache;
+use App\AI\Cache\ProviderMetadataCache;
+use App\AI\Config\PlatformConfig;
+use App\AI\Contracts\AIProviderInterface;
+use App\AI\Contracts\CircuitBreakerInterface;
 use App\AI\Contracts\HealthManagerInterface;
+use App\AI\Contracts\HealthTrackerInterface;
+use App\AI\Contracts\MetricsCollectorInterface;
+use App\AI\Contracts\ProviderDispatcherInterface;
 use App\AI\Contracts\ProviderFactoryInterface;
 use App\AI\Contracts\ProviderManagerInterface;
 use App\AI\Contracts\ProviderRegistryInterface;
+use App\AI\Contracts\ProviderRouterInterface;
+use App\AI\Contracts\RetryPolicyInterface;
 use App\AI\DTOs\ProviderCapabilityDTO;
 use App\AI\DTOs\ProviderConfigDTO;
+use App\AI\Execution\ModalityInvoker;
+use App\AI\Execution\ModalityInvokerRegistry;
+use App\AI\Execution\ProviderDispatcher;
 use App\AI\Factory\ProviderFactory;
 use App\AI\Health\HealthManager;
+use App\AI\Health\ProviderHealthTracker;
 use App\AI\Manager\ProviderManager;
+use App\AI\Metrics\CacheMetricsCollector;
+use App\AI\Metrics\NullMetricsCollector;
 use App\AI\Providers\Claude\ClaudeClient;
 use App\AI\Providers\Claude\ClaudeConfig;
 use App\AI\Providers\Claude\ClaudeModelRegistry;
@@ -49,7 +66,30 @@ use App\AI\Providers\OpenRouter\OpenRouterResponseNormalizer;
 use App\AI\Providers\OpenRouter\OpenRouterTokenCounter;
 use App\AI\Providers\OpenRouter\OpenRouterUsageCalculator;
 use App\AI\Registry\ProviderRegistry;
+use App\AI\Requests\ImageRequest;
+use App\AI\Requests\TextRequest;
+use App\AI\Requests\VideoRequest;
+use App\AI\Requests\VoiceRequest;
+use App\AI\Resilience\CircuitBreaker;
+use App\AI\Resilience\Retrier;
+use App\AI\Resilience\RetryPolicy;
+use App\AI\Responses\ImageResponse;
+use App\AI\Responses\TextResponse;
+use App\AI\Responses\VideoResponse;
+use App\AI\Responses\VoiceResponse;
+use App\AI\Routing\CostEstimator;
+use App\AI\Routing\ProviderRouter;
+use App\AI\Routing\RoutingStrategyRegistry;
+use App\AI\Routing\Strategies\BalancedStrategy;
+use App\AI\Routing\Strategies\CheapestStrategy;
+use App\AI\Routing\Strategies\FastestStrategy;
+use App\AI\Routing\Strategies\PriorityStrategy;
+use App\AI\Routing\Strategies\QualityStrategy;
+use App\AI\Support\Modality;
 use App\AI\Support\ProviderConfigResolver;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Support\ServiceProvider;
 
@@ -61,6 +101,12 @@ use Illuminate\Support\ServiceProvider;
  * their contracts and resolved on demand. Every dependency is an interface, so
  * concrete providers plug in here — and only here — without the manager,
  * factory or registry gaining provider-specific knowledge.
+ *
+ * Sprint 5.3.7 adds the intelligence layer on top of that foundation: parsed
+ * configuration, the provider and metadata caches, passive health, the circuit
+ * breaker, the retry policy, metrics, the routing strategies and the resilient
+ * dispatcher. All of it is additive — the manager, factory and registry
+ * bindings behave exactly as before.
  */
 class AIServiceProvider extends ServiceProvider
 {
@@ -70,8 +116,191 @@ class AIServiceProvider extends ServiceProvider
         $this->app->singleton(ProviderRegistryInterface::class, ProviderRegistry::class);
 
         $this->app->bind(ProviderFactoryInterface::class, ProviderFactory::class);
-        $this->app->bind(HealthManagerInterface::class, HealthManager::class);
         $this->app->bind(ProviderManagerInterface::class, ProviderManager::class);
+
+        $this->registerPlatformConfig();
+        $this->registerCaches();
+        $this->registerHealth();
+        $this->registerResilience();
+        $this->registerMetrics();
+        $this->registerRouting();
+        $this->registerExecution();
+    }
+
+    /**
+     * `config/ai.php` parsed once per process. Every component below reads its
+     * settings from this object rather than from the configuration repository,
+     * so the coercion happens once instead of on every dispatch.
+     */
+    private function registerPlatformConfig(): void
+    {
+        $this->app->singleton(PlatformConfig::class, static function (Application $app): PlatformConfig {
+            /** @var array<string, mixed> $config */
+            $config = $app->make('config')->get('ai', []);
+
+            return PlatformConfig::fromArray($config);
+        });
+    }
+
+    /**
+     * Provider instances and their metadata are memoised for the process:
+     * building a provider allocates a client, a model registry, a usage
+     * calculator, a normaliser and a token counter, and routing may touch
+     * several providers per request.
+     */
+    private function registerCaches(): void
+    {
+        $this->app->singleton(ProviderInstanceCache::class, fn (Application $app): ProviderInstanceCache => new ProviderInstanceCache(
+            $app->make(ProviderFactoryInterface::class),
+            $app->make(ProviderRegistryInterface::class),
+            $app->make(PlatformConfig::class)->cache->providerInstances,
+        ));
+
+        $this->app->singleton(ProviderMetadataCache::class);
+    }
+
+    /**
+     * Active probes stay with the existing health manager; caching and the
+     * passive, outcome-derived view are layered around it.
+     */
+    private function registerHealth(): void
+    {
+        $this->app->bind(HealthManagerInterface::class, function (Application $app): HealthManagerInterface {
+            $manager = $app->make(HealthManager::class);
+            $config = $app->make(PlatformConfig::class);
+
+            if (! (bool) $app->make('config')->get('ai.health.cache_enabled', true)) {
+                return $manager;
+            }
+
+            return new CachedHealthManager(
+                $manager,
+                $app->make(ProviderRegistryInterface::class),
+                $this->cacheStore($config->cache->store),
+                $config->cache,
+            );
+        });
+
+        $this->app->singleton(
+            HealthTrackerInterface::class,
+            fn (Application $app): HealthTrackerInterface => new ProviderHealthTracker(
+                $this->cacheStore($app->make(PlatformConfig::class)->cache->store),
+                $app->make(PlatformConfig::class)->cache,
+                $app->make(PlatformConfig::class)->routing->health,
+            ),
+        );
+    }
+
+    private function registerResilience(): void
+    {
+        $this->app->singleton(
+            CircuitBreakerInterface::class,
+            fn (Application $app): CircuitBreakerInterface => new CircuitBreaker(
+                $this->cacheStore($app->make(PlatformConfig::class)->circuitBreaker->store),
+                $app->make(PlatformConfig::class)->circuitBreaker,
+            ),
+        );
+
+        $this->app->singleton(
+            RetryPolicyInterface::class,
+            static fn (Application $app): RetryPolicyInterface => new RetryPolicy(
+                $app->make(PlatformConfig::class)->retry,
+            ),
+        );
+
+        $this->app->singleton(Retrier::class);
+    }
+
+    /**
+     * Disabling metrics swaps in the null collector, so the dispatcher never
+     * has to ask whether recording is switched on.
+     */
+    private function registerMetrics(): void
+    {
+        $this->app->singleton(MetricsCollectorInterface::class, function (Application $app): MetricsCollectorInterface {
+            $config = $app->make(PlatformConfig::class)->metrics;
+
+            if (! $config->enabled) {
+                return new NullMetricsCollector;
+            }
+
+            return new CacheMetricsCollector($this->cacheStore($config->store), $config);
+        });
+    }
+
+    /**
+     * The strategy registry is the Open/Closed seam for selection policy: an
+     * additional strategy is registered here and named in configuration, and
+     * the router gains no branch.
+     */
+    private function registerRouting(): void
+    {
+        $this->app->singleton(RoutingStrategyRegistry::class, static function (Application $app): RoutingStrategyRegistry {
+            $registry = new RoutingStrategyRegistry;
+            $routing = $app->make(PlatformConfig::class)->routing;
+
+            $registry->register(new PriorityStrategy);
+            $registry->register(new CheapestStrategy);
+            $registry->register(new FastestStrategy);
+            $registry->register(new QualityStrategy);
+            $registry->register(new BalancedStrategy($routing), default: true);
+
+            return $registry;
+        });
+
+        $this->app->singleton(CostEstimator::class);
+        $this->app->bind(ProviderRouterInterface::class, ProviderRouter::class);
+    }
+
+    /**
+     * Modality invokers map a request onto the provider method that serves it.
+     * Registering one here is how a future modality becomes dispatchable
+     * without touching the dispatcher.
+     */
+    private function registerExecution(): void
+    {
+        $this->app->singleton(ModalityInvokerRegistry::class, static function (): ModalityInvokerRegistry {
+            $registry = new ModalityInvokerRegistry;
+
+            $registry->register(new ModalityInvoker(
+                Modality::Text,
+                TextRequest::class,
+                static fn (AIProviderInterface $provider, TextRequest $request): TextResponse => $provider->generateText($request),
+            ));
+
+            $registry->register(new ModalityInvoker(
+                Modality::Image,
+                ImageRequest::class,
+                static fn (AIProviderInterface $provider, ImageRequest $request): ImageResponse => $provider->generateImage($request),
+            ));
+
+            $registry->register(new ModalityInvoker(
+                Modality::Voice,
+                VoiceRequest::class,
+                static fn (AIProviderInterface $provider, VoiceRequest $request): VoiceResponse => $provider->generateVoice($request),
+            ));
+
+            $registry->register(new ModalityInvoker(
+                Modality::Video,
+                VideoRequest::class,
+                static fn (AIProviderInterface $provider, VideoRequest $request): VideoResponse => $provider->generateVideo($request),
+            ));
+
+            return $registry;
+        });
+
+        $this->app->bind(ProviderDispatcherInterface::class, ProviderDispatcher::class);
+    }
+
+    /**
+     * A cache repository by store name; null means the application default.
+     */
+    private function cacheStore(?string $store): Repository
+    {
+        /** @var CacheFactory $cache */
+        $cache = $this->app->make(CacheFactory::class);
+
+        return $cache->store($store);
     }
 
     public function boot(): void

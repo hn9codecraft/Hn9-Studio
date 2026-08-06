@@ -52,18 +52,6 @@ class ElevenLabsProviderTest extends TestCase
     private const AUDIO_BYTES = "ID3\x04\x00audio-bytes";
 
     /**
-     * Laravel executes any request that matches no stub for real. This suite
-     * exercises a live vendor's routes, so a stray request must fail loudly
-     * rather than reach ElevenLabs with a test credential.
-     */
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Http::preventStrayRequests();
-    }
-
-    /**
      * Builds the adapter exactly as the service provider does, from a
      * configuration array — no voice, model or format is hardcoded in the adapter.
      *

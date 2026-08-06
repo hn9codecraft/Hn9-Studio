@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\AI\Http;
 
+use App\AI\Config\PlatformConfig;
+use App\AI\Config\TimeoutConfig;
 use App\AI\Exceptions\AIException;
 use App\AI\Exceptions\ProviderApiException;
 use App\AI\Exceptions\ProviderAuthenticationException;
@@ -69,11 +71,30 @@ abstract readonly class AbstractProviderClient
 
     protected function pending(): PendingRequest
     {
-        return $this->http->baseUrl($this->baseUrl)
+        $timeouts = $this->timeouts();
+
+        $request = $this->http->baseUrl($this->baseUrl)
             ->withHeaders($this->headers())
             ->acceptJson()
-            ->timeout($this->timeout)
+            ->timeout($timeouts->requestTimeoutFor($this->timeout))
             ->retry($this->maxRetries, self::RETRY_DELAY_MS, throw: false);
+
+        // A separate connection timeout fails a black-holed endpoint in seconds
+        // instead of holding the whole request budget open waiting for a socket.
+        return $timeouts->connect > 0 ? $request->connectTimeout($timeouts->connect) : $request;
+    }
+
+    /**
+     * The platform's timeout defaults. A provider's own `timeout` still wins;
+     * these fill in the gaps and supply the connection timeout, so every adapter
+     * inherits one policy instead of restating it.
+     *
+     * Read from the {@see PlatformConfig} singleton, so this costs a container
+     * lookup rather than re-parsing configuration on every request.
+     */
+    protected function timeouts(): TimeoutConfig
+    {
+        return app(PlatformConfig::class)->timeouts;
     }
 
     /**
