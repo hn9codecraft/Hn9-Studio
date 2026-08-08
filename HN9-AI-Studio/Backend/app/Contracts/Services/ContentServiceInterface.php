@@ -37,6 +37,8 @@ interface ContentServiceInterface
 
     public function create(ContentData $data, ?User $causer = null): GeneratedContent;
 
+    public function update(GeneratedContent $content, array $data, ?User $causer = null): GeneratedContent;
+
     /**
      * The next version number to use for a project/type pair.
      */

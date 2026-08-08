@@ -9,6 +9,7 @@ use App\Enums\WorkflowStatus;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\WorkflowRun;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -27,6 +28,8 @@ interface WorkflowServiceInterface
      */
     public function forProject(Project $project): Collection;
 
+    public function paginateForUser(User $user, int $perPage = 15, array $filters = []): LengthAwarePaginator;
+
     public function getByUuid(string $uuid): WorkflowRun;
 
     /**
@@ -38,4 +41,8 @@ interface WorkflowServiceInterface
      * Transition a run to a new status, enforcing the lifecycle rules.
      */
     public function transition(WorkflowRun $run, WorkflowStatus $status, ?User $causer = null): WorkflowRun;
+
+    public function retry(WorkflowRun $run, ?User $causer = null): WorkflowRun;
+
+    public function cancel(WorkflowRun $run, ?User $causer = null): WorkflowRun;
 }

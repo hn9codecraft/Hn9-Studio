@@ -66,6 +66,15 @@ final readonly class ContentService implements ContentServiceInterface
         return $this->contents->latestVersion($projectId, $type) + 1;
     }
 
+    public function update(GeneratedContent $content, array $data, ?User $causer = null): GeneratedContent
+    {
+        $updated = $this->contents->update($content, $data);
+
+        $this->activity->log('content.updated', $updated, $causer, 'Generated content updated');
+
+        return $updated;
+    }
+
     public function setFavorite(GeneratedContent $content, bool $favorite, ?User $causer = null): GeneratedContent
     {
         $updated = $this->contents->update($content, ['is_favorite' => $favorite]);

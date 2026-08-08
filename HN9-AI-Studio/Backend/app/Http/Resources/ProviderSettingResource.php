@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\GeneratedAsset;
+use App\Models\ProviderSetting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * API representation of a generated media asset.
- *
- * @mixin GeneratedAsset
+ * @mixin ProviderSetting
  */
-class AssetResource extends JsonResource
+class ProviderSettingResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -21,13 +19,11 @@ class AssetResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->uuid,
-            'type' => $this->type,
-            'provider' => $this->provider,
-            'status' => $this->status,
-            'prompt' => $this->prompt,
-            'is_favorite' => $this->is_favorite,
-            'metadata' => $this->metadata,
+            'id' => $this->uuid ?? $this->id,
+            'key' => $this->key,
+            'value' => $this->is_secret ? $this->maskedValue() : $this->value,
+            'is_secret' => $this->is_secret,
+            'environment' => $this->environment,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

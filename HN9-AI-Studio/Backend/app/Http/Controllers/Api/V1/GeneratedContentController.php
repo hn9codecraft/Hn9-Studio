@@ -8,6 +8,7 @@ use App\Contracts\Services\ContentRegenerationServiceInterface;
 use App\Contracts\Services\ContentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegenerateContentRequest;
+use App\Http\Requests\UpdateGeneratedContentRequest;
 use App\Http\Resources\AssetResource;
 use App\Http\Resources\GeneratedContentResource;
 use App\Models\GeneratedAsset;
@@ -60,6 +61,17 @@ class GeneratedContentController extends Controller
         return ApiResponse::success(new GeneratedContentResource($content));
     }
 
+    public function update(UpdateGeneratedContentRequest $request, string $uuid): JsonResponse
+    {
+        $content = $this->contents->getByUuid($uuid);
+
+        $this->authorize('update', $content);
+
+        $updated = $this->contents->update($content, $request->validated());
+
+        return ApiResponse::success(new GeneratedContentResource($updated));
+    }
+
     public function destroy(Request $request, string $uuid): JsonResponse
     {
         $content = $this->contents->getByUuid($uuid);
@@ -89,6 +101,17 @@ class GeneratedContentController extends Controller
         $this->authorize('update', $content);
 
         $updated = $this->contents->setFavorite($content, false, $request->user());
+
+        return ApiResponse::success(new GeneratedContentResource($updated));
+    }
+
+    public function approve(Request $request, string $uuid): JsonResponse
+    {
+        $content = $this->contents->getByUuid($uuid);
+
+        $this->authorize('update', $content);
+
+        $updated = $this->contents->update($content, ['status' => 'approved']);
 
         return ApiResponse::success(new GeneratedContentResource($updated));
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Contracts;
 
 use App\Models\WorkflowRun;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -26,4 +27,6 @@ interface WorkflowRunRepositoryInterface extends RepositoryInterface
      * @return Collection<int, WorkflowRun>
      */
     public function withStatus(string $status): Collection;
+
+    public function paginateForOwner(?int $userId, int $perPage = 15, array $filters = [], array $with = []): LengthAwarePaginator;
 }

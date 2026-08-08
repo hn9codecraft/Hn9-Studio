@@ -38,6 +38,7 @@ use App\Repositories\Contracts\ProjectInputRepositoryInterface;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
 use App\Repositories\Contracts\PromptExecutionRepositoryInterface;
 use App\Repositories\Contracts\ProviderRepositoryInterface;
+use App\Repositories\Contracts\ProviderSettingRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Contracts\WorkflowRunRepositoryInterface;
 use App\Repositories\GeneratedContentRepository;
@@ -46,6 +47,7 @@ use App\Repositories\ProjectInputRepository;
 use App\Repositories\ProjectRepository;
 use App\Repositories\PromptExecutionRepository;
 use App\Repositories\ProviderRepository;
+use App\Repositories\ProviderSettingRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\WorkflowRunRepository;
 use App\Services\AgentExecutionService;
@@ -89,6 +91,7 @@ class DomainServiceProvider extends ServiceProvider
         ProjectInputRepositoryInterface::class => ProjectInputRepository::class,
         AssetRepositoryInterface::class => AssetRepository::class,
         ProviderRepositoryInterface::class => ProviderRepository::class,
+        ProviderSettingRepositoryInterface::class => ProviderSettingRepository::class,
         GeneratedContentRepositoryInterface::class => GeneratedContentRepository::class,
         WorkflowRunRepositoryInterface::class => WorkflowRunRepository::class,
         ActivityLogRepositoryInterface::class => ActivityLogRepository::class,
