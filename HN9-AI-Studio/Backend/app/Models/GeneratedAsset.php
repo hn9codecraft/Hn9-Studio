@@ -36,12 +36,14 @@ class GeneratedAsset extends Model
         'status',
         'prompt',
         'metadata',
+        'is_favorite',
     ];
 
     protected function casts(): array
     {
         return [
             'metadata' => 'array',
+            'is_favorite' => 'boolean',
         ];
     }
 

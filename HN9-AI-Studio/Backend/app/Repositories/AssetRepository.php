@@ -6,6 +6,7 @@ namespace App\Repositories;
 
 use App\Models\GeneratedAsset;
 use App\Repositories\Contracts\AssetRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -39,5 +40,44 @@ class AssetRepository extends BaseRepository implements AssetRepositoryInterface
             ->where('type', $type)
             ->latest('id')
             ->get();
+    }
+
+    public function paginateForOwner(?int $userId, int $perPage = 15, array $filters = [], array $with = []): LengthAwarePaginator
+    {
+        $query = $this->query()->with($with);
+
+        if ($userId !== null) {
+            $query->whereHas('project', fn (Builder $project): Builder => $project->where('user_id', $userId));
+        }
+
+        $query = $this->applyFilters($query, $filters);
+
+        if (! empty($filters['project']) || ! empty($filters['projectUuid'])) {
+            $projectUuid = (string) ($filters['project'] ?? $filters['projectUuid'] ?? '');
+            $query->whereHas('project', fn (Builder $project): Builder => $project->where('uuid', $projectUuid));
+        }
+
+        if (! empty($filters['provider'])) {
+            $query->where('provider', (string) $filters['provider']);
+        }
+
+        if (! empty($filters['search'])) {
+            $term = (string) $filters['search'];
+            $query->where(function (Builder $q) use ($term): void {
+                $q->where('prompt', 'like', "%{$term}%")
+                    ->orWhere('uuid', 'like', "%{$term}%")
+                    ->orWhere('type', 'like', "%{$term}%");
+            });
+        }
+
+        if (isset($filters['favorite']) && $filters['favorite'] !== '') {
+            $query->where('is_favorite', filter_var($filters['favorite'], FILTER_VALIDATE_BOOLEAN));
+        }
+
+        $allowed = ['created_at', 'updated_at', 'type', 'status'];
+        $sort = isset($filters['sort']) && in_array($filters['sort'], $allowed, true) ? $filters['sort'] : 'created_at';
+        $order = isset($filters['order']) && strtolower((string) $filters['order']) === 'asc' ? 'asc' : 'desc';
+
+        return $query->orderBy($sort, $order)->paginate($perPage);
     }
 }

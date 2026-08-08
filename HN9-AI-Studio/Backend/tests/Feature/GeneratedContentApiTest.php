@@ -221,6 +221,49 @@ final class GeneratedContentApiTest extends TestCase
             ->assertStatus(404);
     }
 
+    public function test_update_allows_title_status_and_metadata(): void
+    {
+        $user = User::factory()->create();
+        $content = GeneratedContent::factory()
+            ->for(Project::factory()->for($user))
+            ->create(['title' => 'Original', 'status' => 'draft', 'metadata' => ['foo' => 'bar']]);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/v1/generated-content/'.$content->uuid, [
+                'title' => 'Updated title',
+                'status' => 'approved',
+                'metadata' => ['foo' => 'baz'],
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('data.title', 'Updated title')
+            ->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('data.metadata.foo', 'baz');
+
+        $this->assertDatabaseHas('generated_contents', [
+            'id' => $content->id,
+            'title' => 'Updated title',
+            'status' => 'approved',
+        ]);
+    }
+
+    public function test_approve_sets_the_status_to_approved(): void
+    {
+        $user = User::factory()->create();
+        $content = GeneratedContent::factory()
+            ->for(Project::factory()->for($user))
+            ->create(['status' => 'draft']);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/generated-content/'.$content->uuid.'/approve')
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', 'approved');
+
+        $this->assertDatabaseHas('generated_contents', [
+            'id' => $content->id,
+            'status' => 'approved',
+        ]);
+    }
+
     public function test_favorite_and_unfavorite_toggle_the_flag(): void
     {
         $user = User::factory()->create();

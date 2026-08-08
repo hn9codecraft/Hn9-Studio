@@ -94,6 +94,23 @@ final readonly class ProviderRegistryService implements ProviderRegistryServiceI
         return $provider;
     }
 
+    public function activate(AiProvider $provider, ?User $causer = null): AiProvider
+    {
+        return $this->update($provider, ProviderData::fromArray(array_merge($provider->toArray(), ['status' => Status::Active->value])), $causer);
+    }
+
+    public function deactivate(AiProvider $provider, ?User $causer = null): AiProvider
+    {
+        return $this->update($provider, ProviderData::fromArray(array_merge($provider->toArray(), ['status' => Status::Inactive->value])), $causer);
+    }
+
+    public function markTested(AiProvider $provider, ?User $causer = null): AiProvider
+    {
+        $metadata = array_merge((array) ($provider->metadata ?? []), ['last_tested_at' => now()->toIso8601String()]);
+
+        return $this->update($provider, ProviderData::fromArray(array_merge($provider->toArray(), ['metadata' => $metadata])), $causer);
+    }
+
     public function setSetting(ProviderSettingData $data, ?User $causer = null): ProviderSetting
     {
         $setting = $this->providers->updateOrCreateSetting($data);
