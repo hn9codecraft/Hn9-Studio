@@ -11,6 +11,7 @@ use App\Models\GeneratedContent;
 use App\Models\Project;
 use App\Models\User;
 use App\Repositories\Contracts\GeneratedContentRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -24,6 +25,19 @@ final readonly class ContentService implements ContentServiceInterface
         private GeneratedContentRepositoryInterface $contents,
         private ActivityLoggerInterface $activity,
     ) {}
+
+    public function paginateForUser(User $user, int $perPage = 15, array $filters = []): LengthAwarePaginator
+    {
+        // An administrator lists across every project; everyone else is scoped
+        // to the projects they own. The policy grants viewAny to all, so this
+        // scoping — not the policy — is what keeps a list private.
+        return $this->contents->paginateForOwner(
+            $user->isAdmin() ? null : $user->getKey(),
+            $perPage,
+            $filters,
+            ['project'],
+        );
+    }
 
     public function forProject(Project $project): Collection
     {
@@ -50,6 +64,20 @@ final readonly class ContentService implements ContentServiceInterface
     public function nextVersion(int $projectId, string $type): int
     {
         return $this->contents->latestVersion($projectId, $type) + 1;
+    }
+
+    public function setFavorite(GeneratedContent $content, bool $favorite, ?User $causer = null): GeneratedContent
+    {
+        $updated = $this->contents->update($content, ['is_favorite' => $favorite]);
+
+        $this->activity->log(
+            $favorite ? 'content.favorited' : 'content.unfavorited',
+            $updated,
+            $causer,
+            $favorite ? 'Generated content favorited' : 'Generated content unfavorited',
+        );
+
+        return $updated;
     }
 
     public function delete(GeneratedContent $content, ?User $causer = null): bool

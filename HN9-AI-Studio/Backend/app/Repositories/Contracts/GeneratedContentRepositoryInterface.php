@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Contracts;
 
 use App\Models\GeneratedContent;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -12,6 +13,18 @@ use Illuminate\Database\Eloquent\Collection;
  */
 interface GeneratedContentRepositoryInterface extends RepositoryInterface
 {
+    /**
+     * Paginated content, optionally scoped to the projects one user owns.
+     *
+     * Passing null for the owner returns content across every project, which is
+     * how an administrator lists.
+     *
+     * @param  array<string, mixed>  $filters
+     * @param  list<string>  $with
+     * @return LengthAwarePaginator<int, GeneratedContent>
+     */
+    public function paginateForOwner(?int $userId, int $perPage = 15, array $filters = [], array $with = []): LengthAwarePaginator;
+
     /**
      * All generated content for a project.
      *

@@ -37,4 +37,14 @@ interface ProjectServiceInterface
     public function changeStatus(Project $project, ProjectStatus $status, ?User $causer = null): Project;
 
     public function delete(Project $project, ?User $causer = null): bool;
+
+    /**
+     * Restore a soft-deleted project by its UUID.
+     */
+    public function restore(string $uuid): Project;
+
+    /**
+     * Resolve a project by its UUID including soft-deleted records.
+     */
+    public function getByUuidWithTrashed(string $uuid): Project;
 }

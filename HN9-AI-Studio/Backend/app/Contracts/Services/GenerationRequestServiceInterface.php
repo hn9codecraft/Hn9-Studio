@@ -8,6 +8,7 @@ use App\DTOs\Generation\GenerationRequestData;
 use App\Models\Project;
 use App\Models\ProjectInput;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Accepts and validates requests to generate a deliverable, persisting them as
@@ -22,4 +23,11 @@ interface GenerationRequestServiceInterface
      * Validate business rules and record the generation request as a brief.
      */
     public function submit(Project $project, GenerationRequestData $data, ?User $causer = null): ProjectInput;
+
+    /**
+     * List inputs recorded for the project.
+     *
+     * @return Collection<int, ProjectInput>
+     */
+    public function forProject(Project $project): Collection;
 }
