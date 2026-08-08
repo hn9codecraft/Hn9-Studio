@@ -38,6 +38,7 @@ class GeneratedContent extends Model
         'body',
         'structured',
         'status',
+        'is_favorite',
         'version',
         'metadata',
     ];
@@ -48,6 +49,7 @@ class GeneratedContent extends Model
             'structured' => 'array',
             'metadata' => 'array',
             'version' => 'integer',
+            'is_favorite' => 'boolean',
         ];
     }
 

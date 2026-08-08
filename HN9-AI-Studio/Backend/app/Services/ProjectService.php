@@ -92,6 +92,22 @@ final readonly class ProjectService implements ProjectServiceInterface
         return $deleted;
     }
 
+    public function restore(string $uuid): Project
+    {
+        $project = Project::withTrashed()->where('uuid', $uuid)->firstOrFail();
+
+        $project->restore();
+
+        $this->activity->log('project.restored', $project, null, 'Project restored');
+
+        return $project->refresh();
+    }
+
+    public function getByUuidWithTrashed(string $uuid): Project
+    {
+        return Project::withTrashed()->where('uuid', $uuid)->firstOrFail();
+    }
+
     /**
      * Produce a unique slug for the user, ignoring the project being updated.
      */

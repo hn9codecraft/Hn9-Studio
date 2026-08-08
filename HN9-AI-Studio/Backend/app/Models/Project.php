@@ -23,6 +23,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $name
  * @property string $slug
  * @property string $status
+ * @property array<string, mixed>|null $settings
+ * @property array<string, mixed>|null $metadata
  */
 class Project extends Model
 {

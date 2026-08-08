@@ -14,6 +14,7 @@ use App\Models\ProjectInput;
 use App\Models\User;
 use App\Repositories\Contracts\ProjectInputRepositoryInterface;
 use App\Support\DomainHelper;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Accepts requests to generate a deliverable and records them as project-input
@@ -43,6 +44,14 @@ final readonly class GenerationRequestService implements GenerationRequestServic
         $this->activity->log('generation.requested', $input, $causer, 'Generation request recorded');
 
         return $input;
+    }
+
+    /**
+     * @return Collection<int, ProjectInput>
+     */
+    public function forProject(Project $project): Collection
+    {
+        return $this->inputs->forProject($project->getKey());
     }
 
     /**

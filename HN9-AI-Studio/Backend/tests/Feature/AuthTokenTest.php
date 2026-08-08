@@ -15,7 +15,7 @@ class AuthTokenTest extends TestCase
 
     public function test_authenticated_user_route_requires_a_token(): void
     {
-        $this->getJson('/api/v1/user')->assertUnauthorized();
+        $this->getJson('/api/v1/auth/user')->assertUnauthorized();
     }
 
     public function test_user_can_be_resolved_with_a_sanctum_token(): void
@@ -24,9 +24,9 @@ class AuthTokenTest extends TestCase
 
         Sanctum::actingAs($user);
 
-        $this->getJson('/api/v1/user')
+        $this->getJson('/api/v1/auth/user')
             ->assertOk()
-            ->assertJson(['id' => $user->id, 'email' => $user->email]);
+            ->assertJson(['data' => ['email' => $user->email]]);
     }
 
     public function test_user_can_issue_a_personal_access_token(): void
