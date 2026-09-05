@@ -68,6 +68,12 @@ class Project extends Model
         return $this->hasMany(WorkflowRun::class);
     }
 
+    /** @return HasMany<Script, $this> */
+    public function scripts(): HasMany
+    {
+        return $this->hasMany(Script::class);
+    }
+
     /** @return HasMany<GeneratedContent, $this> */
     public function generatedContents(): HasMany
     {

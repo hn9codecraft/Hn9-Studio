@@ -219,9 +219,26 @@ body {
   color: #146c43;
 }
 
-.status-archived {
-  background: #eceff3;
-  color: #5c6b7a;
+.status-ready {
+  background: #e7f6ee;
+  color: #146c43;
+}
+
+.script-body-editor {
+  min-height: 22rem;
+  font-family: "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  background: #0f2438;
+  color: #f4f7fb;
+  border-color: #1e5a8c;
+}
+
+.script-body-editor:focus {
+  background: #0f2438;
+  color: #fff;
+  border-color: var(--hn9-accent);
+  box-shadow: 0 0 0 0.2rem rgba(240, 168, 11, 0.18);
 }
 
 .workspace-hero {

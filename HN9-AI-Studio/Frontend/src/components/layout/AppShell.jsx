@@ -16,6 +16,10 @@ function pageTitle(pathname) {
     return TITLES[pathname];
   }
 
+  if (pathname.includes('/scripts')) {
+    return 'Script Studio';
+  }
+
   if (pathname.startsWith('/projects/')) {
     return 'Project Workspace';
   }

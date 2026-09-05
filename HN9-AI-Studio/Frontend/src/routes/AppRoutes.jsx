@@ -24,6 +24,8 @@ export default function AppRoutes() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<CreateProjectPage />} />
           <Route path="/projects/:projectId" element={<ProjectWorkspacePage />} />
+          <Route path="/projects/:projectId/scripts/new" element={<ProjectWorkspacePage />} />
+          <Route path="/projects/:projectId/scripts/:scriptId" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/:section" element={<ProjectWorkspacePage />} />
           <Route path="/generations" element={<GenerationsPage />} />
           <Route path="/providers" element={<ProvidersPage />} />
