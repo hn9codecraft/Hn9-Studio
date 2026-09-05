@@ -16,6 +16,8 @@ use App\Contracts\Services\GenerationRequestServiceInterface;
 use App\Contracts\Services\HealthServiceInterface;
 use App\Contracts\Services\HistoryServiceInterface;
 use App\Contracts\Services\ImageServiceInterface;
+use App\Contracts\Services\ProjectActivityServiceInterface;
+use App\Contracts\Services\ProjectAssetServiceInterface;
 use App\Contracts\Services\ProjectServiceInterface;
 use App\Contracts\Services\VideoServiceInterface;
 use App\Contracts\Services\ScriptServiceInterface;
@@ -39,6 +41,7 @@ use App\Repositories\Contracts\GeneratedContentRepositoryInterface;
 use App\Repositories\Contracts\MediaFileRepositoryInterface;
 use App\Repositories\Contracts\ProjectInputRepositoryInterface;
 use App\Repositories\Contracts\ImageRepositoryInterface;
+use App\Repositories\Contracts\ProjectAssetRepositoryInterface;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
 use App\Repositories\Contracts\VideoRepositoryInterface;
 use App\Repositories\Contracts\ScriptRepositoryInterface;
@@ -51,6 +54,7 @@ use App\Repositories\GeneratedContentRepository;
 use App\Repositories\MediaFileRepository;
 use App\Repositories\ProjectInputRepository;
 use App\Repositories\ImageRepository;
+use App\Repositories\ProjectAssetRepository;
 use App\Repositories\ProjectRepository;
 use App\Repositories\VideoRepository;
 use App\Repositories\ScriptRepository;
@@ -71,6 +75,8 @@ use App\Services\HistoryService;
 use App\Services\ImageService;
 use App\Services\Logging\ActivityLogger;
 use App\Services\VideoService;
+use App\Services\ProjectActivityService;
+use App\Services\ProjectAssetService;
 use App\Services\ProjectService;
 use App\Services\ScriptService;
 use App\Services\PromptRuntime\BrandContextService;
@@ -103,6 +109,7 @@ class DomainServiceProvider extends ServiceProvider
         ScriptRepositoryInterface::class => ScriptRepository::class,
         ImageRepositoryInterface::class => ImageRepository::class,
         VideoRepositoryInterface::class => VideoRepository::class,
+        ProjectAssetRepositoryInterface::class => ProjectAssetRepository::class,
         ProjectInputRepositoryInterface::class => ProjectInputRepository::class,
         AssetRepositoryInterface::class => AssetRepository::class,
         ProviderRepositoryInterface::class => ProviderRepository::class,
@@ -131,6 +138,8 @@ class DomainServiceProvider extends ServiceProvider
         ScriptServiceInterface::class => ScriptService::class,
         ImageServiceInterface::class => ImageService::class,
         VideoServiceInterface::class => VideoService::class,
+        ProjectAssetServiceInterface::class => ProjectAssetService::class,
+        ProjectActivityServiceInterface::class => ProjectActivityService::class,
         AssetServiceInterface::class => AssetService::class,
         ContentServiceInterface::class => ContentService::class,
         ContentRegenerationServiceInterface::class => ContentRegenerationService::class,

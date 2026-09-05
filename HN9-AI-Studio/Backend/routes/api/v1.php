@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\V1\GeneratedContentController;
 use App\Http\Controllers\Api\V1\GenerationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ImageController;
+use App\Http\Controllers\Api\V1\ProjectActivityController;
+use App\Http\Controllers\Api\V1\ProjectAssetController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\VideoController;
 use App\Http\Controllers\Api\V1\ScriptController;
@@ -86,6 +88,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'show'])->name('projects.videos.show');
     Route::patch('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'update'])->name('projects.videos.update');
     Route::delete('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'destroy'])->name('projects.videos.destroy');
+
+    // Project studio assets (catalog — not pipeline generated_assets)
+    Route::get('projects/{uuid}/assets', [ProjectAssetController::class, 'index'])->name('projects.assets.index');
+    Route::post('projects/{uuid}/assets', [ProjectAssetController::class, 'store'])->name('projects.assets.store');
+    Route::get('projects/{uuid}/assets/{assetUuid}', [ProjectAssetController::class, 'show'])->name('projects.assets.show');
+    Route::patch('projects/{uuid}/assets/{assetUuid}', [ProjectAssetController::class, 'update'])->name('projects.assets.update');
+    Route::delete('projects/{uuid}/assets/{assetUuid}', [ProjectAssetController::class, 'destroy'])->name('projects.assets.destroy');
+
+    // Project studio activity (read-only — written by real studio actions)
+    Route::get('projects/{uuid}/activities', [ProjectActivityController::class, 'index'])->name('projects.activities.index');
 
     // Project inputs
     Route::get('projects/{uuid}/inputs', [ProjectInputController::class, 'index'])->name('projects.inputs.index');

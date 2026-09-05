@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Repositories\Contracts;
 
 use App\Models\ActivityLog;
+use App\Models\Project;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -26,4 +28,12 @@ interface ActivityLogRepositoryInterface extends RepositoryInterface
      * @return Collection<int, ActivityLog>
      */
     public function forUser(int $userId, int $limit = 50): Collection;
+
+    /**
+     * Studio activity for one project (project + nested scripts/images/videos/assets).
+     *
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, ActivityLog>
+     */
+    public function paginateForProject(Project $project, int $perPage = 15, array $filters = []): LengthAwarePaginator;
 }

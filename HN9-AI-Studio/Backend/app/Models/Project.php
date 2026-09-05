@@ -86,6 +86,12 @@ class Project extends Model
         return $this->hasMany(Video::class);
     }
 
+    /** @return HasMany<ProjectAsset, $this> */
+    public function assets(): HasMany
+    {
+        return $this->hasMany(ProjectAsset::class);
+    }
+
     /** @return HasMany<GeneratedContent, $this> */
     public function generatedContents(): HasMany
     {

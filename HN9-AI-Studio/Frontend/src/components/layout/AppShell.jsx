@@ -28,6 +28,14 @@ function pageTitle(pathname) {
     return 'Video Studio';
   }
 
+  if (pathname.includes('/assets')) {
+    return 'Asset Studio';
+  }
+
+  if (pathname.includes('/activity')) {
+    return 'Activity Studio';
+  }
+
   if (pathname.startsWith('/projects/')) {
     return 'Project Workspace';
   }
