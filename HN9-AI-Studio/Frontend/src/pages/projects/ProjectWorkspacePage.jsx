@@ -4,6 +4,8 @@ import ComingNextPanel from '../../components/projects/ComingNextPanel';
 import DeleteProjectModal from '../../components/projects/DeleteProjectModal';
 import ProjectForm from '../../components/projects/ProjectForm';
 import WorkspaceTabs from '../../components/projects/WorkspaceTabs';
+import AssetStudio from '../../components/assets/AssetStudio';
+import ActivityStudio from '../../components/activity/ActivityStudio';
 import ImageStudio from '../../components/images/ImageStudio';
 import ScriptStudio from '../../components/scripts/ScriptStudio';
 import VideoStudio from '../../components/videos/VideoStudio';
@@ -30,16 +32,24 @@ export default function ProjectWorkspacePage() {
   const imageMatch = useMatch('/projects/:projectId/images/:imageId');
   const newVideoMatch = useMatch('/projects/:projectId/videos/new');
   const videoMatch = useMatch('/projects/:projectId/videos/:videoId');
+  const newAssetMatch = useMatch('/projects/:projectId/assets/new');
+  const assetMatch = useMatch('/projects/:projectId/assets/:assetId');
   const inScriptStudio = Boolean(newScriptMatch || scriptMatch || section === 'scripts');
   const inImageStudio = Boolean(newImageMatch || imageMatch || section === 'images');
   const inVideoStudio = Boolean(newVideoMatch || videoMatch || section === 'videos');
+  const inAssetStudio = Boolean(newAssetMatch || assetMatch || section === 'assets');
+  const inActivityStudio = section === 'activity';
   const activeSection = inScriptStudio
     ? 'scripts'
     : inImageStudio
       ? 'images'
       : inVideoStudio
         ? 'videos'
-        : section || 'overview';
+        : inAssetStudio
+          ? 'assets'
+          : inActivityStudio
+            ? 'activity'
+            : section || 'overview';
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -88,7 +98,7 @@ export default function ProjectWorkspacePage() {
   const metadataEntries = useMemo(() => readableEntries(project?.metadata), [project]);
   const settingsEntries = useMemo(() => readableEntries(project?.settings), [project]);
 
-  if (section && !SECTION_TITLES[section] && !inScriptStudio && !inImageStudio && !inVideoStudio) {
+  if (section && !SECTION_TITLES[section] && !inScriptStudio && !inImageStudio && !inVideoStudio && !inAssetStudio) {
     return <Navigate to={`/projects/${projectId}`} replace />;
   }
 
@@ -286,6 +296,14 @@ export default function ProjectWorkspacePage() {
             creating={Boolean(newVideoMatch)}
             videoId={newVideoMatch ? null : videoMatch?.params.videoId || null}
           />
+        ) : activeSection === 'assets' ? (
+          <AssetStudio
+            project={project}
+            creating={Boolean(newAssetMatch)}
+            assetId={newAssetMatch ? null : assetMatch?.params.assetId || null}
+          />
+        ) : activeSection === 'activity' ? (
+          <ActivityStudio project={project} />
         ) : (
           <ComingNextPanel title={SECTION_TITLES[activeSection]} />
         )}
