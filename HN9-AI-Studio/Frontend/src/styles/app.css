@@ -224,6 +224,34 @@ body {
   color: #146c43;
 }
 
+.status-pending {
+  background: rgba(240, 168, 11, 0.18);
+  color: #8a5d00;
+}
+
+.status-processing {
+  background: #e8eef8;
+  color: #1e5a8c;
+}
+
+.status-failed {
+  background: #fdecea;
+  color: #b02a37;
+}
+
+.status-archived {
+  background: #eef3f8;
+  color: #5c6b7a;
+}
+
+.image-prompt-editor {
+  min-height: 12rem;
+}
+
+.video-prompt-editor {
+  min-height: 12rem;
+}
+
 .script-body-editor {
   min-height: 22rem;
   font-family: "Cascadia Code", "Segoe UI Mono", Consolas, monospace;

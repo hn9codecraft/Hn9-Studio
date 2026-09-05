@@ -13,7 +13,9 @@ use App\Http\Controllers\Api\V1\GeneratedAssetController;
 use App\Http\Controllers\Api\V1\GeneratedContentController;
 use App\Http\Controllers\Api\V1\GenerationController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\ImageController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\VideoController;
 use App\Http\Controllers\Api\V1\ScriptController;
 use App\Http\Controllers\Api\V1\ProjectInputController;
 use App\Http\Controllers\Api\V1\ProjectPromptController;
@@ -70,6 +72,20 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'show'])->name('projects.scripts.show');
     Route::patch('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'update'])->name('projects.scripts.update');
     Route::delete('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'destroy'])->name('projects.scripts.destroy');
+
+    // Project image requests (studio drafts — not pipeline generated_assets)
+    Route::get('projects/{uuid}/images', [ImageController::class, 'index'])->name('projects.images.index');
+    Route::post('projects/{uuid}/images', [ImageController::class, 'store'])->name('projects.images.store');
+    Route::get('projects/{uuid}/images/{imageUuid}', [ImageController::class, 'show'])->name('projects.images.show');
+    Route::patch('projects/{uuid}/images/{imageUuid}', [ImageController::class, 'update'])->name('projects.images.update');
+    Route::delete('projects/{uuid}/images/{imageUuid}', [ImageController::class, 'destroy'])->name('projects.images.destroy');
+
+    // Project video requests (studio drafts — not pipeline generated_assets)
+    Route::get('projects/{uuid}/videos', [VideoController::class, 'index'])->name('projects.videos.index');
+    Route::post('projects/{uuid}/videos', [VideoController::class, 'store'])->name('projects.videos.store');
+    Route::get('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'show'])->name('projects.videos.show');
+    Route::patch('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'update'])->name('projects.videos.update');
+    Route::delete('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'destroy'])->name('projects.videos.destroy');
 
     // Project inputs
     Route::get('projects/{uuid}/inputs', [ProjectInputController::class, 'index'])->name('projects.inputs.index');
