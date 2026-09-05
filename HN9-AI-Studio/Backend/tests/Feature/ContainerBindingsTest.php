@@ -13,7 +13,9 @@ use App\Contracts\Services\ContentServiceInterface;
 use App\Contracts\Services\GenerationRequestServiceInterface;
 use App\Contracts\Services\HealthServiceInterface;
 use App\Contracts\Services\HistoryServiceInterface;
+use App\Contracts\Services\ImageServiceInterface;
 use App\Contracts\Services\ProjectServiceInterface;
+use App\Contracts\Services\VideoServiceInterface;
 use App\Contracts\Services\ScriptServiceInterface;
 use App\Contracts\Services\PromptServiceInterface;
 use App\Contracts\Services\ProviderRegistryServiceInterface;
@@ -25,7 +27,9 @@ use App\Repositories\Contracts\AssetRepositoryInterface;
 use App\Repositories\Contracts\GeneratedContentRepositoryInterface;
 use App\Repositories\Contracts\MediaFileRepositoryInterface;
 use App\Repositories\Contracts\ProjectInputRepositoryInterface;
+use App\Repositories\Contracts\ImageRepositoryInterface;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
+use App\Repositories\Contracts\VideoRepositoryInterface;
 use App\Repositories\Contracts\ScriptRepositoryInterface;
 use App\Repositories\Contracts\PromptExecutionRepositoryInterface;
 use App\Repositories\Contracts\ProviderRepositoryInterface;
@@ -42,6 +46,8 @@ class ContainerBindingsTest extends TestCase
         return [
             ProjectRepositoryInterface::class,
             ScriptRepositoryInterface::class,
+            ImageRepositoryInterface::class,
+            VideoRepositoryInterface::class,
             ProjectInputRepositoryInterface::class,
             AssetRepositoryInterface::class,
             ProviderRepositoryInterface::class,
@@ -56,6 +62,8 @@ class ContainerBindingsTest extends TestCase
             ExecutionTrackerInterface::class,
             ProjectServiceInterface::class,
             ScriptServiceInterface::class,
+            ImageServiceInterface::class,
+            VideoServiceInterface::class,
             AssetServiceInterface::class,
             ContentServiceInterface::class,
             GenerationRequestServiceInterface::class,

@@ -74,6 +74,18 @@ class Project extends Model
         return $this->hasMany(Script::class);
     }
 
+    /** @return HasMany<Image, $this> */
+    public function images(): HasMany
+    {
+        return $this->hasMany(Image::class);
+    }
+
+    /** @return HasMany<Video, $this> */
+    public function videos(): HasMany
+    {
+        return $this->hasMany(Video::class);
+    }
+
     /** @return HasMany<GeneratedContent, $this> */
     public function generatedContents(): HasMany
     {

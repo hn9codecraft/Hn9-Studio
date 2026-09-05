@@ -20,6 +20,14 @@ function pageTitle(pathname) {
     return 'Script Studio';
   }
 
+  if (pathname.includes('/images')) {
+    return 'Image Studio';
+  }
+
+  if (pathname.includes('/videos')) {
+    return 'Video Studio';
+  }
+
   if (pathname.startsWith('/projects/')) {
     return 'Project Workspace';
   }

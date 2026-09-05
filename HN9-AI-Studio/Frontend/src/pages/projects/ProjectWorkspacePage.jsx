@@ -4,7 +4,9 @@ import ComingNextPanel from '../../components/projects/ComingNextPanel';
 import DeleteProjectModal from '../../components/projects/DeleteProjectModal';
 import ProjectForm from '../../components/projects/ProjectForm';
 import WorkspaceTabs from '../../components/projects/WorkspaceTabs';
+import ImageStudio from '../../components/images/ImageStudio';
 import ScriptStudio from '../../components/scripts/ScriptStudio';
+import VideoStudio from '../../components/videos/VideoStudio';
 import AlertMessage from '../../components/ui/AlertMessage';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { ApiError } from '../../services/apiClient';
@@ -24,8 +26,20 @@ export default function ProjectWorkspacePage() {
   const navigate = useNavigate();
   const newScriptMatch = useMatch('/projects/:projectId/scripts/new');
   const scriptMatch = useMatch('/projects/:projectId/scripts/:scriptId');
+  const newImageMatch = useMatch('/projects/:projectId/images/new');
+  const imageMatch = useMatch('/projects/:projectId/images/:imageId');
+  const newVideoMatch = useMatch('/projects/:projectId/videos/new');
+  const videoMatch = useMatch('/projects/:projectId/videos/:videoId');
   const inScriptStudio = Boolean(newScriptMatch || scriptMatch || section === 'scripts');
-  const activeSection = inScriptStudio ? 'scripts' : section || 'overview';
+  const inImageStudio = Boolean(newImageMatch || imageMatch || section === 'images');
+  const inVideoStudio = Boolean(newVideoMatch || videoMatch || section === 'videos');
+  const activeSection = inScriptStudio
+    ? 'scripts'
+    : inImageStudio
+      ? 'images'
+      : inVideoStudio
+        ? 'videos'
+        : section || 'overview';
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -74,7 +88,7 @@ export default function ProjectWorkspacePage() {
   const metadataEntries = useMemo(() => readableEntries(project?.metadata), [project]);
   const settingsEntries = useMemo(() => readableEntries(project?.settings), [project]);
 
-  if (section && !SECTION_TITLES[section] && !inScriptStudio) {
+  if (section && !SECTION_TITLES[section] && !inScriptStudio && !inImageStudio && !inVideoStudio) {
     return <Navigate to={`/projects/${projectId}`} replace />;
   }
 
@@ -259,6 +273,18 @@ export default function ProjectWorkspacePage() {
             project={project}
             creating={Boolean(newScriptMatch)}
             scriptId={newScriptMatch ? null : scriptMatch?.params.scriptId || null}
+          />
+        ) : activeSection === 'images' ? (
+          <ImageStudio
+            project={project}
+            creating={Boolean(newImageMatch)}
+            imageId={newImageMatch ? null : imageMatch?.params.imageId || null}
+          />
+        ) : activeSection === 'videos' ? (
+          <VideoStudio
+            project={project}
+            creating={Boolean(newVideoMatch)}
+            videoId={newVideoMatch ? null : videoMatch?.params.videoId || null}
           />
         ) : (
           <ComingNextPanel title={SECTION_TITLES[activeSection]} />
