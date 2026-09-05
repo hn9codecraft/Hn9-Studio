@@ -14,6 +14,12 @@ final class ProjectApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_unauthenticated_requests_are_rejected(): void
+    {
+        $this->getJson('/api/v1/projects')->assertUnauthorized();
+        $this->postJson('/api/v1/projects', ['name' => 'Unauthenticated'])->assertUnauthorized();
+    }
+
     public function test_create_project(): void
     {
         $user = User::factory()->create(['permissions' => ['project.create']]);
@@ -114,5 +120,44 @@ final class ProjectApiTest extends TestCase
             ->getJson('/api/v1/projects/'.$project->uuid.'/inputs')
             ->assertStatus(200)
             ->assertJsonStructure(['data']);
+    }
+
+    public function test_member_without_create_permission_cannot_create_a_project(): void
+    {
+        $user = User::factory()->create(['permissions' => []]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/projects', ['name' => 'Forbidden'])
+            ->assertForbidden();
+    }
+
+    public function test_user_cannot_view_update_or_delete_another_users_project(): void
+    {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create(['permissions' => ['project.create']]);
+        $project = Project::factory()->for($owner)->create(['name' => 'Owner project']);
+
+        $this->actingAs($intruder, 'sanctum')
+            ->getJson('/api/v1/projects/'.$project->uuid)
+            ->assertForbidden();
+
+        $this->actingAs($intruder, 'sanctum')
+            ->patchJson('/api/v1/projects/'.$project->uuid, ['name' => 'Hijacked'])
+            ->assertForbidden();
+
+        $this->actingAs($intruder, 'sanctum')
+            ->deleteJson('/api/v1/projects/'.$project->uuid)
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'name' => 'Owner project',
+            'deleted_at' => null,
+        ]);
+
+        $this->actingAs($intruder, 'sanctum')
+            ->getJson('/api/v1/projects')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 }

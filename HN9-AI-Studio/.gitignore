@@ -12,6 +12,8 @@ desktop.ini
 # ---- Environment & secrets ----
 .env
 .env.*
+!.env.example
+!**/.env.example
 *.local
 secrets.json
 credentials.json

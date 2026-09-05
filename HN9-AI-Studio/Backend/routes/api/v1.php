@@ -35,13 +35,13 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Public infrastructure endpoints.
+// Public infrastructure and authentication endpoints.
 Route::get('health', HealthController::class)->name('health');
+Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
 
 // Authenticated endpoints (Sanctum bearer token).
 Route::middleware('auth:sanctum')->group(function (): void {
     // Auth module
-    Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
     Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
     Route::get('auth/user', [AuthController::class, 'user'])->name('auth.user');
     Route::patch('auth/profile', [AuthController::class, 'profile'])->name('auth.profile');
