@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\GeneratedContentController;
 use App\Http\Controllers\Api\V1\GenerationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ScriptController;
 use App\Http\Controllers\Api\V1\ProjectInputController;
 use App\Http\Controllers\Api\V1\ProjectPromptController;
 use App\Http\Controllers\Api\V1\ProviderController;
@@ -62,6 +63,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('projects/{uuid}', [ProjectController::class, 'destroy'])->name('projects.destroy');
     Route::post('projects/{uuid}/archive', [ProjectController::class, 'archive'])->name('projects.archive');
     Route::post('projects/{uuid}/restore', [ProjectController::class, 'restore'])->name('projects.restore');
+
+    // Project scripts (manual studio drafts — not pipeline generated_contents)
+    Route::get('projects/{uuid}/scripts', [ScriptController::class, 'index'])->name('projects.scripts.index');
+    Route::post('projects/{uuid}/scripts', [ScriptController::class, 'store'])->name('projects.scripts.store');
+    Route::get('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'show'])->name('projects.scripts.show');
+    Route::patch('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'update'])->name('projects.scripts.update');
+    Route::delete('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'destroy'])->name('projects.scripts.destroy');
 
     // Project inputs
     Route::get('projects/{uuid}/inputs', [ProjectInputController::class, 'index'])->name('projects.inputs.index');

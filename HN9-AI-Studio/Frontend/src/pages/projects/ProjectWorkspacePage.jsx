@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useMatch, useNavigate, useParams } from 'react-router-dom';
 import ComingNextPanel from '../../components/projects/ComingNextPanel';
 import DeleteProjectModal from '../../components/projects/DeleteProjectModal';
 import ProjectForm from '../../components/projects/ProjectForm';
 import WorkspaceTabs from '../../components/projects/WorkspaceTabs';
+import ScriptStudio from '../../components/scripts/ScriptStudio';
 import AlertMessage from '../../components/ui/AlertMessage';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { ApiError } from '../../services/apiClient';
@@ -21,6 +22,10 @@ const SECTION_TITLES = {
 export default function ProjectWorkspacePage() {
   const { projectId, section } = useParams();
   const navigate = useNavigate();
+  const newScriptMatch = useMatch('/projects/:projectId/scripts/new');
+  const scriptMatch = useMatch('/projects/:projectId/scripts/:scriptId');
+  const inScriptStudio = Boolean(newScriptMatch || scriptMatch || section === 'scripts');
+  const activeSection = inScriptStudio ? 'scripts' : section || 'overview';
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,8 +37,6 @@ export default function ProjectWorkspacePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
-
-  const activeSection = section || 'overview';
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +74,7 @@ export default function ProjectWorkspacePage() {
   const metadataEntries = useMemo(() => readableEntries(project?.metadata), [project]);
   const settingsEntries = useMemo(() => readableEntries(project?.settings), [project]);
 
-  if (section && !SECTION_TITLES[section]) {
+  if (section && !SECTION_TITLES[section] && !inScriptStudio) {
     return <Navigate to={`/projects/${projectId}`} replace />;
   }
 
@@ -251,6 +254,12 @@ export default function ProjectWorkspacePage() {
               </div>
             </div>
           </div>
+        ) : activeSection === 'scripts' ? (
+          <ScriptStudio
+            project={project}
+            creating={Boolean(newScriptMatch)}
+            scriptId={newScriptMatch ? null : scriptMatch?.params.scriptId || null}
+          />
         ) : (
           <ComingNextPanel title={SECTION_TITLES[activeSection]} />
         )}

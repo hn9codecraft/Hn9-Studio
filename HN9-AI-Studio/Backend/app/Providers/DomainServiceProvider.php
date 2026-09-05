@@ -16,6 +16,7 @@ use App\Contracts\Services\GenerationRequestServiceInterface;
 use App\Contracts\Services\HealthServiceInterface;
 use App\Contracts\Services\HistoryServiceInterface;
 use App\Contracts\Services\ProjectServiceInterface;
+use App\Contracts\Services\ScriptServiceInterface;
 use App\Contracts\Services\PromptRuntime\BrandContextServiceInterface;
 use App\Contracts\Services\PromptRuntime\PromptContextBuilderInterface;
 use App\Contracts\Services\PromptRuntime\PromptRendererInterface;
@@ -36,6 +37,7 @@ use App\Repositories\Contracts\GeneratedContentRepositoryInterface;
 use App\Repositories\Contracts\MediaFileRepositoryInterface;
 use App\Repositories\Contracts\ProjectInputRepositoryInterface;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
+use App\Repositories\Contracts\ScriptRepositoryInterface;
 use App\Repositories\Contracts\PromptExecutionRepositoryInterface;
 use App\Repositories\Contracts\ProviderRepositoryInterface;
 use App\Repositories\Contracts\ProviderSettingRepositoryInterface;
@@ -45,6 +47,7 @@ use App\Repositories\GeneratedContentRepository;
 use App\Repositories\MediaFileRepository;
 use App\Repositories\ProjectInputRepository;
 use App\Repositories\ProjectRepository;
+use App\Repositories\ScriptRepository;
 use App\Repositories\PromptExecutionRepository;
 use App\Repositories\ProviderRepository;
 use App\Repositories\ProviderSettingRepository;
@@ -61,6 +64,7 @@ use App\Services\HealthService;
 use App\Services\HistoryService;
 use App\Services\Logging\ActivityLogger;
 use App\Services\ProjectService;
+use App\Services\ScriptService;
 use App\Services\PromptRuntime\BrandContextService;
 use App\Services\PromptRuntime\PromptContextBuilder;
 use App\Services\PromptRuntime\PromptRenderer;
@@ -88,6 +92,7 @@ class DomainServiceProvider extends ServiceProvider
      */
     private const REPOSITORIES = [
         ProjectRepositoryInterface::class => ProjectRepository::class,
+        ScriptRepositoryInterface::class => ScriptRepository::class,
         ProjectInputRepositoryInterface::class => ProjectInputRepository::class,
         AssetRepositoryInterface::class => AssetRepository::class,
         ProviderRepositoryInterface::class => ProviderRepository::class,
@@ -113,6 +118,7 @@ class DomainServiceProvider extends ServiceProvider
 
         // Domain services
         ProjectServiceInterface::class => ProjectService::class,
+        ScriptServiceInterface::class => ScriptService::class,
         AssetServiceInterface::class => AssetService::class,
         ContentServiceInterface::class => ContentService::class,
         ContentRegenerationServiceInterface::class => ContentRegenerationService::class,
