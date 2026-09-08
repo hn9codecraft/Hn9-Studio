@@ -38,6 +38,8 @@ class PromptExecution extends Model
         'completion_tokens',
         'total_tokens',
         'cost',
+        'currency',
+        'cost_source',
         'latency_ms',
         'error',
     ];

@@ -87,7 +87,7 @@ final class OpenAIProvider extends AbstractProvider
         $output = (int) ($request->parameters['max_tokens'] ?? 0);
         $usage = $this->usageCalculator->fromUsage(['input_tokens' => $input, 'output_tokens' => $output], $model);
 
-        return $usage->cost;
+        return $usage->routingEstimate();
     }
 
     public function countTokens(string $text, ?string $model = null): TokenResponse

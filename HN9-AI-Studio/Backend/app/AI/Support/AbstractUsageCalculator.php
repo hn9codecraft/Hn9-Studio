@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\AI\Support;
 
 use App\AI\Responses\UsageResponse;
+use App\Enums\CostSource;
 
 /**
  * Shared token/cost arithmetic for provider adapters. Subclasses translate their
  * vendor's usage payload into prompt/completion counts; the pricing model —
  * per-million-token rates supplied by configuration — is applied here once.
  *
- * No rate is hard-coded: an unpriced model simply yields a zero cost.
+ * Unpriced models yield a null cost, not invented spend.
  */
 abstract readonly class AbstractUsageCalculator
 {
@@ -28,7 +29,7 @@ abstract readonly class AbstractUsageCalculator
     public function __construct(protected array $pricing) {}
 
     /**
-     * Build a usage response, pricing the tokens with the configured rates.
+     * Build a usage response, pricing the tokens only when a rate exists.
      */
     protected function priced(
         string $model,
@@ -38,8 +39,16 @@ abstract readonly class AbstractUsageCalculator
         ?int $executionTimeMs = null,
     ): UsageResponse {
         $rate = $this->pricing[$model] ?? [];
-        $cost = ($promptTokens * (float) ($rate['input'] ?? 0) + $completionTokens * (float) ($rate['output'] ?? 0))
-            / self::TOKENS_PER_PRICE_UNIT;
+        $hasPricing = array_key_exists('input', $rate) || array_key_exists('output', $rate);
+
+        $cost = null;
+        $costSource = null;
+
+        if ($hasPricing) {
+            $cost = ($promptTokens * (float) ($rate['input'] ?? 0) + $completionTokens * (float) ($rate['output'] ?? 0))
+                / self::TOKENS_PER_PRICE_UNIT;
+            $costSource = CostSource::ConfiguredPricing->value;
+        }
 
         return new UsageResponse(
             promptTokens: $promptTokens,
@@ -48,6 +57,7 @@ abstract readonly class AbstractUsageCalculator
             cost: $cost,
             currency: self::CURRENCY,
             executionTimeMs: $executionTimeMs,
+            costSource: $costSource,
         );
     }
 }

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\AI\Contracts\ProviderDispatcherInterface;
+use App\AI\Contracts\ProviderResponseInterface;
 use App\AI\Execution\DispatchOptions;
 use App\AI\Requests\TextRequest;
 use App\AI\Responses\TextResponse;
+use App\AI\Responses\UsageResponse;
 use App\Contracts\Services\AgentExecutionServiceInterface;
 use App\Contracts\Services\AssetServiceInterface;
 use App\Contracts\Services\ContentServiceInterface;
@@ -123,6 +125,18 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
             ? $dispatchResult->response->text
             : (string) Arr::get($dispatchResult->response->toArray(), 'text', '');
 
+        $model = $dispatchResult->response instanceof TextResponse
+            ? $dispatchResult->response->model
+            : (isset($dispatchResult->response->toArray()['model']) ? (string) $dispatchResult->response->toArray()['model'] : null);
+
+        $promptExecution = $this->prompts->recordProviderUsage(
+            $promptExecution,
+            $this->usageFromResponse($dispatchResult->response),
+            $model,
+            $dispatchResult->providerKey,
+            $dispatchResult->durationMs > 0 ? $dispatchResult->durationMs : null,
+        );
+
         $content = $this->content->create(new ContentData(
             project_id: $project->getKey(),
             type: $data->deliverable_type,
@@ -237,6 +251,11 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
         }
 
         return is_scalar($value) ? (string) $value : (string) json_encode($value);
+    }
+
+    private function usageFromResponse(ProviderResponseInterface $response): ?UsageResponse
+    {
+        return property_exists($response, 'usage') ? $response->usage : null;
     }
 
     private function createWorkflowRun(Project $project, GenerationRequestData $data, mixed $causer = null): ?WorkflowRun

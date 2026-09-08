@@ -69,7 +69,7 @@ final class ClaudeProvider extends AbstractProvider
     {
         $model = $this->models->resolve($request->model);
 
-        return $this->usage->fromUsage(['input_tokens' => $this->tokens->count((string) ($request->parameters['prompt'] ?? ''), $model)->count, 'output_tokens' => (int) ($request->parameters['max_tokens'] ?? 0)], $model)->cost;
+        return $this->usage->fromUsage(['input_tokens' => $this->tokens->count((string) ($request->parameters['prompt'] ?? ''), $model)->count, 'output_tokens' => (int) ($request->parameters['max_tokens'] ?? 0)], $model)->routingEstimate();
     }
 
     public function countTokens(string $text, ?string $model = null): TokenResponse

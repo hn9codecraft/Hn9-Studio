@@ -251,8 +251,9 @@ class ElevenLabsProviderTest extends TestCase
         $this->assertSame(13, $response->raw['characters']);
         // The fast model bills half a credit per character, rounded up.
         $this->assertSame(7, $response->raw['credits']);
-        // ...and carries no configured rate, so the cost stays zero rather than invented.
-        $this->assertSame(0.0, $response->usage?->cost);
+        // ...and carries no configured rate, so the cost stays unknown rather than invented.
+        $this->assertNull($response->usage?->cost);
+        $this->assertNull($response->usage?->costSource);
     }
 
     public function test_the_response_records_the_voice_model_and_request_id_used(): void

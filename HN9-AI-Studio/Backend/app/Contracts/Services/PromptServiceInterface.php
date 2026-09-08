@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Contracts\Services;
 
+use App\AI\Responses\UsageResponse;
 use App\DTOs\Prompt\PromptExecutionData;
 use App\Models\AgentExecution;
 use App\Models\PromptExecution;
@@ -31,4 +32,16 @@ interface PromptServiceInterface
      * Create a prompt-execution record in its initial state.
      */
     public function record(PromptExecutionData $data): PromptExecution;
+
+    /**
+     * Persist real UsageResponse telemetry onto an existing prompt execution.
+     * Missing usage stays NULL. Cost is stored only when billed.
+     */
+    public function recordProviderUsage(
+        PromptExecution $execution,
+        ?UsageResponse $usage,
+        ?string $model = null,
+        ?string $providerKey = null,
+        ?int $latencyMs = null,
+    ): PromptExecution;
 }

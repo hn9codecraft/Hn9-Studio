@@ -13,6 +13,7 @@ use App\Contracts\Services\ContentRegenerationServiceInterface;
 use App\Contracts\Services\ContentServiceInterface;
 use App\Contracts\Services\ExecutionOrchestratorInterface;
 use App\Contracts\Services\GenerationRequestServiceInterface;
+use App\Contracts\Services\DashboardServiceInterface;
 use App\Contracts\Services\HealthServiceInterface;
 use App\Contracts\Services\HistoryServiceInterface;
 use App\Contracts\Services\ImageServiceInterface;
@@ -32,9 +33,13 @@ use App\Contracts\Services\UserServiceInterface;
 use App\Contracts\Services\WorkflowServiceInterface;
 use App\Contracts\Storage\StorageInterface;
 use App\Repositories\ActivityLogRepository;
+use App\Repositories\DashboardRepository;
+use App\Repositories\ExecutionUsageRepository;
 use App\Repositories\AgentExecutionRepository;
 use App\Repositories\AssetRepository;
 use App\Repositories\Contracts\ActivityLogRepositoryInterface;
+use App\Repositories\Contracts\DashboardRepositoryInterface;
+use App\Repositories\Contracts\ExecutionUsageRepositoryInterface;
 use App\Repositories\Contracts\AgentExecutionRepositoryInterface;
 use App\Repositories\Contracts\AssetRepositoryInterface;
 use App\Repositories\Contracts\GeneratedContentRepositoryInterface;
@@ -66,6 +71,7 @@ use App\Repositories\WorkflowRunRepository;
 use App\Services\AgentExecutionService;
 use App\Services\AssetService;
 use App\Services\ContentRegenerationService;
+use App\Services\DashboardService;
 use App\Services\ContentService;
 use App\Services\Execution\ExecutionTracker;
 use App\Services\ExecutionOrchestrator;
@@ -117,6 +123,8 @@ class DomainServiceProvider extends ServiceProvider
         GeneratedContentRepositoryInterface::class => GeneratedContentRepository::class,
         WorkflowRunRepositoryInterface::class => WorkflowRunRepository::class,
         ActivityLogRepositoryInterface::class => ActivityLogRepository::class,
+        DashboardRepositoryInterface::class => DashboardRepository::class,
+        ExecutionUsageRepositoryInterface::class => ExecutionUsageRepository::class,
         MediaFileRepositoryInterface::class => MediaFileRepository::class,
         AgentExecutionRepositoryInterface::class => AgentExecutionRepository::class,
         PromptExecutionRepositoryInterface::class => PromptExecutionRepository::class,
@@ -134,6 +142,7 @@ class DomainServiceProvider extends ServiceProvider
         ExecutionTrackerInterface::class => ExecutionTracker::class,
 
         // Domain services
+        DashboardServiceInterface::class => DashboardService::class,
         ProjectServiceInterface::class => ProjectService::class,
         ScriptServiceInterface::class => ScriptService::class,
         ImageServiceInterface::class => ImageService::class,

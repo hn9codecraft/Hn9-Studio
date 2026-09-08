@@ -97,7 +97,7 @@ final class ElevenLabsProvider extends AbstractProvider
         $model = $this->voices->resolve($request->model);
         $characters = $this->tokenCounter->characters((string) ($request->parameters['input'] ?? ''));
 
-        return $this->usageCalculator->fromCharacters($characters, $model)->cost;
+        return $this->usageCalculator->fromCharacters($characters, $model)->routingEstimate();
     }
 
     /**
