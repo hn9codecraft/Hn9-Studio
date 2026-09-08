@@ -86,7 +86,7 @@ final class OpenRouterProvider extends AbstractProvider
                 'completion_tokens' => (int) ($request->parameters['max_tokens'] ?? 0),
             ],
             $model,
-        )->cost;
+        )->routingEstimate();
     }
 
     public function countTokens(string $text, ?string $model = null): TokenResponse

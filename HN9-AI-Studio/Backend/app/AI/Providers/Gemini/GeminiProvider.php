@@ -105,7 +105,7 @@ final class GeminiProvider extends AbstractProvider
         return $this->usageCalculator->fromUsageMetadata(
             ['promptTokenCount' => $input, 'candidatesTokenCount' => $output],
             $model,
-        )->cost;
+        )->routingEstimate();
     }
 
     public function countTokens(string $text, ?string $model = null): TokenResponse

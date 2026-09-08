@@ -4,35 +4,46 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Contracts\Services\DashboardServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DashboardAnalyticsRequest;
+use App\Http\Requests\DashboardUsageRequest;
+use App\Http\Resources\DashboardAnalyticsResource;
+use App\Http\Resources\DashboardCostsResource;
+use App\Http\Resources\DashboardSummaryResource;
+use App\Http\Resources\DashboardUsageResource;
+use App\Models\Project;
 use App\Support\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 final class DashboardController extends Controller
 {
-    public function summary(Request $request)
+    public function __construct(
+        private DashboardServiceInterface $dashboard,
+    ) {}
+
+    public function summary(Request $request): JsonResponse
     {
-        $payload = [];
+        $this->authorize('viewAny', Project::class);
 
-        // Prefer an explicit DashboardService when available.
-        if (class_exists('App\\Services\\DashboardService')) {
-            $svc = app('App\\Services\\DashboardService');
-            if (method_exists($svc, 'summary')) {
-                $payload = $svc->summary($request->user());
+        return ApiResponse::success(
+            new DashboardSummaryResource($this->dashboard->summary($request->user())),
+        );
+    }
 
-                return ApiResponse::success($payload);
-            }
-        }
+    public function analytics(DashboardAnalyticsRequest $request): JsonResponse
+    {
+        $this->authorize('viewAny', Project::class);
 
-        // Fallback: assemble pieces from known services if present.
-        // ProjectService has no dashboard projection, so there is nothing to
-        // read here until a DashboardService exists.
-        $payload['projects'] = [];
-        $payload['usage'] = class_exists('App\\Services\\UsageService') ? app('App\\Services\\UsageService')->summary($request->user()) : [];
-        $payload['costs'] = class_exists('App\\Services\\CostService') ? app('App\\Services\\CostService')->summary($request->user()) : [];
-        $payload['notifications'] = class_exists('App\\Services\\NotificationService') ? app('App\\Services\\NotificationService')->recentForUser($request->user()) : [];
+        $from = $request->validated('from');
+        $to = $request->validated('to');
 
-        return ApiResponse::success($payload);
+        return ApiResponse::success(
+            new DashboardAnalyticsResource(
+                $this->dashboard->analytics($request->user(), $from, $to),
+            ),
+        );
     }
 
     public function projects(Request $request)
@@ -47,28 +58,26 @@ final class DashboardController extends Controller
         return ApiResponse::success([]);
     }
 
-    public function usage(Request $request)
+    public function usage(DashboardUsageRequest $request): JsonResponse
     {
-        if (class_exists('App\\Services\\UsageService')) {
-            $svc = app('App\\Services\\UsageService');
-            if (method_exists($svc, 'summary')) {
-                return ApiResponse::success($svc->summary($request->user()));
-            }
-        }
+        $this->authorize('viewAny', Project::class);
 
-        return ApiResponse::success([]);
+        return ApiResponse::success(
+            new DashboardUsageResource(
+                $this->dashboard->usage($request->user(), $request->validated()),
+            ),
+        );
     }
 
-    public function costs(Request $request)
+    public function costs(DashboardUsageRequest $request): JsonResponse
     {
-        if (class_exists('App\\Services\\CostService')) {
-            $svc = app('App\\Services\\CostService');
-            if (method_exists($svc, 'summary')) {
-                return ApiResponse::success($svc->summary($request->user()));
-            }
-        }
+        $this->authorize('viewAny', Project::class);
 
-        return ApiResponse::success([]);
+        return ApiResponse::success(
+            new DashboardCostsResource(
+                $this->dashboard->costs($request->user(), $request->validated()),
+            ),
+        );
     }
 
     public function notifications(Request $request)

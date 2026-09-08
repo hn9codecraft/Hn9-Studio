@@ -11,6 +11,7 @@ use App\Contracts\Services\AgentExecutionServiceInterface;
 use App\Contracts\Services\AssetServiceInterface;
 use App\Contracts\Services\ContentServiceInterface;
 use App\Contracts\Services\GenerationRequestServiceInterface;
+use App\Contracts\Services\DashboardServiceInterface;
 use App\Contracts\Services\HealthServiceInterface;
 use App\Contracts\Services\HistoryServiceInterface;
 use App\Contracts\Services\ImageServiceInterface;
@@ -24,6 +25,8 @@ use App\Contracts\Services\ProviderRegistryServiceInterface;
 use App\Contracts\Services\WorkflowServiceInterface;
 use App\Contracts\Storage\StorageInterface;
 use App\Repositories\Contracts\ActivityLogRepositoryInterface;
+use App\Repositories\Contracts\DashboardRepositoryInterface;
+use App\Repositories\Contracts\ExecutionUsageRepositoryInterface;
 use App\Repositories\Contracts\AgentExecutionRepositoryInterface;
 use App\Repositories\Contracts\AssetRepositoryInterface;
 use App\Repositories\Contracts\GeneratedContentRepositoryInterface;
@@ -58,12 +61,15 @@ class ContainerBindingsTest extends TestCase
             GeneratedContentRepositoryInterface::class,
             WorkflowRunRepositoryInterface::class,
             ActivityLogRepositoryInterface::class,
+            DashboardRepositoryInterface::class,
+            ExecutionUsageRepositoryInterface::class,
             MediaFileRepositoryInterface::class,
             AgentExecutionRepositoryInterface::class,
             PromptExecutionRepositoryInterface::class,
             ActivityLoggerInterface::class,
             StorageInterface::class,
             ExecutionTrackerInterface::class,
+            DashboardServiceInterface::class,
             ProjectServiceInterface::class,
             ScriptServiceInterface::class,
             ImageServiceInterface::class,

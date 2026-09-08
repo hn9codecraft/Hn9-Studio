@@ -6,6 +6,7 @@ namespace App\AI\Providers\OpenRouter;
 
 use App\AI\Responses\UsageResponse;
 use App\AI\Support\AbstractUsageCalculator;
+use App\Enums\CostSource;
 
 /**
  * Token and cost accounting for OpenRouter.
@@ -15,8 +16,8 @@ use App\AI\Support\AbstractUsageCalculator;
  * it selects, the settled charge can differ from any statically configured rate.
  * When usage accounting is enabled OpenRouter returns that settled charge, and
  * it is preferred over the local calculation; otherwise the shared
- * per-million-token arithmetic applies the configured rates, and an unpriced
- * model simply yields zero.
+ * per-million-token arithmetic applies the configured rates. An unpriced model
+ * yields a null cost rather than invented spend.
  */
 final readonly class OpenRouterUsageCalculator extends AbstractUsageCalculator
 {
@@ -51,6 +52,7 @@ final readonly class OpenRouterUsageCalculator extends AbstractUsageCalculator
             cost: $reported,
             currency: $priced->currency,
             executionTimeMs: $priced->executionTimeMs,
+            costSource: CostSource::ProviderReported->value,
         );
     }
 

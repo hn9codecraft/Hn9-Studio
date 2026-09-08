@@ -155,12 +155,14 @@ class ExecutionOrchestratorTest extends TestCase
             $this->assertSame('blog', $data->template_key);
 
             return true;
-        })->andReturn(new PromptExecution([
+        })->andReturn($promptExecution = new PromptExecution([
             'agent_execution_id' => $agentExecution->getKey(),
             'template_key' => 'blog',
             'status' => 'pending',
             'rendered_prompt' => 'Write a blog post about AI automation for founders.',
         ]));
+
+        $prompts->shouldReceive('recordProviderUsage')->once()->andReturn($promptExecution);
 
         $dispatcher->shouldReceive('dispatch')->once()->withArgs(function ($requestArg, $optionsArg = null) use ($renderedPrompt) {
             $this->assertInstanceOf(TextRequest::class, $requestArg);
