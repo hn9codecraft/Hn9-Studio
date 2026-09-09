@@ -69,6 +69,14 @@ final class ProviderApiTest extends TestCase
         $this->actingAs($editor, 'sanctum')
             ->patchJson('/api/v1/providers/'.$provider->uuid, ['name' => 'Nope'])
             ->assertStatus(403);
+
+        $this->actingAs($editor, 'sanctum')
+            ->postJson('/api/v1/providers/'.$provider->uuid.'/disable')
+            ->assertStatus(403);
+
+        $this->actingAs($editor, 'sanctum')
+            ->postJson('/api/v1/providers/'.$provider->uuid.'/enable')
+            ->assertStatus(403);
     }
 
     public function test_validation_errors_are_returned_for_provider_updates(): void
@@ -108,5 +116,99 @@ final class ProviderApiTest extends TestCase
 
         $this->getJson('/api/v1/providers/'.$provider->uuid)
             ->assertStatus(401);
+
+        $this->getJson('/api/v1/provider-settings')
+            ->assertStatus(401);
+    }
+
+    public function test_members_cannot_read_or_update_provider_settings(): void
+    {
+        $member = User::factory()->create(['role' => 'member']);
+        $provider = AiProvider::factory()->create();
+        $setting = ProviderSetting::factory()->for($provider, 'provider')->create();
+
+        $this->actingAs($member, 'sanctum')
+            ->getJson('/api/v1/provider-settings')
+            ->assertStatus(403);
+
+        $this->actingAs($member, 'sanctum')
+            ->patchJson('/api/v1/provider-settings/'.$setting->uuid, ['value' => 'stolen'])
+            ->assertStatus(403);
+    }
+
+    public function test_secret_provider_settings_are_masked_and_never_echo_plaintext(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $provider = AiProvider::factory()->create();
+        $secret = 'sk-live-do-not-leak-'.fake()->uuid();
+        $setting = ProviderSetting::factory()->for($provider, 'provider')->secret()->create([
+            'value' => $secret,
+        ]);
+
+        $list = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/providers')
+            ->assertStatus(200)
+            ->assertJsonPath('data.0.id', $provider->uuid)
+            ->assertJsonPath('data.0.settings.0.id', $setting->uuid)
+            ->assertJsonPath('data.0.settings.0.is_secret', true)
+            ->assertJsonPath('data.0.settings.0.value', '********');
+
+        $this->assertStringNotContainsString($secret, $list->getContent());
+        $this->assertDoesNotMatchRegularExpression('/"id"\s*:\s*\d+/', $list->getContent());
+
+        $updated = $this->actingAs($admin, 'sanctum')
+            ->patchJson('/api/v1/provider-settings/'.$setting->uuid, [
+                'value' => 'replacement-secret-value',
+                'is_secret' => true,
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('data.value', '********')
+            ->assertJsonPath('data.is_secret', true);
+
+        $this->assertStringNotContainsString('replacement-secret-value', $updated->getContent());
+        $this->assertSame('replacement-secret-value', $setting->fresh()->value);
+
+        $reload = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/providers/'.$provider->uuid)
+            ->assertStatus(200)
+            ->assertJsonPath('data.settings.0.value', '********');
+
+        $this->assertStringNotContainsString('replacement-secret-value', $reload->getContent());
+    }
+
+    public function test_enable_disable_and_name_updates_persist_on_reload(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $provider = AiProvider::factory()->create([
+            'name' => 'Original Registry Name',
+            'status' => Status::Active->value,
+            'priority' => 10,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson('/api/v1/providers/'.$provider->uuid, [
+                'name' => 'Persisted Registry Name',
+                'priority' => 42,
+            ])
+            ->assertStatus(200);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/providers/'.$provider->uuid.'/disable')
+            ->assertStatus(200);
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/providers/'.$provider->uuid)
+            ->assertStatus(200)
+            ->assertJsonPath('data.name', 'Persisted Registry Name')
+            ->assertJsonPath('data.priority', 42)
+            ->assertJsonPath('data.status', Status::Inactive->value);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/providers/'.$provider->uuid.'/enable')
+            ->assertStatus(200);
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/providers/'.$provider->uuid)
+            ->assertJsonPath('data.status', Status::Active->value);
     }
 }

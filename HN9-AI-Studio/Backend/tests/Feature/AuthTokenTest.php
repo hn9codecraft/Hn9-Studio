@@ -150,4 +150,115 @@ class AuthTokenTest extends TestCase
     {
         $this->getJson('/api/v1/health')->assertOk();
     }
+
+    public function test_authenticated_user_can_update_profile_and_reload_it(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Original Name',
+            'locale' => 'en',
+            'timezone' => 'UTC',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/v1/auth/profile', [
+                'name' => 'Studio Operator',
+                'locale' => 'en-GB',
+                'timezone' => 'Europe/London',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Studio Operator')
+            ->assertJsonPath('data.locale', 'en-GB')
+            ->assertJsonPath('data.timezone', 'Europe/London')
+            ->assertJsonMissingPath('data.password');
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/auth/user')
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Studio Operator')
+            ->assertJsonPath('data.locale', 'en-GB')
+            ->assertJsonPath('data.timezone', 'Europe/London')
+            ->assertJsonMissingPath('data.password');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'Studio Operator',
+            'locale' => 'en-GB',
+            'timezone' => 'Europe/London',
+        ]);
+    }
+
+    public function test_profile_validation_errors_are_returned(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/v1/auth/profile', ['name' => str_repeat('n', 200)])
+            ->assertStatus(422);
+    }
+
+    public function test_password_update_persists_and_rejects_the_old_password(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'operator@example.com',
+            'password' => 'password',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/v1/auth/password', [
+                'current_password' => 'wrong-password',
+                'new_password' => 'new-password',
+                'new_password_confirmation' => 'new-password',
+            ])
+            ->assertStatus(422);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/v1/auth/password', [
+                'current_password' => 'password',
+                'new_password' => 'short',
+                'new_password_confirmation' => 'short',
+            ])
+            ->assertStatus(422);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/v1/auth/password', [
+                'current_password' => 'password',
+                'new_password' => 'new-password',
+                'new_password_confirmation' => 'new-password',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.message', 'Password updated')
+            ->assertJsonMissingPath('data.password');
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'operator@example.com',
+            'password' => 'password',
+        ])->assertUnauthorized();
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'operator@example.com',
+            'password' => 'new-password',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.user.email', 'operator@example.com');
+    }
+
+    public function test_application_settings_endpoints_do_not_persist_values(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/settings')
+            ->assertOk()
+            ->assertExactJson(['data' => []]);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/v1/settings', ['theme' => 'dark'])
+            ->assertOk()
+            ->assertExactJson(['data' => []]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/settings')
+            ->assertOk()
+            ->assertExactJson(['data' => []]);
+    }
 }

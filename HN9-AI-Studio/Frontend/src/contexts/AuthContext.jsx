@@ -71,6 +71,10 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const applyUser = useCallback((nextUser) => {
+    setUser(nextUser);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -78,8 +82,9 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user),
       login,
       logout,
+      applyUser,
     }),
-    [user, bootstrapping, login, logout],
+    [user, bootstrapping, login, logout, applyUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

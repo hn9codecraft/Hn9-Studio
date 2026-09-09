@@ -429,6 +429,24 @@ body {
   color: #0d365c;
 }
 
+.provider-card + .provider-card {
+  margin-top: 0;
+}
+
+.provider-setting-row {
+  padding: 0.9rem 1rem;
+  border: 1px solid #eef2f6;
+  border-radius: 0.75rem;
+  background: #fbfcfe;
+}
+
+.status-inactive,
+.status-disabled,
+.status-archived {
+  background: #eef2f6;
+  color: #5b6b7c;
+}
+
 .activity-item-icon {
   flex: 0 0 2.4rem;
   width: 2.4rem;

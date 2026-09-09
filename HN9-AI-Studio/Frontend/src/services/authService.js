@@ -21,6 +21,20 @@ export async function fetchCurrentUser() {
   return apiRequest('/auth/user');
 }
 
+export async function updateProfile(payload) {
+  return apiRequest('/auth/profile', {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export async function updatePassword(payload) {
+  return apiRequest('/auth/password', {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
 export async function logout() {
   try {
     await apiRequest('/auth/logout', { method: 'POST' });

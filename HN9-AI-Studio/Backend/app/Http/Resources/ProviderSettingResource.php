@@ -19,7 +19,7 @@ class ProviderSettingResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->uuid ?? $this->id,
+            'id' => $this->uuid,
             'key' => $this->key,
             'value' => $this->is_secret ? $this->maskedValue() : $this->value,
             'is_secret' => $this->is_secret,
