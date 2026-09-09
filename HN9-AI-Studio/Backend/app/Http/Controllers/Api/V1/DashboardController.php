@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Contracts\Services\DashboardServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DashboardActionsRequest;
 use App\Http\Requests\DashboardAnalyticsRequest;
 use App\Http\Requests\DashboardUsageRequest;
+use App\Http\Resources\DashboardActionsResource;
 use App\Http\Resources\DashboardAnalyticsResource;
 use App\Http\Resources\DashboardCostsResource;
 use App\Http\Resources\DashboardSummaryResource;
@@ -76,6 +78,17 @@ final class DashboardController extends Controller
         return ApiResponse::success(
             new DashboardCostsResource(
                 $this->dashboard->costs($request->user(), $request->validated()),
+            ),
+        );
+    }
+
+    public function actions(DashboardActionsRequest $request): JsonResponse
+    {
+        $this->authorize('viewAny', Project::class);
+
+        return ApiResponse::success(
+            new DashboardActionsResource(
+                $this->dashboard->actions($request->user(), $request->validated()),
             ),
         );
     }

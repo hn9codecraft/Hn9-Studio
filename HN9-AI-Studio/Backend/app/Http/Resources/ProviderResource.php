@@ -9,8 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * API representation of an AI provider registry entry. Exposes definition and
- * capabilities only — never credential/setting values.
+ * API representation of an AI provider registry entry. Nested settings use
+ * {@see ProviderSettingResource}, which masks secret values. Plaintext
+ * credentials are never included.
  *
  * @mixin AiProvider
  */
@@ -31,6 +32,10 @@ class ProviderResource extends JsonResource
             'priority' => $this->priority,
             'capabilities' => $this->capabilities,
             'metadata' => $this->metadata,
+            'settings' => $this->whenLoaded(
+                'settings',
+                fn () => ProviderSettingResource::collection($this->settings)->resolve(),
+            ),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

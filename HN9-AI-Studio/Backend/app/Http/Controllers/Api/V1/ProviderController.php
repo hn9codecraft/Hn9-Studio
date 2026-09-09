@@ -75,7 +75,7 @@ class ProviderController extends Controller
 
         $updated = $this->providers->update($provider, ProviderData::fromArray($payload), $request->user());
 
-        return ApiResponse::success(new ProviderResource($updated));
+        return ApiResponse::success(new ProviderResource($updated->load('settings')));
     }
 
     public function enable(ProviderActionRequest $request, string $uuid): JsonResponse
@@ -88,7 +88,7 @@ class ProviderController extends Controller
             'status' => Status::Active->value,
         ])), $request->user());
 
-        return ApiResponse::success(new ProviderResource($updated));
+        return ApiResponse::success(new ProviderResource($updated->load('settings')));
     }
 
     public function disable(ProviderActionRequest $request, string $uuid): JsonResponse
@@ -108,7 +108,7 @@ class ProviderController extends Controller
             'metadata' => $provider->metadata ?? [],
         ]), $request->user());
 
-        return ApiResponse::success(new ProviderResource($updated));
+        return ApiResponse::success(new ProviderResource($updated->load('settings')));
     }
 
     public function test(ProviderActionRequest $request, string $uuid): JsonResponse

@@ -15,11 +15,14 @@ use App\Repositories\Contracts\ActivityLogRepositoryInterface;
 use App\Repositories\Contracts\DashboardRepositoryInterface;
 use App\Repositories\Contracts\ExecutionUsageRepositoryInterface;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
+use App\Support\DashboardActionRules;
+use DateTimeInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Owner-scoped studio overview, analytics, usage and cost. Studio counts come
- * from content tables; usage and cost come from prompt_executions.
+ * Owner-scoped studio overview, analytics, usage, cost and Action Center.
+ * Studio counts and actions come from content tables; usage and cost come from
+ * prompt_executions.
  */
 final readonly class DashboardService implements DashboardServiceInterface
 {
@@ -103,6 +106,60 @@ final readonly class DashboardService implements DashboardServiceInterface
         return $this->executions->costsForUser($user->getKey(), $this->executionFilters($user, $filters));
     }
 
+    public function actions(User $user, array $filters = []): array
+    {
+        $result = $this->dashboard->attentionItemsForUser($user->getKey(), $this->actionFilters($user, $filters));
+        $items = [];
+
+        foreach ($result['rows'] as $row) {
+            $priority = DashboardActionRules::priorityForStatus($row['status']);
+            $type = DashboardActionRules::type($row['status'], $row['module']);
+            $createdAt = $row['created_at'];
+
+            $items[] = [
+                'id' => $row['id'],
+                'type' => $type,
+                'module' => $row['module'],
+                'priority' => $priority->value,
+                'title' => $row['title'],
+                'description' => DashboardActionRules::description($type),
+                'project' => [
+                    'id' => $row['project_uuid'],
+                    'name' => $row['project_name'],
+                ],
+                'status' => $row['status'],
+                'created_at' => $createdAt instanceof DateTimeInterface
+                    ? $createdAt->format(DateTimeInterface::ATOM)
+                    : (string) $createdAt,
+                'action_url' => DashboardActionRules::actionUrl($row['module'], $row['id'], $row['project_uuid']),
+                '_priority_rank' => DashboardActionRules::priorityRank($priority),
+                '_created_at' => $createdAt instanceof DateTimeInterface
+                    ? $createdAt->getTimestamp()
+                    : (int) strtotime((string) $createdAt),
+            ];
+        }
+
+        usort($items, function (array $left, array $right): int {
+            if ($left['_priority_rank'] !== $right['_priority_rank']) {
+                return $left['_priority_rank'] <=> $right['_priority_rank'];
+            }
+
+            return $right['_created_at'] <=> $left['_created_at'];
+        });
+
+        $items = array_map(function (array $item): array {
+            unset($item['_priority_rank'], $item['_created_at']);
+
+            return $item;
+        }, array_slice($items, 0, DashboardActionRules::LIMIT));
+
+        return [
+            'total' => $result['total'],
+            'limit' => DashboardActionRules::LIMIT,
+            'items' => array_values($items),
+        ];
+    }
+
     /**
      * @param  array{from?: string|null, to?: string|null, project?: string|null, provider?: string|null}  $filters
      * @return array{from?: string|null, to?: string|null, project_id?: int|null, provider?: string|null}
@@ -113,6 +170,29 @@ final readonly class DashboardService implements DashboardServiceInterface
             'from' => $filters['from'] ?? null,
             'to' => $filters['to'] ?? null,
             'provider' => $filters['provider'] ?? null,
+        ];
+
+        $projectUuid = $filters['project'] ?? null;
+        if (is_string($projectUuid) && $projectUuid !== '') {
+            $project = $this->projects->findByUuid($projectUuid);
+            if ($project === null || (int) $project->user_id !== (int) $user->getKey()) {
+                throw new NotFoundHttpException('Project not found.');
+            }
+            $resolved['project_id'] = (int) $project->getKey();
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * @param  array{module?: string|null, status?: string|null, project?: string|null}  $filters
+     * @return array{module?: string|null, status?: string|null, project_id?: int|null}
+     */
+    private function actionFilters(User $user, array $filters): array
+    {
+        $resolved = [
+            'module' => $filters['module'] ?? null,
+            'status' => $filters['status'] ?? null,
         ];
 
         $projectUuid = $filters['project'] ?? null;

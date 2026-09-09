@@ -162,6 +162,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('dashboard/projects', [DashboardController::class, 'projects'])->name('dashboard.projects');
     Route::get('dashboard/usage', [DashboardController::class, 'usage'])->name('dashboard.usage');
     Route::get('dashboard/costs', [DashboardController::class, 'costs'])->name('dashboard.costs');
+    Route::get('dashboard/actions', [DashboardController::class, 'actions'])->name('dashboard.actions');
     Route::get('dashboard/notifications', [DashboardController::class, 'notifications'])->name('dashboard.notifications');
 
     // Analytics
