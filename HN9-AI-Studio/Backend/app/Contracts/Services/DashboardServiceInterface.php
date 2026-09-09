@@ -48,4 +48,12 @@ interface DashboardServiceInterface
      * @return array<string, mixed>
      */
     public function costs(User $user, array $filters = []): array;
+
+    /**
+     * Owner-scoped Action Center items from real studio statuses.
+     *
+     * @param  array{module?: string|null, status?: string|null, project?: string|null}  $filters
+     * @return array<string, mixed>
+     */
+    public function actions(User $user, array $filters = []): array;
 }

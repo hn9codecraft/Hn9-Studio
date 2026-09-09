@@ -63,4 +63,12 @@ interface DashboardRepositoryInterface
      * @return Collection<int, Project>
      */
     public function projectProductivityForUser(int $userId, ?string $from = null, ?string $to = null): Collection;
+
+    /**
+     * Owner-scoped studio rows that currently need attention.
+     *
+     * @param  array{module?: string|null, status?: string|null, project_id?: int|null}  $filters
+     * @return array{total: int, rows: list<array<string, mixed>>}
+     */
+    public function attentionItemsForUser(int $userId, array $filters = []): array;
 }

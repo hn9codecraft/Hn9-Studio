@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ActionCenterSection from '../components/dashboard/ActionCenterSection';
 import AnalyticsSection from '../components/dashboard/AnalyticsSection';
 import DashboardStats from '../components/dashboard/DashboardStats';
 import RecentActivity from '../components/dashboard/RecentActivity';
@@ -64,8 +65,8 @@ export default function DashboardPage() {
           <p className="text-uppercase small text-secondary mb-1">Overview</p>
           <h2 className="h3 mb-1">Welcome back, {user?.name || 'there'}</h2>
           <p className="text-secondary mb-0">
-            Counts are live from your projects. Zeros are real. Usage and cost below only include recorded provider
-            executions.
+            Counts are live from your projects. Zeros are real. The Action Center lists only items that currently need
+            work. Usage and cost below only include recorded provider executions.
           </p>
         </div>
       </div>
@@ -97,6 +98,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          <ActionCenterSection />
           <AnalyticsSection />
           <UsageCostSection />
         </>

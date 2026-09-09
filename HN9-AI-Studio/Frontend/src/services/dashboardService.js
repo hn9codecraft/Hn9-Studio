@@ -26,12 +26,25 @@ export function getDashboardCosts(filters = {}) {
   return apiRequest(withLedgerQuery('/dashboard/costs', filters)).then(normalizeCosts);
 }
 
+export function getDashboardActions(filters = {}) {
+  return apiRequest(withActionQuery('/dashboard/actions', filters)).then(normalizeActions);
+}
+
 function withLedgerQuery(path, { from = '', to = '', project = '', provider = '' } = {}) {
   const params = new URLSearchParams();
   if (from) params.set('from', from);
   if (to) params.set('to', to);
   if (project) params.set('project', project);
   if (provider) params.set('provider', provider);
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+function withActionQuery(path, { module = '', status = '', project = '' } = {}) {
+  const params = new URLSearchParams();
+  if (module) params.set('module', module);
+  if (status) params.set('status', status);
+  if (project) params.set('project', project);
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
@@ -135,6 +148,40 @@ function normalizeCosts(raw) {
     by_provider: Array.isArray(data.by_provider) ? data.by_provider : [],
     by_model: Array.isArray(data.by_model) ? data.by_model : [],
     timeline: Array.isArray(data.timeline) ? data.timeline : [],
+  };
+}
+
+function normalizeActions(raw) {
+  const data = raw && typeof raw === 'object' ? raw : {};
+
+  return {
+    total: numberOrZero(data.total),
+    limit: numberOrZero(data.limit) || 50,
+    items: Array.isArray(data.items) ? data.items.map(normalizeActionItem) : [],
+  };
+}
+
+function normalizeActionItem(item) {
+  const row = item && typeof item === 'object' ? item : {};
+  const project = row.project && typeof row.project === 'object' ? row.project : {};
+  const actionUrl = typeof row.action_url === 'string' && row.action_url.startsWith('/projects/')
+    ? row.action_url
+    : '';
+
+  return {
+    id: row.id || '',
+    type: row.type || '',
+    module: row.module || '',
+    priority: row.priority || '',
+    title: row.title || 'Untitled',
+    description: row.description || '',
+    status: row.status || '',
+    created_at: row.created_at || '',
+    action_url: actionUrl,
+    project: {
+      id: project.id || '',
+      name: project.name || 'Untitled project',
+    },
   };
 }
 

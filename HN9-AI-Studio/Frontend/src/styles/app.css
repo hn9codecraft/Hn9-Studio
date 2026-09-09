@@ -395,6 +395,40 @@ body {
   border-bottom: 0;
 }
 
+.action-center-item {
+  padding: 1.15rem 1.35rem;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.action-center-item:last-child {
+  border-bottom: 0;
+}
+
+.action-priority-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.action-priority-high {
+  background: #fde8e8;
+  color: #9b1c1c;
+}
+
+.action-priority-medium {
+  background: #fff4dc;
+  color: #92400e;
+}
+
+.action-priority-low {
+  background: #eef3f8;
+  color: #0d365c;
+}
+
 .activity-item-icon {
   flex: 0 0 2.4rem;
   width: 2.4rem;
