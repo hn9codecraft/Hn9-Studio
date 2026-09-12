@@ -4,6 +4,22 @@ export function getDashboardSummary() {
   return apiRequest('/dashboard/summary').then(normalizeSummary);
 }
 
+export function getDashboardActivity({ page = 1, perPage = 20 } = {}) {
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('perPage', String(perPage));
+
+  return apiRequest(`/dashboard/activity?${params.toString()}`, { withMeta: true }).then((result) => {
+    const raw = result?.data;
+    const data = Array.isArray(raw) ? raw : [];
+
+    return {
+      data,
+      meta: result?.meta ?? null,
+    };
+  });
+}
+
 export function getDashboardAnalytics({ from = '', to = '' } = {}) {
   const params = new URLSearchParams();
   if (from) {

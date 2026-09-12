@@ -71,17 +71,16 @@ export default function ActionCenterSection() {
   }
 
   return (
-    <section className="action-center-section mt-5">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <section className="page-section action-center-section">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Action center</p>
-          <h3 className="h4 mb-1">Items that need attention</h3>
-          <p className="text-secondary mb-0">
+          <h2 className="section-title mb-1">Items that need attention</h2>
+          <p className="page-lede mb-0">
             Built from real project and content statuses. Failed is high, pending or processing is medium, draft is
             low. Empty means nothing currently needs work.
           </p>
         </div>
-        <form className="d-flex flex-wrap align-items-end gap-2" onSubmit={applyFilters}>
+        <form className="filter-bar" onSubmit={applyFilters}>
           <div>
             <label className="form-label small mb-1" htmlFor="actions-module">
               Module
@@ -148,30 +147,47 @@ export default function ActionCenterSection() {
               ? ` Showing the first ${actions.items.length}.`
               : ''}
           </p>
-          <div className="card border-0 shadow-sm">
-            <ul className="list-unstyled mb-0 action-center-list">
-              {actions.items.map((item) => (
-                <li key={`${item.module}-${item.id}`} className="action-center-item">
-                  <div className="d-flex flex-wrap align-items-start justify-content-between gap-3">
-                    <div>
-                      <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
-                        <span className={`action-priority-badge action-priority-${item.priority}`}>{item.priority}</span>
-                        <span className="badge text-bg-light text-capitalize">{item.module}</span>
-                        <span className="badge text-bg-light text-capitalize">{item.status}</span>
-                      </div>
-                      <h3 className="h6 mb-1">{item.title}</h3>
-                      <p className="small text-secondary mb-1">{item.description}</p>
-                      <p className="small text-secondary mb-0">{item.project.name}</p>
-                    </div>
-                    {item.action_url ? (
-                      <Link className="btn btn-sm btn-outline-primary" to={item.action_url}>
-                        Open
-                      </Link>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <div className="card border-0 attention-table-wrap">
+            <table className="table attention-table studio-table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">Priority</th>
+                  <th scope="col">Module</th>
+                  <th scope="col">Item</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Project</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actions.items.map((item) => (
+                  <tr key={`${item.module}-${item.id}`}>
+                    <td data-label="Priority">
+                      <span className={`action-priority-badge action-priority-${item.priority}`}>{item.priority}</span>
+                    </td>
+                    <td data-label="Module" className="text-capitalize">
+                      {item.module}
+                    </td>
+                    <td data-label="Item">
+                      <span className="attention-title">{item.title}</span>
+                    </td>
+                    <td data-label="Status">
+                      <span className={`status-pill status-${item.status || 'draft'}`}>{item.status}</span>
+                    </td>
+                    <td data-label="Project">{item.project.name}</td>
+                    <td data-label="Action">
+                      {item.action_url ? (
+                        <Link className="btn btn-sm btn-outline-primary" to={item.action_url}>
+                          Open
+                        </Link>
+                      ) : (
+                        <span className="text-secondary">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </>
       ) : null}

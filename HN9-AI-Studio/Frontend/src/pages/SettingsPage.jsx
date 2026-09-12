@@ -119,10 +119,9 @@ export default function SettingsPage() {
 
   return (
     <div className="settings-page">
-      <div className="page-toolbar mb-4">
-        <p className="text-uppercase small text-secondary mb-1">Account</p>
-        <h2 className="h3 mb-1">Settings</h2>
-        <p className="text-secondary mb-0">
+      <div className="page-toolbar">
+        <h1 className="visually-hidden">Settings</h1>
+        <p className="page-lede mb-0">
           Profile and password are stored on your user record. Application-wide settings and notification preferences
           are not available because those services have no persistence layer.
         </p>
@@ -137,11 +136,11 @@ export default function SettingsPage() {
       {loading ? <LoadingSpinner label="Loading account…" /> : null}
 
       {!loading && !loadError ? (
-        <div className="row g-4">
+        <div className="row g-3">
           <div className="col-lg-7">
             <div className="card border-0 shadow-sm">
-              <div className="card-body p-4">
-                <h3 className="h5 mb-3">Profile</h3>
+              <div className="card-body">
+                <h2 className="section-title mb-3">Profile</h2>
                 {profileNotice ? (
                   <div className="alert alert-success py-2" role="status">
                     {profileNotice}
@@ -223,8 +222,8 @@ export default function SettingsPage() {
 
           <div className="col-lg-5">
             <div className="card border-0 shadow-sm">
-              <div className="card-body p-4">
-                <h3 className="h5 mb-3">Password</h3>
+              <div className="card-body">
+                <h2 className="section-title mb-3">Password</h2>
                 {passwordNotice ? (
                   <div className="alert alert-success py-2" role="status">
                     {passwordNotice}

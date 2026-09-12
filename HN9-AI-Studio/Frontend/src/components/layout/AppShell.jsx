@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import DocumentTitle from '../ui/DocumentTitle';
 import Header from './Header';
 import Sidebar from './Sidebar';
 
@@ -49,14 +50,18 @@ export default function AppShell() {
 
   return (
     <div className="app-shell">
-      <div className="d-none d-lg-block">
+      <DocumentTitle title={title} />
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
+      <div className="app-sidebar-rail d-none d-lg-block">
         <Sidebar />
       </div>
 
-      <div className="offcanvas offcanvas-start app-offcanvas d-lg-none" tabIndex="-1" id="mobileSidebar">
+      <div className="offcanvas offcanvas-start app-offcanvas d-lg-none" tabIndex="-1" id="mobileSidebar" aria-label="Mobile navigation">
         <div className="offcanvas-header">
-          <h2 className="offcanvas-title h5 mb-0">Navigation</h2>
-          <button type="button" className="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close" />
+          <p className="offcanvas-title h5 mb-0">Navigation</p>
+          <button type="button" className="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close navigation" />
         </div>
         <div className="offcanvas-body p-0" data-bs-dismiss="offcanvas">
           <Sidebar />
@@ -65,7 +70,7 @@ export default function AppShell() {
 
       <div className="app-main">
         <Header title={title} />
-        <main className="app-content">
+        <main className="app-content" id="main-content">
           <Outlet />
         </main>
       </div>

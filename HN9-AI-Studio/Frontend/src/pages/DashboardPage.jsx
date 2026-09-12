@@ -60,16 +60,16 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-page">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
-        <div>
-          <p className="text-uppercase small text-secondary mb-1">Overview</p>
-          <h2 className="h3 mb-1">Welcome back, {user?.name || 'there'}</h2>
-          <p className="text-secondary mb-0">
+      <section className="page-section page-section--flush dashboard-hero glass-card card border-0">
+        <div className="card-body">
+          <p className="section-kicker mb-2">Overview</p>
+          <h1 className="section-title mb-2">Welcome back, {user?.name || 'there'}</h1>
+          <p className="dashboard-hero-copy mb-0">
             Counts are live from your projects. Zeros are real. The Action Center lists only items that currently need
             work. Usage and cost below only include recorded provider executions.
           </p>
         </div>
-      </div>
+      </section>
 
       {error ? (
         <div className="mb-4">
@@ -81,22 +81,20 @@ export default function DashboardPage() {
 
       {!loading ? (
         <>
-          <DashboardStats summary={summary} />
+          <section className="page-section">
+            <h2 className="visually-hidden">Studio totals</h2>
+            <DashboardStats summary={summary} />
+          </section>
 
-          <div className="row g-4 mt-1">
-            <div className="col-xl-7">
-              <div className="d-flex align-items-center justify-content-between gap-3 mb-3">
-                <h3 className="h5 mb-0">Recent projects</h3>
-              </div>
-              <RecentProjects projects={summary.recent_projects} />
-            </div>
-            <div className="col-xl-5">
-              <div className="d-flex align-items-center justify-content-between gap-3 mb-3">
-                <h3 className="h5 mb-0">Recent activity</h3>
-              </div>
-              <RecentActivity activities={summary.recent_activity} />
-            </div>
-          </div>
+          <section className="page-section">
+            <h2 className="section-title">Recent projects</h2>
+            <RecentProjects projects={summary.recent_projects} />
+          </section>
+
+          <section className="page-section">
+            <h2 className="section-title">Recent activity</h2>
+            <RecentActivity activities={summary.recent_activity} />
+          </section>
 
           <ActionCenterSection />
           <AnalyticsSection />

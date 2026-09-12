@@ -9,10 +9,10 @@ export default function ActivityList({ projectId, activities, loading, error, me
 
   return (
     <div className="activity-list">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Activity Studio</p>
-          <h3 className="h4 mb-1">Activity</h3>
+          <p className="section-kicker mb-1">Activity Studio</p>
+          <h2 className="section-title mb-1">Activity</h2>
           <p className="text-secondary mb-0">A timeline of real actions on this project. Nothing here is invented.</p>
         </div>
       </div>
