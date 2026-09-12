@@ -117,9 +117,11 @@ class ProviderController extends Controller
 
         $this->authorize('update', $provider);
 
-        $updated = $this->providers->markTested($provider, $request->user());
-
-        return ApiResponse::success(new ProviderResource($updated));
+        return ApiResponse::error(
+            'Provider connectivity tests are not implemented. The registry was not marked as tested.',
+            'not_implemented',
+            501,
+        );
     }
 
     public function settingsIndex(IndexProviderSettingRequest $request): JsonResponse

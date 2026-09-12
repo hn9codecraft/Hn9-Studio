@@ -53,8 +53,15 @@ final class ProviderApiTest extends TestCase
 
         $this->actingAs($admin, 'sanctum')
             ->postJson('/api/v1/providers/'.$provider->uuid.'/test')
-            ->assertStatus(200)
-            ->assertJsonPath('data.status', Status::Active->value);
+            ->assertStatus(501)
+            ->assertJsonPath('error_code', 'not_implemented');
+
+        $this->assertDatabaseHas('ai_providers', [
+            'id' => $provider->id,
+            'status' => Status::Active->value,
+        ]);
+        $provider->refresh();
+        $this->assertArrayNotHasKey('last_tested_at', (array) $provider->metadata);
     }
 
     public function test_non_admin_cannot_manage_providers(): void

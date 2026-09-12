@@ -10,6 +10,7 @@ use App\DTOs\Project\UpdateProjectData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBrandInsightRequest;
 use App\Http\Requests\UpdateProjectRequest;
+use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +44,7 @@ final class BrandBrainController extends Controller
         // provided by the Brand Brain update flow.
         $updated = $this->projects->update($project, UpdateProjectData::fromArray($request->validated()), $request->user());
 
-        return ApiResponse::success($updated);
+        return ApiResponse::success(new ProjectResource($updated));
     }
 
     public function insights(StoreBrandInsightRequest $request, string $projectUuid): JsonResponse

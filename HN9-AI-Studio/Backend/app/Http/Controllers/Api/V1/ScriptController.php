@@ -14,6 +14,7 @@ use App\Http\Requests\UpdateScriptRequest;
 use App\Http\Resources\ScriptResource;
 use App\Models\Script;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,7 @@ class ScriptController extends Controller
         $this->authorize('view', $project);
         $this->authorize('viewAny', [Script::class, $project]);
 
-        $perPage = (int) $request->query('perPage', 50);
+        $perPage = PageSize::fromRequest($request, 50);
         $filters = $request->only(['status', 'sort', 'order']);
         $page = $this->scripts->paginateForProject($project, $perPage, $filters);
 

@@ -174,7 +174,7 @@ final class GenerationApiTest extends TestCase
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
 
-        $this->actingAs($user, 'sanctum')
+        $preview = $this->actingAs($user, 'sanctum')
             ->postJson('/api/v1/projects/'.$project->uuid.'/generate/preview', [
                 'deliverable_type' => 'caption',
                 'language' => 'en',
@@ -183,6 +183,11 @@ final class GenerationApiTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('data.deliverable_type', 'caption')
             ->assertJsonPath('data.payload.copy', 'Preview content');
+
+        $this->assertArrayNotHasKey('project_id', $preview->json('data'));
+        $this->assertArrayNotHasKey('user_id', $preview->json('data'));
+        $this->assertDoesNotMatchRegularExpression('/"project_id"\s*:\s*\d+/', $preview->getContent() ?: '');
+        $this->assertDoesNotMatchRegularExpression('/"user_id"\s*:\s*\d+/', $preview->getContent() ?: '');
 
         $this->assertDatabaseCount('project_inputs', 0);
     }

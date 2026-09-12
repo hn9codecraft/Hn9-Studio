@@ -28,7 +28,11 @@ class UserPolicy
 
     public function update(User $user, User $model): bool
     {
-        return $user->id === $model->id || $user->isAdmin();
+        // Privileged fields (role, permissions, status) are accepted by
+        // UpdateUserRequest. Self-service profile changes go through
+        // /auth/profile, which cannot set those fields. Mutating /users
+        // is therefore an administrator operation only.
+        return false;
     }
 
     public function delete(User $user, User $model): bool

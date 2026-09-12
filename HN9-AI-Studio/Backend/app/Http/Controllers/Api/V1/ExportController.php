@@ -45,7 +45,11 @@ final class ExportController extends Controller
             }
         }
 
-        return ApiResponse::created([]);
+        return ApiResponse::error(
+            'Exports are not available yet. Nothing was created or queued.',
+            'not_implemented',
+            501,
+        );
     }
 
     public function show(Request $request, string $uuid)

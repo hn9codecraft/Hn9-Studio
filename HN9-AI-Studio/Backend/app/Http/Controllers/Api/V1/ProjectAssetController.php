@@ -14,6 +14,7 @@ use App\Http\Requests\UpdateProjectAssetRequest;
 use App\Http\Resources\ProjectAssetResource;
 use App\Models\ProjectAsset;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,7 @@ class ProjectAssetController extends Controller
         $this->authorize('view', $project);
         $this->authorize('viewAny', [ProjectAsset::class, $project]);
 
-        $perPage = (int) $request->query('perPage', 50);
+        $perPage = PageSize::fromRequest($request, 50);
         $filters = $request->only(['status', 'type', 'source', 'sort', 'order']);
         $page = $this->assets->paginateForProject($project, $perPage, $filters);
 

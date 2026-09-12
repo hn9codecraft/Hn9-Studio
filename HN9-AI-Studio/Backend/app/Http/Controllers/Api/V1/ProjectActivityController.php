@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\IndexProjectActivityRequest;
 use App\Http\Resources\ProjectActivityResource;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -29,7 +30,7 @@ class ProjectActivityController extends Controller
 
         $this->authorize('view', $project);
 
-        $perPage = (int) $request->query('perPage', 50);
+        $perPage = PageSize::fromRequest($request, 50);
         $filters = $request->safe()->only(['module', 'action', 'order']);
         $page = $this->activities->paginateForProject($project, $perPage, $filters);
 

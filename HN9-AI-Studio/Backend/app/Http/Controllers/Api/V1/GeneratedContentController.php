@@ -15,6 +15,7 @@ use App\Models\GeneratedAsset;
 use App\Models\GeneratedContent;
 use App\Policies\GeneratedContentPolicy;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,7 +35,7 @@ class GeneratedContentController extends Controller
     {
         $this->authorize('viewAny', GeneratedContent::class);
 
-        $perPage = (int) ($request->query('perPage', 15));
+        $perPage = PageSize::fromRequest($request, 15);
 
         $filters = $request->only([
             'project', 'status', 'provider', 'template', 'date',

@@ -76,7 +76,16 @@ final class GenerationController extends Controller
 
         $dto = GenerationRequestData::fromArray($payload);
 
-        return ApiResponse::success($dto->toArray());
+        return ApiResponse::success([
+            'deliverable_type' => $dto->deliverable_type,
+            'platform' => $dto->platform,
+            'language' => $dto->language,
+            'topic' => $dto->topic,
+            'goal' => $dto->goal,
+            'payload' => $dto->payload,
+            'source' => $dto->source,
+            'type' => $dto->type,
+        ]);
     }
 
     public function history(string $uuid): JsonResponse

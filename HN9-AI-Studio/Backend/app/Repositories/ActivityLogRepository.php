@@ -89,30 +89,42 @@ class ActivityLogRepository extends BaseRepository implements ActivityLogReposit
 
     public function studioAnalyticsForOwnedProjects(int $userId, ?string $from = null, ?string $to = null): array
     {
-        $moduleCase = $this->moduleCaseSql();
-        $byModuleRows = $this->ownedStudioQueryForRange($userId, $from, $to)
-            ->selectRaw("{$moduleCase} as module, COUNT(*) as aggregate")
-            ->groupByRaw($moduleCase)
-            ->pluck('aggregate', 'module');
+        $recentStart = now()->subDays(7)->startOfDay();
+
+        $rows = $this->ownedStudioQueryForRange($userId, $from, $to)
+            ->selectRaw(
+                'action, COUNT(*) as aggregate, SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as recent_aggregate',
+                [$recentStart],
+            )
+            ->groupBy('action')
+            ->orderByRaw('COUNT(*) DESC')
+            ->get();
 
         $byModule = [];
         foreach (ProjectActivityModule::cases() as $module) {
-            $byModule[$module->value] = (int) ($byModuleRows[$module->value] ?? 0);
+            $byModule[$module->value] = 0;
         }
 
-        $byAction = $this->ownedStudioQueryForRange($userId, $from, $to)
-            ->selectRaw('action, COUNT(*) as aggregate')
-            ->groupBy('action')
-            ->orderByRaw('COUNT(*) DESC')
-            ->pluck('aggregate', 'action')
-            ->map(fn (mixed $count): int => (int) $count)
-            ->all();
+        $byAction = [];
+        $total = 0;
+        $recentCount = 0;
+
+        foreach ($rows as $row) {
+            $action = (string) $row->action;
+            $count = (int) $row->aggregate;
+            $byAction[$action] = $count;
+            $total += $count;
+            $recentCount += (int) $row->recent_aggregate;
+
+            $module = ProjectActivityModule::fromAction($action);
+            if ($module !== null) {
+                $byModule[$module->value] += $count;
+            }
+        }
 
         return [
-            'total' => $this->ownedStudioQueryForRange($userId, $from, $to)->count(),
-            'recent_count' => $this->ownedStudioQueryForRange($userId, $from, $to)
-                ->where('created_at', '>=', now()->subDays(7)->startOfDay())
-                ->count(),
+            'total' => $total,
+            'recent_count' => $recentCount,
             'by_module' => $byModule,
             'by_action' => $byAction,
         ];
@@ -139,21 +151,6 @@ class ActivityLogRepository extends BaseRepository implements ActivityLogReposit
         return $this->query()->where(function (Builder $outer) use ($ownedProjectIds): void {
             $this->constrainToOwnedProjectStudio($outer, $ownedProjectIds);
         });
-    }
-
-    /**
-     * Classify studio actions in SQL. project_asset.* is asset, never project.
-     */
-    private function moduleCaseSql(): string
-    {
-        return "CASE
-            WHEN action LIKE 'project_asset.%' THEN 'asset'
-            WHEN action LIKE 'script.%' THEN 'script'
-            WHEN action LIKE 'image.%' THEN 'image'
-            WHEN action LIKE 'video.%' THEN 'video'
-            WHEN action LIKE 'project.%' THEN 'project'
-            ELSE NULL
-        END";
     }
 
     /**

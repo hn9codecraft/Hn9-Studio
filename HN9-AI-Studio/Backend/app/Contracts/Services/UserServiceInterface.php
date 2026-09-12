@@ -13,6 +13,8 @@ interface UserServiceInterface
 
     public function getByUuid(string $uuid): User;
 
+    public function getByUuidWithTrashed(string $uuid): User;
+
     public function update(User $user, array $data): User;
 
     public function delete(User $user): bool;

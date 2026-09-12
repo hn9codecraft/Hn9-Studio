@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\WorkflowRunResource;
 use App\Models\WorkflowRun;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class WorkflowRunController extends Controller
     {
         $this->authorize('viewAny', WorkflowRun::class);
 
-        $perPage = (int) ($request->query('per_page', $request->query('perPage', 15)));
+        $perPage = PageSize::fromRequest($request, 15);
         $filters = $request->only(['status', 'provider', 'project', 'workflow', 'created_from', 'created_to', 'sort', 'order', 'search']);
 
         $page = $this->workflows->paginateForUser($request->user(), $perPage, $filters);
