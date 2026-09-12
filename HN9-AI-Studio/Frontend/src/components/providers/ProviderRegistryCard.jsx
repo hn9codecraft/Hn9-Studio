@@ -112,7 +112,7 @@ export default function ProviderRegistryCard({ provider, onUpdated }) {
       <div className="card-body p-4">
         <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
           <div>
-            <h3 className="h5 mb-1">{provider.name}</h3>
+            <h2 className="card-heading mb-1">{provider.name}</h2>
             <p className="text-secondary small mb-0">
               <code>{provider.slug}</code>
               {provider.category ? ` · ${provider.category}` : ''}
@@ -198,7 +198,7 @@ export default function ProviderRegistryCard({ provider, onUpdated }) {
         </form>
 
         <div>
-          <h4 className="h6 mb-2">Stored configuration</h4>
+          <h3 className="card-heading mb-2">Stored configuration</h3>
           {settings.length === 0 ? (
             <p className="text-secondary small mb-0">No configuration entries are stored for this provider.</p>
           ) : (

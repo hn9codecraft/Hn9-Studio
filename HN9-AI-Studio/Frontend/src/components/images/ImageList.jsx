@@ -13,10 +13,10 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
 
   return (
     <div className="image-list">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Image Studio</p>
-          <h3 className="h4 mb-1">Image requests</h3>
+          <p className="section-kicker mb-1">Image Studio</p>
+          <h2 className="section-title mb-1">Image requests</h2>
           <p className="text-secondary mb-0">Save prompts and settings for this project. AI generation is not configured yet.</p>
         </div>
         <Link className="btn btn-primary" to={`/projects/${projectId}/images/new`}>
@@ -51,11 +51,13 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
                 <table className="table studio-table mb-0 align-middle">
                   <thead>
                     <tr>
-                      <th>Title</th>
-                      <th>Aspect ratio</th>
-                      <th>Status</th>
-                      <th>Updated</th>
-                      <th />
+                      <th scope="col">Title</th>
+                      <th scope="col">Aspect ratio</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Updated</th>
+                      <th scope="col">
+                        <span className="visually-hidden">Actions</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

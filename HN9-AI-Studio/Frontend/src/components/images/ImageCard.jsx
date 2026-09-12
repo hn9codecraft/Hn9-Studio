@@ -7,7 +7,7 @@ export default function ImageCard({ projectId, image }) {
     <Link to={`/projects/${projectId}/images/${image.id}`} className="project-card card border-0 shadow-sm text-decoration-none">
       <div className="card-body p-4">
         <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
-          <h3 className="h6 mb-0 text-body">{image.title}</h3>
+          <h3 className="card-heading mb-0">{image.title}</h3>
           <span className={`status-pill status-${image.status || 'draft'}`}>{imageStatusLabel(image.status)}</span>
         </div>
         <p className="small text-secondary mb-2">{imageAspectRatioLabel(image.aspect_ratio)}</p>

@@ -172,7 +172,7 @@ export default function AssetEditor({ projectId, assetId, creating }) {
             <i className="bi bi-arrow-left me-1" aria-hidden="true" />
             Back to Assets
           </Link>
-          <h3 className="h4 mt-3 mb-1">{creating ? 'New Asset' : 'Asset'}</h3>
+          <h2 className="section-title mt-3 mb-1">{creating ? 'New Asset' : 'Asset'}</h2>
           <p className="text-secondary mb-0">
             {dirty ? 'Unsaved changes' : creating ? 'Saved when you create it.' : 'All changes are saved to the database.'}
           </p>
@@ -324,7 +324,7 @@ export default function AssetEditor({ projectId, assetId, creating }) {
 
       <div className="card border-0 shadow-sm mt-4">
         <div className="card-body p-4 p-md-5">
-          <h3 className="h5 mb-3">File and output</h3>
+          <h3 className="card-heading mb-3">File and output</h3>
           <AlertMessage variant="warning">File upload and AI generation are not configured yet.</AlertMessage>
           <dl className="row mb-0 mt-4">
             <dt className="col-sm-3">File</dt>

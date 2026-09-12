@@ -12,10 +12,10 @@ export default function ScriptList({ projectId, scripts, loading, error, meta })
 
   return (
     <div className="script-list">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Script Studio</p>
-          <h3 className="h4 mb-1">Scripts</h3>
+          <p className="section-kicker mb-1">Script Studio</p>
+          <h2 className="section-title mb-1">Scripts</h2>
           <p className="text-secondary mb-0">Manual drafts for this project, stored in the database.</p>
         </div>
         <Link className="btn btn-primary" to={`/projects/${projectId}/scripts/new`}>
@@ -50,11 +50,13 @@ export default function ScriptList({ projectId, scripts, loading, error, meta })
                 <table className="table studio-table mb-0 align-middle">
                   <thead>
                     <tr>
-                      <th>Title</th>
-                      <th>Status</th>
-                      <th>Updated</th>
-                      <th>Created</th>
-                      <th />
+                      <th scope="col">Title</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Updated</th>
+                      <th scope="col">Created</th>
+                      <th scope="col">
+                        <span className="visually-hidden">Actions</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -91,7 +93,7 @@ export default function ScriptList({ projectId, scripts, loading, error, meta })
                 <Link to={`/projects/${projectId}/scripts/${script.id}`} className="project-card card border-0 shadow-sm text-decoration-none">
                   <div className="card-body p-4">
                     <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
-                      <h3 className="h6 mb-0 text-body">{script.title}</h3>
+                      <h3 className="card-heading mb-0">{script.title}</h3>
                       <span className={`status-pill status-${script.status || 'draft'}`}>{scriptStatusLabel(script.status)}</span>
                     </div>
                     <p className="small text-secondary mb-0">Updated {formatProjectDate(script.updated_at)}</p>

@@ -58,11 +58,10 @@ export default function ProvidersPage() {
 
   return (
     <div className="providers-page">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Administration</p>
-          <h2 className="h3 mb-1">AI providers</h2>
-          <p className="text-secondary mb-0">
+          <h1 className="visually-hidden">Providers</h1>
+          <p className="page-lede mb-0">
             Registry records from the database. Enable, disable, and configuration changes are saved through the live
             API. Secrets stay masked after save.
           </p>
