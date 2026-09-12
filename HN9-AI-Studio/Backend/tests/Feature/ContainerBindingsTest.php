@@ -22,6 +22,7 @@ use App\Contracts\Services\VideoServiceInterface;
 use App\Contracts\Services\ScriptServiceInterface;
 use App\Contracts\Services\PromptServiceInterface;
 use App\Contracts\Services\ProviderRegistryServiceInterface;
+use App\Contracts\Services\UserServiceInterface;
 use App\Contracts\Services\WorkflowServiceInterface;
 use App\Contracts\Storage\StorageInterface;
 use App\Repositories\Contracts\ActivityLogRepositoryInterface;
@@ -39,6 +40,7 @@ use App\Repositories\Contracts\VideoRepositoryInterface;
 use App\Repositories\Contracts\ScriptRepositoryInterface;
 use App\Repositories\Contracts\PromptExecutionRepositoryInterface;
 use App\Repositories\Contracts\ProviderRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Contracts\WorkflowRunRepositoryInterface;
 use Tests\TestCase;
 
@@ -58,6 +60,7 @@ class ContainerBindingsTest extends TestCase
             ProjectInputRepositoryInterface::class,
             AssetRepositoryInterface::class,
             ProviderRepositoryInterface::class,
+            UserRepositoryInterface::class,
             GeneratedContentRepositoryInterface::class,
             WorkflowRunRepositoryInterface::class,
             ActivityLogRepositoryInterface::class,
@@ -81,6 +84,7 @@ class ContainerBindingsTest extends TestCase
             GenerationRequestServiceInterface::class,
             ProviderRegistryInterface::class,
             ProviderRegistryServiceInterface::class,
+            UserServiceInterface::class,
             WorkflowServiceInterface::class,
             AgentExecutionServiceInterface::class,
             PromptServiceInterface::class,

@@ -21,8 +21,11 @@ class ProjectInputResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'project_id' => $this->project_id,
+            'id' => $this->uuid,
+            'project_id' => $this->when(
+                $this->relationLoaded('project') && $this->project !== null,
+                fn () => $this->project->uuid,
+            ),
             'type' => $this->type,
             'deliverable_type' => $this->deliverable_type,
             'platform' => $this->platform,

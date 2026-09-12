@@ -26,7 +26,7 @@ class ProjectInputController extends Controller
 
         $this->authorize('view', $project);
 
-        $inputs = $this->generation->forProject($project);
+        $inputs = $this->generation->forProject($project)->load('project');
 
         return ApiResponse::success(ProjectInputResource::collection($inputs));
     }
@@ -44,6 +44,7 @@ class ProjectInputController extends Controller
         $dto = GenerationRequestData::fromArray($payload);
 
         $input = $this->generation->submit($project, $dto, $request->user());
+        $input->setRelation('project', $project);
 
         return ApiResponse::created(new ProjectInputResource($input));
     }

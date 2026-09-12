@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,7 +22,7 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $perPage = (int) ($request->query('perPage', 15));
+        $perPage = PageSize::fromRequest($request, 15);
 
         $page = $this->users->paginate($perPage, $request->only(['status', 'role']));
 
@@ -66,7 +67,7 @@ class UserController extends Controller
 
     public function restore(string $uuid): JsonResponse
     {
-        $user = $this->users->getByUuid($uuid);
+        $user = $this->users->getByUuidWithTrashed($uuid);
 
         $this->authorize('restore', $user);
 

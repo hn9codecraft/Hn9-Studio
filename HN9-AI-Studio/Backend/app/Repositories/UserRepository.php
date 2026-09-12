@@ -19,6 +19,11 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
         return User::query();
     }
 
+    public function findByUuidWithTrashedOrFail(string $uuid, array $with = []): User
+    {
+        return User::withTrashed()->with($with)->where('uuid', $uuid)->firstOrFail();
+    }
+
     protected function filterable(): array
     {
         return ['status', 'role'];

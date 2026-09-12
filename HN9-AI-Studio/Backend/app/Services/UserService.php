@@ -24,6 +24,11 @@ final readonly class UserService implements UserServiceInterface
         return $this->users->findByUuidOrFail($uuid);
     }
 
+    public function getByUuidWithTrashed(string $uuid): User
+    {
+        return $this->users->findByUuidWithTrashedOrFail($uuid);
+    }
+
     public function update(User $user, array $data): User
     {
         $user = $this->users->update($user, $data);
@@ -46,7 +51,7 @@ final readonly class UserService implements UserServiceInterface
 
     public function restore(string $uuid): User
     {
-        $user = $this->getByUuid($uuid);
+        $user = $this->getByUuidWithTrashed($uuid);
 
         $user->restore();
 

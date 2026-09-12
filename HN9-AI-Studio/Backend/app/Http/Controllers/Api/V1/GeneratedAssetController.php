@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateGeneratedAssetRequest;
 use App\Http\Resources\AssetResource;
 use App\Models\GeneratedAsset;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -25,7 +26,7 @@ class GeneratedAssetController extends Controller
     {
         $this->authorize('viewAny', GeneratedAsset::class);
 
-        $perPage = (int) ($request->query('perPage', 15));
+        $perPage = PageSize::fromRequest($request, 15);
         $filters = $request->only([
             'project', 'projectUuid', 'type', 'provider', 'status', 'search', 'favorite', 'sort', 'order',
         ]);

@@ -14,6 +14,7 @@ use App\Http\Requests\UpdateImageRequest;
 use App\Http\Resources\ImageResource;
 use App\Models\Image;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,7 @@ class ImageController extends Controller
         $this->authorize('view', $project);
         $this->authorize('viewAny', [Image::class, $project]);
 
-        $perPage = (int) $request->query('perPage', 50);
+        $perPage = PageSize::fromRequest($request, 50);
         $filters = $request->only(['status', 'sort', 'order']);
         $page = $this->images->paginateForProject($project, $perPage, $filters);
 

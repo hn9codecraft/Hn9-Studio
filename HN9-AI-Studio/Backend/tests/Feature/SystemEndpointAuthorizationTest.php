@@ -70,4 +70,39 @@ final class SystemEndpointAuthorizationTest extends TestCase
 
         $this->getJson('/api/v1/system/activity-logs')->assertStatus(401);
     }
+
+    public function test_system_metrics_and_traces_require_authentication(): void
+    {
+        $this->getJson('/api/v1/system/metrics')->assertUnauthorized();
+        $this->getJson('/api/v1/system/traces')->assertUnauthorized();
+    }
+
+    public function test_system_metrics_and_traces_are_forbidden_to_a_non_admin(): void
+    {
+        $member = User::factory()->create(['role' => 'member']);
+
+        $this->actingAs($member, 'sanctum')
+            ->getJson('/api/v1/system/metrics')
+            ->assertForbidden();
+
+        $this->actingAs($member, 'sanctum')
+            ->getJson('/api/v1/system/traces')
+            ->assertForbidden();
+    }
+
+    public function test_an_admin_may_read_empty_system_metrics_and_traces(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/system/metrics')
+            ->assertOk()
+            ->assertJsonPath('data.metrics', []);
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/system/traces')
+            ->assertOk()
+            ->assertJsonPath('data.data', [])
+            ->assertJsonPath('data.meta.total', 0);
+    }
 }

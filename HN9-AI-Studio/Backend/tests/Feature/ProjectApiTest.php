@@ -43,6 +43,11 @@ final class ProjectApiTest extends TestCase
             ->assertStatus(200)
             ->assertJsonStructure(['data', 'meta']);
 
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/projects?perPage=500')
+            ->assertOk()
+            ->assertJsonPath('meta.perPage', 100);
+
         $project = Project::factory()->for($user)->create();
 
         $this->actingAs($user, 'sanctum')
@@ -107,19 +112,33 @@ final class ProjectApiTest extends TestCase
 
         $project = Project::factory()->for($user)->create(['status' => 'active']);
 
-        $this->actingAs($user, 'sanctum')
+        $created = $this->actingAs($user, 'sanctum')
             ->postJson('/api/v1/projects/'.$project->uuid.'/inputs', [
                 'deliverable_type' => 'blog_post',
                 'language' => 'en',
                 'payload' => ['title' => 'Hello'],
             ])
             ->assertStatus(201)
-            ->assertJsonPath('data.deliverable_type', 'blog_post');
+            ->assertJsonPath('data.deliverable_type', 'blog_post')
+            ->assertJsonPath('data.project_id', $project->uuid);
 
-        $this->actingAs($user, 'sanctum')
+        $createdId = $created->json('data.id');
+
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
+            (string) $createdId,
+        );
+        $this->assertNotSame((string) $project->getKey(), (string) $createdId);
+        $this->assertDoesNotMatchRegularExpression('/"id"\s*:\s*\d+/', $created->getContent() ?: '');
+        $this->assertDoesNotMatchRegularExpression('/"project_id"\s*:\s*\d+/', $created->getContent() ?: '');
+
+        $list = $this->actingAs($user, 'sanctum')
             ->getJson('/api/v1/projects/'.$project->uuid.'/inputs')
             ->assertStatus(200)
             ->assertJsonStructure(['data']);
+
+        $this->assertDoesNotMatchRegularExpression('/"id"\s*:\s*\d+/', $list->getContent() ?: '');
+        $this->assertDoesNotMatchRegularExpression('/"project_id"\s*:\s*\d+/', $list->getContent() ?: '');
     }
 
     public function test_member_without_create_permission_cannot_create_a_project(): void
@@ -147,6 +166,14 @@ final class ProjectApiTest extends TestCase
 
         $this->actingAs($intruder, 'sanctum')
             ->deleteJson('/api/v1/projects/'.$project->uuid)
+            ->assertForbidden();
+
+        $this->actingAs($intruder, 'sanctum')
+            ->postJson('/api/v1/projects/'.$project->uuid.'/archive')
+            ->assertForbidden();
+
+        $this->actingAs($intruder, 'sanctum')
+            ->postJson('/api/v1/projects/'.$project->uuid.'/restore')
             ->assertForbidden();
 
         $this->assertDatabaseHas('projects', [

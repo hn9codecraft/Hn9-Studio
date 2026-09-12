@@ -12,6 +12,10 @@ final class SystemController extends Controller
 {
     public function metrics(Request $request)
     {
+        if (! $request->user()?->isAdmin()) {
+            abort(403);
+        }
+
         // Prefer a dedicated SystemService
         if (class_exists('App\\Services\\SystemService')) {
             $svc = app('App\\Services\\SystemService');

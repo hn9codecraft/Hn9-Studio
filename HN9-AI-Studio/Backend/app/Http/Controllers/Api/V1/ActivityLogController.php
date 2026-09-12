@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Repositories\Contracts\ActivityLogRepositoryInterface;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,7 +25,7 @@ final class ActivityLogController extends Controller
         // scope — so listing it is gated to administrators.
         $this->authorize('viewAny', ActivityLog::class);
 
-        $perPage = (int) $request->query('per_page', '15');
+        $perPage = PageSize::fromRequest($request, 15);
 
         $filters = [];
         foreach (['action', 'user_id'] as $key) {

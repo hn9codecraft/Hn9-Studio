@@ -47,9 +47,20 @@ final class AgentController extends Controller
     {
         $this->authorize('viewAny', WorkflowRun::class);
 
-        $path = base_path('../Agents/agents/'.$agentUuid.'.md');
+        if (! preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/', $agentUuid)) {
+            return ApiResponse::error('Not found', 'not_found', 404);
+        }
 
-        if (! is_file($path)) {
+        $root = realpath(base_path('../Agents/agents'));
+
+        if ($root === false) {
+            return ApiResponse::error('Not found', 'not_found', 404);
+        }
+
+        $candidate = $root.DIRECTORY_SEPARATOR.$agentUuid.'.md';
+        $path = realpath($candidate);
+
+        if ($path === false || ! str_starts_with($path, $root.DIRECTORY_SEPARATOR)) {
             return ApiResponse::error('Not found', 'not_found', 404);
         }
 

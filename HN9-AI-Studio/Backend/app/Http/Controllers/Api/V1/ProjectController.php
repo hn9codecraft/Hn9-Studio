@@ -14,6 +14,7 @@ use App\Http\Requests\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -25,7 +26,7 @@ class ProjectController extends Controller
     {
         $this->authorize('viewAny', Project::class);
 
-        $perPage = (int) ($request->query('perPage', 15));
+        $perPage = PageSize::fromRequest($request, 15);
 
         $filters = $request->only(['status', 'type', 'search', 'sort', 'order', 'date', 'owner', 'created_by']);
 

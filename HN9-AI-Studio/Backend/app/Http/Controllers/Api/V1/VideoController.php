@@ -14,6 +14,7 @@ use App\Http\Requests\UpdateVideoRequest;
 use App\Http\Resources\VideoResource;
 use App\Models\Video;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,7 @@ class VideoController extends Controller
         $this->authorize('view', $project);
         $this->authorize('viewAny', [Video::class, $project]);
 
-        $perPage = (int) $request->query('perPage', 50);
+        $perPage = PageSize::fromRequest($request, 50);
         $filters = $request->only(['status', 'sort', 'order']);
         $page = $this->videos->paginateForProject($project, $perPage, $filters);
 
