@@ -21,6 +21,7 @@ use App\AI\Contracts\ProviderRouterInterface;
 use App\AI\Contracts\RetryPolicyInterface;
 use App\AI\DTOs\ProviderCapabilityDTO;
 use App\AI\DTOs\ProviderConfigDTO;
+use App\AI\Exceptions\ProviderNotConfiguredException;
 use App\AI\Execution\ModalityInvoker;
 use App\AI\Execution\ModalityInvokerRegistry;
 use App\AI\Execution\ProviderDispatcher;
@@ -323,7 +324,11 @@ class AIServiceProvider extends ServiceProvider
             return;
         }
 
-        $config = ElevenLabsConfig::fromProviderConfig($resolver->resolve('elevenlabs'));
+        try {
+            $config = ElevenLabsConfig::fromProviderConfig($resolver->resolve('elevenlabs'));
+        } catch (ProviderNotConfiguredException) {
+            return;
+        }
         $voices = new ElevenLabsVoiceRegistry($config);
 
         $this->registry()->register(
@@ -362,7 +367,11 @@ class AIServiceProvider extends ServiceProvider
             return;
         }
 
-        $config = ClaudeConfig::fromProviderConfig($resolver->resolve('claude'));
+        try {
+            $config = ClaudeConfig::fromProviderConfig($resolver->resolve('claude'));
+        } catch (ProviderNotConfiguredException) {
+            return;
+        }
         $models = new ClaudeModelRegistry($config);
 
         $this->registry()->register(
@@ -388,7 +397,11 @@ class AIServiceProvider extends ServiceProvider
             return;
         }
 
-        $config = OpenAIConfig::fromProviderConfig($resolver->resolve('openai'));
+        try {
+            $config = OpenAIConfig::fromProviderConfig($resolver->resolve('openai'));
+        } catch (ProviderNotConfiguredException) {
+            return;
+        }
         $models = new OpenAIModelRegistry($config);
 
         $this->registry()->register(
@@ -403,7 +416,7 @@ class AIServiceProvider extends ServiceProvider
             ),
             new ProviderCapabilityDTO(
                 key: 'openai', name: 'OpenAI', version: OpenAIProvider::VERSION,
-                text: true, image: true, streaming: $config->supportsStreaming,
+                text: true, image: $config->imageModels !== [], streaming: $config->supportsStreaming,
                 functionCalling: $config->supportsFunctionCalling, models: $models->all(),
             ),
             priority: (int) ($settings['priority'] ?? 100),
@@ -418,7 +431,11 @@ class AIServiceProvider extends ServiceProvider
             return;
         }
 
-        $config = GeminiConfig::fromProviderConfig($resolver->resolve('gemini'));
+        try {
+            $config = GeminiConfig::fromProviderConfig($resolver->resolve('gemini'));
+        } catch (ProviderNotConfiguredException) {
+            return;
+        }
         $models = new GeminiModelRegistry($config);
 
         $this->registry()->register(
@@ -428,8 +445,9 @@ class AIServiceProvider extends ServiceProvider
             ),
             new ProviderCapabilityDTO(
                 key: 'gemini', name: 'Gemini', version: GeminiProvider::VERSION,
-                // Image support is declared only when image-capable models are configured.
-                text: true, image: $config->imageModels !== [], streaming: $config->supportsStreaming,
+                // Image/video support is declared only when those models are configured.
+                text: true, image: $config->imageModels !== [], video: $config->videoModels !== [],
+                streaming: $config->supportsStreaming,
                 functionCalling: $config->supportsFunctionCalling, models: $models->all(),
             ),
             priority: (int) ($settings['priority'] ?? 80),
@@ -444,7 +462,11 @@ class AIServiceProvider extends ServiceProvider
             return;
         }
 
-        $config = OpenRouterConfig::fromProviderConfig($resolver->resolve('openrouter'));
+        try {
+            $config = OpenRouterConfig::fromProviderConfig($resolver->resolve('openrouter'));
+        } catch (ProviderNotConfiguredException) {
+            return;
+        }
         $models = new OpenRouterModelRegistry($config);
 
         $this->registry()->register(

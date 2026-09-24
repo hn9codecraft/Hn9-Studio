@@ -7,10 +7,11 @@ namespace App\Enums;
 use App\Enums\Concerns\InteractsWithEnum;
 
 /**
- * Lifecycle of a studio image request. Mirrors the `status` column on `images`.
+ * Lifecycle of a studio image. Mirrors the `status` column on `images`.
  *
- * pending / processing / completed / failed exist for a future provider job.
- * Until a provider is connected, user-facing writes stay on draft, pending, or archived.
+ * Review statuses follow the M10.3 script workflow and change only through
+ * dedicated review actions. pending / processing / completed / failed remain
+ * for compatibility with earlier studio rows.
  */
 enum ImageStatus: string
 {
@@ -22,9 +23,12 @@ enum ImageStatus: string
     case Completed = 'completed';
     case Failed = 'failed';
     case Archived = 'archived';
+    case PendingReview = 'pending_review';
+    case NeedsRework = 'needs_rework';
+    case Approved = 'approved';
 
     /**
-     * Statuses a studio user may set while no image provider is connected.
+     * Statuses a studio user may set through create/update payloads.
      *
      * @return list<string>
      */
@@ -35,5 +39,48 @@ enum ImageStatus: string
             self::Pending->value,
             self::Archived->value,
         ];
+    }
+
+    public function isSubmittable(): bool
+    {
+        return in_array($this, [self::Draft, self::Pending, self::NeedsRework], true);
+    }
+
+    public function isReviewable(): bool
+    {
+        return $this === self::PendingReview;
+    }
+
+    public function allowsContentEdit(): bool
+    {
+        return in_array($this, [self::Draft, self::Pending, self::NeedsRework], true);
+    }
+
+    /**
+     * A new generation is a new row. Pending review and archived rows cannot spawn one.
+     */
+    public function allowsRegeneration(): bool
+    {
+        return ! in_array($this, [self::PendingReview, self::Archived, self::Processing], true);
+    }
+
+    public function isApproved(): bool
+    {
+        return $this === self::Approved;
+    }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Draft => 'Draft',
+            self::Pending => 'Pending',
+            self::Processing => 'Processing',
+            self::Completed => 'Completed',
+            self::Failed => 'Failed',
+            self::Archived => 'Archived',
+            self::PendingReview => 'Pending review',
+            self::NeedsRework => 'Needs rework',
+            self::Approved => 'Approved',
+        };
     }
 }

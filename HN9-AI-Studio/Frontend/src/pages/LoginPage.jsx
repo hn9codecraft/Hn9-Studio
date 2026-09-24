@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import ThemeToggle from '../components/layout/ThemeToggle';
 import AlertMessage from '../components/ui/AlertMessage';
+import DocumentTitle from '../components/ui/DocumentTitle';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../services/apiClient';
 
@@ -31,11 +33,15 @@ export default function LoginPage() {
 
   return (
     <div className="login-screen">
-      <div className="login-panel card shadow">
+      <DocumentTitle title="Sign in" />
+      <div className="login-theme-toggle">
+        <ThemeToggle />
+      </div>
+      <div className="login-panel glass-card card border-0">
         <div className="card-body p-4 p-md-5">
           <div className="mb-4">
             <div className="brand-mark mb-3">HN9</div>
-            <h1 className="h3 mb-1">HN9 AI Studio</h1>
+            <h1 className="login-title mb-1">HN9 AI Studio</h1>
             <p className="text-secondary mb-0">Sign in with your studio account.</p>
           </div>
 

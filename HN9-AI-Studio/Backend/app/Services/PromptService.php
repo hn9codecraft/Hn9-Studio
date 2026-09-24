@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\AI\Responses\UsageResponse;
+use App\AI\Support\ProviderErrorSanitizer;
 use App\Contracts\Services\PromptServiceInterface;
 use App\DTOs\Prompt\PromptExecutionData;
+use App\Enums\ExecutionStatus;
 use App\Models\AgentExecution;
 use App\Models\PromptExecution;
 use App\Repositories\Contracts\ExecutionUsageRepositoryInterface;
@@ -51,7 +53,9 @@ final readonly class PromptService implements PromptServiceInterface
         ?string $providerKey = null,
         ?int $latencyMs = null,
     ): PromptExecution {
-        $attributes = [];
+        $attributes = [
+            'status' => ExecutionStatus::Completed->value,
+        ];
 
         if ($model !== null && $model !== '') {
             $attributes['model'] = $model;
@@ -87,5 +91,13 @@ final readonly class PromptService implements PromptServiceInterface
         $this->usage->rollupAgentExecution((int) $execution->agent_execution_id);
 
         return $execution;
+    }
+
+    public function markFailed(PromptExecution $execution, string $error): PromptExecution
+    {
+        return $this->prompts->update($execution, [
+            'status' => ExecutionStatus::Failed->value,
+            'error' => ProviderErrorSanitizer::message($error),
+        ]);
     }
 }

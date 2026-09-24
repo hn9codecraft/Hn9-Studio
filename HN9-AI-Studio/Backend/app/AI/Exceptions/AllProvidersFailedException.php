@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\AI\Exceptions;
 
 use App\AI\Support\Capability;
+use App\AI\Support\ProviderErrorSanitizer;
 use Throwable;
 
 /**
@@ -28,7 +29,10 @@ final class AllProvidersFailedException extends AIException
             context: [
                 'capability' => $capability->value,
                 'attempts' => $attempts,
-                'last_error' => $previous?->getMessage(),
+                'last_error' => $previous instanceof AIException
+                    ? $previous->errorCode()
+                    : ($previous === null ? null : 'unhandled_exception'),
+                'last_error_message' => ProviderErrorSanitizer::message($previous?->getMessage()),
             ],
             previous: $previous,
         );

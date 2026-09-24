@@ -20,6 +20,9 @@ final readonly class OpenAIConfig
         public bool $supportsStreaming,
         public bool $supportsFunctionCalling,
         public array $pricing,
+        /** @var list<string> */
+        public array $imageModels = [],
+        public ?string $imageDefaultModel = null,
     ) {}
 
     public static function fromProviderConfig(ProviderConfigDTO $config): self
@@ -31,6 +34,8 @@ final readonly class OpenAIConfig
 
         $models = $config->option('models', []);
         $pricing = $config->option('pricing', []);
+        $imageModels = $config->option('image_models', []);
+        $imageDefault = $config->option('image_default_model');
 
         return new self(
             apiKey: $apiKey,
@@ -42,6 +47,8 @@ final readonly class OpenAIConfig
             supportsStreaming: (bool) $config->option('supports_streaming', false),
             supportsFunctionCalling: (bool) $config->option('supports_function_calling', false),
             pricing: is_array($pricing) ? $pricing : [],
+            imageModels: is_array($imageModels) ? array_values(array_filter($imageModels, 'is_string')) : [],
+            imageDefaultModel: is_string($imageDefault) && $imageDefault !== '' ? $imageDefault : null,
         );
     }
 }

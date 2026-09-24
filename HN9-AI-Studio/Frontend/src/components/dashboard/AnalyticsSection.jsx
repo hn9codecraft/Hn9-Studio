@@ -80,17 +80,16 @@ export default function AnalyticsSection() {
   ];
 
   return (
-    <section className="analytics-section mt-5">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <section className="page-section analytics-section">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Analytics</p>
-          <h3 className="h4 mb-1">Studio analytics</h3>
-          <p className="text-secondary mb-0">
+          <h2 className="section-title mb-1">Studio analytics</h2>
+          <p className="page-lede mb-0">
             Aggregated from your owned records. Zeros and empty charts are real. Provider usage and cost are listed
             below.
           </p>
         </div>
-        <form className="d-flex flex-wrap align-items-end gap-2" onSubmit={applyRange}>
+        <form className="filter-bar" onSubmit={applyRange}>
           <div>
             <label className="form-label small mb-1" htmlFor="analytics-from">
               From
@@ -137,37 +136,39 @@ export default function AnalyticsSection() {
 
       {!loading ? (
         <>
-          <div className="row g-3 mb-4">
+          <div className="kpi-grid">
             {overview.map((card) => (
-              <div className="col-6 col-xl" key={card.label}>
-                <div className="card border-0 shadow-sm h-100">
-                  <div className="card-body p-4">
-                    <p className="small text-secondary text-uppercase mb-2">
-                      <i className={`bi ${card.icon} me-1`} aria-hidden="true" />
-                      {card.label}
-                    </p>
-                    <p className="dashboard-stat-value mb-0">{card.value}</p>
+              <div className="glass-card kpi-card card border-0" key={card.label}>
+                <div className="card-body">
+                  <div className="kpi-icon" aria-hidden="true">
+                    <i className={`bi ${card.icon}`} />
+                  </div>
+                  <div className="kpi-copy">
+                    <p className="kpi-label mb-0">{card.label}</p>
+                    <p className="kpi-value mb-0">{card.value}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="mb-4">
+          <div className="subsection">
             <CreationTimeline rows={analytics.creation_timeline} />
           </div>
 
-          <div className="mb-4">
-            <h3 className="h5 mb-3">Content status</h3>
+          <div className="subsection">
+            <h3 className="card-heading">Content status</h3>
             <ContentStatusBreakdown content={analytics.content} projects={analytics.projects} />
           </div>
 
-          <div className="mb-4">
-            <h3 className="h5 mb-3">Project productivity</h3>
+          <div className="subsection">
+            <h3 className="card-heading">Project productivity</h3>
             <ProjectProductivity rows={analytics.project_productivity} />
           </div>
 
-          <ActivityBreakdown activity={analytics.activity} />
+          <div className="subsection">
+            <ActivityBreakdown activity={analytics.activity} />
+          </div>
         </>
       ) : null}
     </section>

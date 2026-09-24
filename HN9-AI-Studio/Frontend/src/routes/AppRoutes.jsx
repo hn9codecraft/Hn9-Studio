@@ -24,11 +24,16 @@ export default function AppRoutes() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<CreateProjectPage />} />
           <Route path="/projects/:projectId" element={<ProjectWorkspacePage />} />
+          <Route path="/projects/:projectId/scripts/generate" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/scripts/new" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/scripts/:scriptId" element={<ProjectWorkspacePage />} />
+          <Route path="/projects/:projectId/images/generate" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/images/new" element={<ProjectWorkspacePage />} />
+          <Route path="/projects/:projectId/images/:imageId/regenerate" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/images/:imageId" element={<ProjectWorkspacePage />} />
+          <Route path="/projects/:projectId/videos/generate" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/videos/new" element={<ProjectWorkspacePage />} />
+          <Route path="/projects/:projectId/videos/:videoId/regenerate" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/videos/:videoId" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/assets/new" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/assets/:assetId" element={<ProjectWorkspacePage />} />

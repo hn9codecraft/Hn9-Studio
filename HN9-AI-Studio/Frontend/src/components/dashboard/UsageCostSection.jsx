@@ -81,17 +81,16 @@ export default function UsageCostSection() {
   }
 
   return (
-    <section className="usage-cost-section mt-5">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <section className="page-section usage-cost-section">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Usage &amp; cost</p>
-          <h3 className="h4 mb-1">Provider usage and cost</h3>
-          <p className="text-secondary mb-0">
+          <h2 className="section-title mb-1">Provider usage and cost</h2>
+          <p className="page-lede mb-0">
             Recorded from real prompt executions. Missing tokens stay unknown. Cost appears only when a provider
             reported a charge or a configured price exists.
           </p>
         </div>
-        <form className="d-flex flex-wrap align-items-end gap-2" onSubmit={applyFilters}>
+        <form className="filter-bar" onSubmit={applyFilters}>
           <div>
             <label className="form-label small mb-1" htmlFor="usage-from">
               From
@@ -161,8 +160,8 @@ export default function UsageCostSection() {
 function UsagePanel({ usage }) {
   if (usage.operations < 1) {
     return (
-      <div className="mb-4">
-        <h3 className="h5 mb-3">Usage overview</h3>
+      <div className="subsection">
+        <h3 className="card-heading">Usage overview</h3>
         <EmptyState
           icon="bi-cpu"
           title="No usage has been recorded yet."
@@ -173,28 +172,26 @@ function UsagePanel({ usage }) {
   }
 
   return (
-    <div className="mb-4">
-      <h3 className="h5 mb-3">Usage overview</h3>
-      <div className="row g-3 mb-4">
+    <div className="subsection">
+      <h3 className="card-heading">Usage overview</h3>
+      <div className="stat-grid">
         <StatCard label="Operations" value={usage.operations} />
         <StatCard label="Input tokens" value={formatUnknown(usage.tokens.input)} />
         <StatCard label="Output tokens" value={formatUnknown(usage.tokens.output)} />
         <StatCard label="Total tokens" value={formatUnknown(usage.tokens.total)} />
       </div>
-      <p className="small text-secondary mb-3">
+      <p className="small text-secondary mt-3 mb-0">
         {usage.tokens.operations_without_tokens === 1
           ? '1 operation had no token data from the provider.'
           : `${usage.tokens.operations_without_tokens} operations had no token data from the provider.`}
       </p>
-      <div className="row g-3 mb-4">
-        <div className="col-md-6">
-          <BreakdownCard title="By provider" rows={usage.by_provider} labelKey="provider" valueKey="operations" />
-        </div>
-        <div className="col-md-6">
-          <BreakdownCard title="By model" rows={usage.by_model} labelKey="model" valueKey="operations" />
-        </div>
+      <div className="equal-card-row mt-3">
+        <BreakdownCard title="By provider" rows={usage.by_provider} labelKey="provider" valueKey="operations" />
+        <BreakdownCard title="By model" rows={usage.by_model} labelKey="model" valueKey="operations" />
       </div>
-      <TimelineCard title="Usage timeline" rows={usage.timeline} valueKey="operations" />
+      <div className="mt-3">
+        <TimelineCard title="Usage timeline" rows={usage.timeline} valueKey="operations" />
+      </div>
     </div>
   );
 }
@@ -202,17 +199,17 @@ function UsagePanel({ usage }) {
 function CostPanel({ costs }) {
   if (!costs.has_records) {
     return (
-      <div className="mb-4">
-        <h3 className="h5 mb-3">Cost overview</h3>
+      <div className="subsection">
+        <h3 className="card-heading">Cost overview</h3>
         <EmptyState icon="bi-currency-dollar" title="Cost data is not available yet." description={costs.message} />
       </div>
     );
   }
 
   return (
-    <div className="mb-4">
-      <h3 className="h5 mb-3">Cost overview</h3>
-      <div className="row g-3 mb-4">
+    <div className="subsection">
+      <h3 className="card-heading">Cost overview</h3>
+      <div className="stat-grid">
         {costs.totals.map((total) => (
           <StatCard
             key={total.currency}
@@ -221,26 +218,24 @@ function CostPanel({ costs }) {
           />
         ))}
       </div>
-      <div className="row g-3 mb-4">
-        <div className="col-md-6">
-          <BreakdownCard title="Cost by provider" rows={costs.by_provider} labelKey="provider" valueKey="amount" />
-        </div>
-        <div className="col-md-6">
-          <BreakdownCard title="Cost by model" rows={costs.by_model} labelKey="model" valueKey="amount" />
-        </div>
+      <div className="equal-card-row mt-3">
+        <BreakdownCard title="Cost by provider" rows={costs.by_provider} labelKey="provider" valueKey="amount" />
+        <BreakdownCard title="Cost by model" rows={costs.by_model} labelKey="model" valueKey="amount" />
       </div>
-      <TimelineCard title="Cost timeline" rows={costs.timeline} valueKey="amount" />
+      <div className="mt-3">
+        <TimelineCard title="Cost timeline" rows={costs.timeline} valueKey="amount" />
+      </div>
     </div>
   );
 }
 
 function StatCard({ label, value }) {
   return (
-    <div className="col-6 col-xl">
-      <div className="card border-0 shadow-sm h-100">
-        <div className="card-body p-4">
-          <p className="small text-secondary text-uppercase mb-2">{label}</p>
-          <p className="dashboard-stat-value mb-0">{value}</p>
+    <div className="glass-card kpi-card card border-0">
+      <div className="card-body">
+        <div className="kpi-copy">
+          <p className="kpi-label mb-0">{label}</p>
+          <p className="kpi-value mb-0">{value}</p>
         </div>
       </div>
     </div>
@@ -252,8 +247,8 @@ function BreakdownCard({ title, rows, labelKey, valueKey }) {
 
   return (
     <div className="card border-0 shadow-sm h-100">
-      <div className="card-body p-4">
-        <h3 className="h6 text-secondary text-uppercase mb-3">{title}</h3>
+      <div className="card-body">
+        <h4 className="card-heading mb-3">{title}</h4>
         <ul className="list-unstyled mb-0">
           {rows.map((row) => {
             const label = row[labelKey] || 'Unattributed';
@@ -263,10 +258,10 @@ function BreakdownCard({ title, rows, labelKey, valueKey }) {
               <li key={`${label}-${row.currency || ''}`} className="mb-3">
                 <div className="d-flex justify-content-between small mb-1">
                   <span>{label}</span>
-                  <span className="fw-semibold">{value}</span>
+                  <span className="fw-semibold numeric-cell">{value}</span>
                 </div>
                 <div className="analytics-bar-track">
-                  <div className="analytics-bar-fill" style={{ width, background: '#0d365c' }} />
+                  <div className="analytics-bar-fill" style={{ width, background: 'var(--chart-3)' }} />
                 </div>
               </li>
             );
@@ -286,8 +281,8 @@ function TimelineCard({ title, rows, valueKey }) {
 
   return (
     <div className="card border-0 shadow-sm">
-      <div className="card-body p-4">
-        <h3 className="h6 text-secondary text-uppercase mb-3">{title}</h3>
+      <div className="card-body">
+        <h4 className="card-heading mb-3">{title}</h4>
         <p className="small text-secondary mb-3">Real recorded days only. Empty days are omitted.</p>
         {rows.map((row) => (
           <div key={`${row.date}-${row.currency || ''}`} className="analytics-timeline-row">
@@ -296,7 +291,7 @@ function TimelineCard({ title, rows, valueKey }) {
               <div className="analytics-bar-track">
                 <div
                   className="analytics-bar-fill"
-                  style={{ width: `${Math.round((Number(row[valueKey]) / max) * 100)}%`, background: '#0d365c' }}
+                  style={{ width: `${Math.round((Number(row[valueKey]) / max) * 100)}%`, background: 'var(--chart-3)' }}
                 />
               </div>
             </div>

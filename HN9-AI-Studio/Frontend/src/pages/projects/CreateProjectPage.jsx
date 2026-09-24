@@ -45,12 +45,12 @@ export default function CreateProjectPage() {
     <div className="row justify-content-center">
       <div className="col-lg-8 col-xl-7">
         <div className="mb-4">
-          <Link to="/projects" className="small text-decoration-none">
+          <Link to="/projects" className="activity-link small text-decoration-none">
             <i className="bi bi-arrow-left me-1" aria-hidden="true" />
             Back to Projects
           </Link>
-          <h2 className="h3 mt-3 mb-1">New Project</h2>
-          <p className="text-secondary mb-0">Saved to the database as soon as you create it. No mock records.</p>
+          <h1 className="visually-hidden">New Project</h1>
+          <p className="page-lede mt-3 mb-0">Saved to the database as soon as you create it. No mock records.</p>
         </div>
 
         <div className="card border-0 shadow-sm">

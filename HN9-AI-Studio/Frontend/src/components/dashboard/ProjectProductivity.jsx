@@ -13,33 +13,53 @@ export default function ProjectProductivity({ rows }) {
   }
 
   return (
-    <div className="card border-0 shadow-sm">
+    <div className="card border-0 shadow-sm studio-table-card">
       <div className="card-body p-0">
-        <div className="table-responsive">
-          <table className="table studio-table mb-0 align-middle">
+        <div className="productivity-table-wrap">
+          <table className="table studio-table productivity-table mb-0 align-middle">
             <thead>
               <tr>
-                <th>Project</th>
-                <th>Scripts</th>
-                <th>Images</th>
-                <th>Videos</th>
-                <th>Assets</th>
-                <th>Total items</th>
+                <th scope="col">Project</th>
+                <th scope="col" className="numeric-cell">
+                  Scripts
+                </th>
+                <th scope="col" className="numeric-cell">
+                  Images
+                </th>
+                <th scope="col" className="numeric-cell">
+                  Videos
+                </th>
+                <th scope="col" className="numeric-cell">
+                  Assets
+                </th>
+                <th scope="col" className="numeric-cell">
+                  Total items
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.project.id}>
-                  <td>
-                    <Link to={`/projects/${row.project.id}`} className="fw-semibold text-decoration-none">
+                  <td data-label="Project">
+                    <Link to={`/projects/${row.project.id}`} className="project-name activity-link text-decoration-none">
                       {row.project.name}
                     </Link>
                   </td>
-                  <td>{row.scripts}</td>
-                  <td>{row.images}</td>
-                  <td>{row.videos}</td>
-                  <td>{row.assets}</td>
-                  <td className="fw-semibold">{row.total_items}</td>
+                  <td className="numeric-cell" data-label="Scripts">
+                    {row.scripts}
+                  </td>
+                  <td className="numeric-cell" data-label="Images">
+                    {row.images}
+                  </td>
+                  <td className="numeric-cell" data-label="Videos">
+                    {row.videos}
+                  </td>
+                  <td className="numeric-cell" data-label="Assets">
+                    {row.assets}
+                  </td>
+                  <td className="numeric-cell fw-semibold" data-label="Total items">
+                    {row.total_items}
+                  </td>
                 </tr>
               ))}
             </tbody>

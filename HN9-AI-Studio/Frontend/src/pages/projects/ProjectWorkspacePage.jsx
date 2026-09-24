@@ -9,6 +9,7 @@ import ActivityStudio from '../../components/activity/ActivityStudio';
 import ImageStudio from '../../components/images/ImageStudio';
 import ScriptStudio from '../../components/scripts/ScriptStudio';
 import VideoStudio from '../../components/videos/VideoStudio';
+import FinalAssetsStudio from '../../components/exports/FinalAssetsStudio';
 import AlertMessage from '../../components/ui/AlertMessage';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { ApiError } from '../../services/apiClient';
@@ -20,6 +21,7 @@ const SECTION_TITLES = {
   images: 'Images',
   videos: 'Videos',
   assets: 'Assets',
+  final: 'Final assets',
   activity: 'Activity',
 };
 
@@ -27,18 +29,24 @@ export default function ProjectWorkspacePage() {
   const { projectId, section } = useParams();
   const navigate = useNavigate();
   const newScriptMatch = useMatch('/projects/:projectId/scripts/new');
+  const generateScriptMatch = useMatch('/projects/:projectId/scripts/generate');
   const scriptMatch = useMatch('/projects/:projectId/scripts/:scriptId');
   const newImageMatch = useMatch('/projects/:projectId/images/new');
+  const generateImageMatch = useMatch('/projects/:projectId/images/generate');
+  const regenerateImageMatch = useMatch('/projects/:projectId/images/:imageId/regenerate');
   const imageMatch = useMatch('/projects/:projectId/images/:imageId');
   const newVideoMatch = useMatch('/projects/:projectId/videos/new');
+  const generateVideoMatch = useMatch('/projects/:projectId/videos/generate');
+  const regenerateVideoMatch = useMatch('/projects/:projectId/videos/:videoId/regenerate');
   const videoMatch = useMatch('/projects/:projectId/videos/:videoId');
   const newAssetMatch = useMatch('/projects/:projectId/assets/new');
   const assetMatch = useMatch('/projects/:projectId/assets/:assetId');
-  const inScriptStudio = Boolean(newScriptMatch || scriptMatch || section === 'scripts');
-  const inImageStudio = Boolean(newImageMatch || imageMatch || section === 'images');
-  const inVideoStudio = Boolean(newVideoMatch || videoMatch || section === 'videos');
+  const inScriptStudio = Boolean(newScriptMatch || generateScriptMatch || scriptMatch || section === 'scripts');
+  const inImageStudio = Boolean(newImageMatch || generateImageMatch || regenerateImageMatch || imageMatch || section === 'images');
+  const inVideoStudio = Boolean(newVideoMatch || generateVideoMatch || regenerateVideoMatch || videoMatch || section === 'videos');
   const inAssetStudio = Boolean(newAssetMatch || assetMatch || section === 'assets');
   const inActivityStudio = section === 'activity';
+  const inFinalStudio = section === 'final';
   const activeSection = inScriptStudio
     ? 'scripts'
     : inImageStudio
@@ -47,9 +55,11 @@ export default function ProjectWorkspacePage() {
         ? 'videos'
         : inAssetStudio
           ? 'assets'
-          : inActivityStudio
-            ? 'activity'
-            : section || 'overview';
+          : inFinalStudio
+            ? 'final'
+            : inActivityStudio
+              ? 'activity'
+              : section || 'overview';
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -148,7 +158,8 @@ export default function ProjectWorkspacePage() {
   if (error || !project) {
     return (
       <div>
-        <Link to="/projects" className="small text-decoration-none">
+        <h1 className="visually-hidden">Project Workspace</h1>
+        <Link to="/projects" className="activity-link small text-decoration-none">
           <i className="bi bi-arrow-left me-1" aria-hidden="true" />
           Back to Projects
         </Link>
@@ -161,10 +172,10 @@ export default function ProjectWorkspacePage() {
 
   return (
     <div className="project-workspace">
-      <div className="workspace-hero card border-0 shadow-sm mb-4">
-        <div className="card-body p-4 p-md-5">
+      <section className="page-section page-section--flush workspace-hero glass-card card border-0">
+        <div className="card-body">
           <div className="d-flex flex-wrap justify-content-between gap-3 mb-3">
-            <Link to="/projects" className="small text-decoration-none">
+            <Link to="/projects" className="activity-link small text-decoration-none">
               <i className="bi bi-arrow-left me-1" aria-hidden="true" />
               Back to Projects
             </Link>
@@ -173,8 +184,8 @@ export default function ProjectWorkspacePage() {
 
           <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
             <div>
-              <p className="text-uppercase small text-secondary mb-1">Project workspace</p>
-              <h2 className="h3 mb-2">{project.name}</h2>
+              <p className="section-kicker mb-1">Project workspace</p>
+              <h1 className="section-title mb-2">{project.name}</h1>
               <p className="text-secondary mb-0">{project.description || 'No description yet.'}</p>
             </div>
             <div className="d-flex flex-wrap gap-2">
@@ -214,7 +225,7 @@ export default function ProjectWorkspacePage() {
             </div>
           </dl>
         </div>
-      </div>
+      </section>
 
       {notice ? (
         <div className="mb-4">
@@ -223,9 +234,10 @@ export default function ProjectWorkspacePage() {
       ) : null}
 
       {editing ? (
-        <div className="card border-0 shadow-sm mb-4">
-          <div className="card-body p-4 p-md-5">
-            <h3 className="h5 mb-4">Edit project</h3>
+        <section className="page-section">
+          <div className="card border-0 glass-card">
+          <div className="card-body">
+            <h3 className="card-heading mb-3">Edit project</h3>
             <ProjectForm
               values={values}
               onChange={setValues}
@@ -236,18 +248,20 @@ export default function ProjectWorkspacePage() {
               currentStatus={project.status}
             />
           </div>
-        </div>
+          </div>
+        </section>
       ) : null}
 
+      <section className="page-section">
       <WorkspaceTabs projectId={project.id} section={activeSection} />
 
-      <div className="workspace-panel mt-4">
+      <div className="workspace-panel">
         {activeSection === 'overview' ? (
           <div className="row g-4">
             <div className="col-lg-7">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body p-4">
-                  <h3 className="h6 text-uppercase text-secondary mb-3">Overview</h3>
+              <div className="card border-0 glass-card h-100">
+                <div className="card-body">
+                  <h3 className="card-heading mb-3">Overview</h3>
                   <p className="mb-4">{project.description || 'This project has no description yet.'}</p>
                   <dl className="row mb-0">
                     <dt className="col-sm-4">Slug</dt>
@@ -263,9 +277,9 @@ export default function ProjectWorkspacePage() {
               </div>
             </div>
             <div className="col-lg-5">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body p-4">
-                  <h3 className="h6 text-uppercase text-secondary mb-3">Metadata</h3>
+              <div className="card border-0 glass-card h-100">
+                <div className="card-body">
+                  <h3 className="card-heading mb-3">Metadata</h3>
                   {metadataEntries.length === 0 && settingsEntries.length === 0 ? (
                     <p className="text-secondary mb-0">No metadata or settings are stored on this project yet.</p>
                   ) : (
@@ -282,19 +296,24 @@ export default function ProjectWorkspacePage() {
           <ScriptStudio
             project={project}
             creating={Boolean(newScriptMatch)}
-            scriptId={newScriptMatch ? null : scriptMatch?.params.scriptId || null}
+            generating={Boolean(generateScriptMatch)}
+            scriptId={newScriptMatch || generateScriptMatch ? null : scriptMatch?.params.scriptId || null}
           />
         ) : activeSection === 'images' ? (
           <ImageStudio
             project={project}
             creating={Boolean(newImageMatch)}
-            imageId={newImageMatch ? null : imageMatch?.params.imageId || null}
+            generating={Boolean(generateImageMatch)}
+            parentImageId={regenerateImageMatch?.params.imageId || null}
+            imageId={newImageMatch || generateImageMatch || regenerateImageMatch ? null : imageMatch?.params.imageId || null}
           />
         ) : activeSection === 'videos' ? (
           <VideoStudio
             project={project}
             creating={Boolean(newVideoMatch)}
-            videoId={newVideoMatch ? null : videoMatch?.params.videoId || null}
+            generating={Boolean(generateVideoMatch)}
+            parentVideoId={regenerateVideoMatch?.params.videoId || null}
+            videoId={newVideoMatch || generateVideoMatch || regenerateVideoMatch ? null : videoMatch?.params.videoId || null}
           />
         ) : activeSection === 'assets' ? (
           <AssetStudio
@@ -302,12 +321,21 @@ export default function ProjectWorkspacePage() {
             creating={Boolean(newAssetMatch)}
             assetId={newAssetMatch ? null : assetMatch?.params.assetId || null}
           />
+        ) : activeSection === 'final' ? (
+          <FinalAssetsStudio
+            project={project}
+            onProjectUpdated={(updated) => {
+              setProject(updated);
+              setValues(formValuesFromProject(updated));
+            }}
+          />
         ) : activeSection === 'activity' ? (
           <ActivityStudio project={project} />
         ) : (
           <ComingNextPanel title={SECTION_TITLES[activeSection]} />
         )}
       </div>
+      </section>
 
       {deleteError ? (
         <div className="mt-4">
@@ -350,7 +378,7 @@ function MetaList({ title, entries }) {
 
   return (
     <div className="mb-3">
-      <h4 className="h6">{title}</h4>
+      <h4 className="card-heading">{title}</h4>
       <dl className="row mb-0">
         {entries.map(([key, value]) => (
           <Fragment key={key}>

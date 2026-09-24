@@ -50,11 +50,10 @@ export default function ProjectsPage() {
 
   return (
     <div className="projects-page">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Studio</p>
-          <h2 className="h3 mb-1">Projects</h2>
-          <p className="text-secondary mb-0">Your production workspaces, loaded from the live API.</p>
+          <h1 className="visually-hidden">Projects</h1>
+          <p className="page-lede mb-0">Your production workspaces, loaded from the live API.</p>
         </div>
         <Link className="btn btn-primary" to="/projects/new">
           <i className="bi bi-plus-lg me-2" aria-hidden="true" />
@@ -94,15 +93,15 @@ export default function ProjectsPage() {
       {!loading && projects.length > 0 ? (
         <>
           <div className="d-none d-md-block">
-            <div className="card border-0 shadow-sm studio-table-card">
+            <div className="card border-0 glass-card studio-table-card">
               <div className="table-responsive">
                 <table className="table studio-table mb-0 align-middle">
                   <thead>
                     <tr>
-                      <th>Project</th>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Created</th>
+                      <th scope="col">Project</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Created</th>
                     </tr>
                   </thead>
                   <tbody>

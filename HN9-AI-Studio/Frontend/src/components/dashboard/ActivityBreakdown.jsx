@@ -21,8 +21,8 @@ export default function ActivityBreakdown({ activity }) {
 
   return (
     <div className="card border-0 shadow-sm">
-      <div className="card-body p-4">
-        <h3 className="h6 text-secondary text-uppercase mb-3">Activity breakdown</h3>
+      <div className="card-body">
+        <h3 className="card-heading mb-3">Activity breakdown</h3>
         <p className="small text-secondary mb-3">
           {activity.total} studio event{activity.total === 1 ? '' : 's'} total. {activity.recent_count} in the last 7
           days. <code>project_asset.*</code> is counted as asset.
@@ -39,7 +39,7 @@ export default function ActivityBreakdown({ activity }) {
                 <div className="analytics-bar-track">
                   <div
                     className="analytics-bar-fill"
-                    style={{ width: `${Math.round((value / max) * 100)}%`, background: '#0d365c' }}
+                    style={{ width: `${Math.round((value / max) * 100)}%`, background: 'var(--chart-3)' }}
                   />
                 </div>
               </li>
@@ -48,7 +48,7 @@ export default function ActivityBreakdown({ activity }) {
         </ul>
         {actions.length ? (
           <div>
-            <h4 className="h6 mb-2">Actions</h4>
+            <h4 className="mb-2">Actions</h4>
             <ul className="list-unstyled mb-0 dashboard-status-list">
               {actions.map(([action, count]) => (
                 <li key={action} className="d-flex justify-content-between gap-3 py-1 small">

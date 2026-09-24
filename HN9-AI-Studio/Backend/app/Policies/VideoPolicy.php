@@ -13,6 +13,8 @@ use App\Models\Video;
  */
 class VideoPolicy
 {
+    public const REVIEW_PERMISSION = 'video.review';
+
     public function before(User $user, string $ability): ?bool
     {
         return $user->isAdmin() ? true : null;
@@ -47,6 +49,21 @@ class VideoPolicy
     }
 
     public function delete(User $user, Video $video): bool
+    {
+        return $this->owns($user, $video);
+    }
+
+    public function submit(User $user, Video $video): bool
+    {
+        return $this->owns($user, $video);
+    }
+
+    public function review(User $user, Video $video): bool
+    {
+        return $this->owns($user, $video) && $user->hasPermission(self::REVIEW_PERMISSION);
+    }
+
+    public function viewReviewHistory(User $user, Video $video): bool
     {
         return $this->owns($user, $video);
     }

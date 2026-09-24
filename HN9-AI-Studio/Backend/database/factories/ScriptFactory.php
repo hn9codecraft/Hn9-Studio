@@ -25,7 +25,29 @@ class ScriptFactory extends Factory
             'project_id' => Project::factory(),
             'title' => fake()->sentence(4),
             'body' => fake()->optional()->paragraphs(3, true),
-            'status' => fake()->randomElement(ScriptStatus::values()),
+            'status' => ScriptStatus::Draft->value,
+            'source' => 'manual',
         ];
+    }
+
+    public function pendingReview(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => ScriptStatus::PendingReview->value,
+        ]);
+    }
+
+    public function approved(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => ScriptStatus::Approved->value,
+        ]);
+    }
+
+    public function needsRework(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => ScriptStatus::NeedsRework->value,
+        ]);
     }
 }

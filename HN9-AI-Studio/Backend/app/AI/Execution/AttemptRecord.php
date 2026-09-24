@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\AI\Execution;
 
+use App\AI\Support\ProviderErrorSanitizer;
+
 /**
  * One entry in a dispatch's audit trail.
  *
@@ -30,7 +32,7 @@ final readonly class AttemptRecord
 
     public static function failure(string $provider, int $attempt, int $durationMs, string $error, ?string $code = null): self
     {
-        return new self($provider, $attempt, false, $durationMs, $error, $code);
+        return new self($provider, $attempt, false, $durationMs, ProviderErrorSanitizer::message($error), $code);
     }
 
     /**

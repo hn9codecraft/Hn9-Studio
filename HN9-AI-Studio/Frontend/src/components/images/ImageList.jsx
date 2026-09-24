@@ -3,7 +3,7 @@ import AlertMessage from '../ui/AlertMessage';
 import EmptyState from '../ui/EmptyState';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { formatProjectDate } from '../../services/projectConstants';
-import { imageAspectRatioLabel, imageStatusLabel } from '../../services/imageConstants';
+import { imageAspectRatioLabel, imageStatusClass, imageStatusLabel } from '../../services/imageConstants';
 import ImageCard from './ImageCard';
 
 export default function ImageList({ projectId, images, loading, error, meta }) {
@@ -13,16 +13,21 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
 
   return (
     <div className="image-list">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Image Studio</p>
-          <h3 className="h4 mb-1">Image requests</h3>
-          <p className="text-secondary mb-0">Save prompts and settings for this project. AI generation is not configured yet.</p>
+          <p className="section-kicker mb-1">Image Studio</p>
+          <h2 className="section-title mb-1">Image requests</h2>
+          <p className="text-secondary mb-0">Generate an image from a prompt, or save a manual image request.</p>
         </div>
-        <Link className="btn btn-primary" to={`/projects/${projectId}/images/new`}>
-          <i className="bi bi-plus-lg me-2" aria-hidden="true" />
-          New Image Request
-        </Link>
+        <div className="d-flex flex-wrap gap-2">
+          <Link className="btn btn-outline-primary" to={`/projects/${projectId}/images/new`}>
+            New image request
+          </Link>
+          <Link className="btn btn-primary" to={`/projects/${projectId}/images/generate`}>
+            <i className="bi bi-stars me-2" aria-hidden="true" />
+            Generate image
+          </Link>
+        </div>
       </div>
 
       {error ? (
@@ -35,11 +40,16 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
         <EmptyState
           icon="bi-image"
           title="No image requests yet"
-          description="Create an image request to save a prompt and settings. AI image generation is not configured yet."
+          description="Generate an image from a prompt, or save a manual request for later."
         >
-          <Link className="btn btn-primary" to={`/projects/${projectId}/images/new`}>
-            New Image Request
-          </Link>
+          <div className="d-flex flex-wrap justify-content-center gap-2">
+            <Link className="btn btn-outline-primary" to={`/projects/${projectId}/images/new`}>
+              New image request
+            </Link>
+            <Link className="btn btn-primary" to={`/projects/${projectId}/images/generate`}>
+              Generate image
+            </Link>
+          </div>
         </EmptyState>
       ) : null}
 
@@ -51,11 +61,13 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
                 <table className="table studio-table mb-0 align-middle">
                   <thead>
                     <tr>
-                      <th>Title</th>
-                      <th>Aspect ratio</th>
-                      <th>Status</th>
-                      <th>Updated</th>
-                      <th />
+                      <th scope="col">Title</th>
+                      <th scope="col">Aspect ratio</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Updated</th>
+                      <th scope="col">
+                        <span className="visually-hidden">Actions</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -68,7 +80,7 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
                         </td>
                         <td className="text-secondary">{imageAspectRatioLabel(image.aspect_ratio)}</td>
                         <td>
-                          <span className={`status-pill status-${image.status || 'draft'}`}>
+                          <span className={`status-pill ${imageStatusClass(image.status)}`}>
                             {imageStatusLabel(image.status)}
                           </span>
                         </td>

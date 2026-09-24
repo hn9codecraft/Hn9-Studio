@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Enums\VideoAspectRatio;
 use App\Enums\VideoDuration;
+use App\Enums\VideoSource;
 use App\Enums\VideoStatus;
 use App\Models\Project;
 use App\Models\Video;
@@ -31,6 +32,7 @@ class VideoFactory extends Factory
             'aspect_ratio' => fake()->randomElement(VideoAspectRatio::values()),
             'duration' => fake()->randomElement(VideoDuration::cases())->value,
             'status' => VideoStatus::Draft->value,
+            'source' => VideoSource::Manual->value,
             'provider' => null,
             'provider_job_id' => null,
             'output_url' => null,

@@ -3,7 +3,7 @@ import AlertMessage from '../ui/AlertMessage';
 import EmptyState from '../ui/EmptyState';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { formatProjectDate } from '../../services/projectConstants';
-import { scriptStatusLabel } from '../../services/scriptConstants';
+import { scriptOriginLabel, scriptStatusClass, scriptStatusLabel } from '../../services/scriptConstants';
 
 export default function ScriptList({ projectId, scripts, loading, error, meta }) {
   if (loading) {
@@ -12,16 +12,22 @@ export default function ScriptList({ projectId, scripts, loading, error, meta })
 
   return (
     <div className="script-list">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Script Studio</p>
-          <h3 className="h4 mb-1">Scripts</h3>
-          <p className="text-secondary mb-0">Manual drafts for this project, stored in the database.</p>
+          <p className="section-kicker mb-1">Script Studio</p>
+          <h2 className="section-title mb-1">Scripts</h2>
+          <p className="text-secondary mb-0">Manual drafts and AI-generated scripts for this project.</p>
         </div>
-        <Link className="btn btn-primary" to={`/projects/${projectId}/scripts/new`}>
-          <i className="bi bi-plus-lg me-2" aria-hidden="true" />
-          New Script
-        </Link>
+        <div className="d-flex flex-wrap gap-2">
+          <Link className="btn btn-outline-primary" to={`/projects/${projectId}/scripts/generate`}>
+            <i className="bi bi-stars me-2" aria-hidden="true" />
+            Generate Script
+          </Link>
+          <Link className="btn btn-primary" to={`/projects/${projectId}/scripts/new`}>
+            <i className="bi bi-plus-lg me-2" aria-hidden="true" />
+            New Script
+          </Link>
+        </div>
       </div>
 
       {error ? (
@@ -34,11 +40,16 @@ export default function ScriptList({ projectId, scripts, loading, error, meta })
         <EmptyState
           icon="bi-file-text"
           title="No scripts yet"
-          description="Create a script to open the studio editor. AI generation is not part of this milestone."
+          description="Create a manual draft or generate a script with a configured AI provider."
         >
-          <Link className="btn btn-primary" to={`/projects/${projectId}/scripts/new`}>
-            New Script
-          </Link>
+          <div className="d-flex flex-wrap justify-content-center gap-2">
+            <Link className="btn btn-outline-primary" to={`/projects/${projectId}/scripts/generate`}>
+              Generate Script
+            </Link>
+            <Link className="btn btn-primary" to={`/projects/${projectId}/scripts/new`}>
+              New Script
+            </Link>
+          </div>
         </EmptyState>
       ) : null}
 
@@ -50,11 +61,14 @@ export default function ScriptList({ projectId, scripts, loading, error, meta })
                 <table className="table studio-table mb-0 align-middle">
                   <thead>
                     <tr>
-                      <th>Title</th>
-                      <th>Status</th>
-                      <th>Updated</th>
-                      <th>Created</th>
-                      <th />
+                      <th scope="col">Title</th>
+                      <th scope="col">Origin</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Updated</th>
+                      <th scope="col">Created</th>
+                      <th scope="col">
+                        <span className="visually-hidden">Actions</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -66,7 +80,12 @@ export default function ScriptList({ projectId, scripts, loading, error, meta })
                           </Link>
                         </td>
                         <td>
-                          <span className={`status-pill status-${script.status || 'draft'}`}>
+                          <span className={`status-pill ${script.source === 'ai' ? 'status-ready' : 'status-draft'}`}>
+                            {scriptOriginLabel(script.source)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-pill ${scriptStatusClass(script.status)}`}>
                             {scriptStatusLabel(script.status)}
                           </span>
                         </td>
@@ -91,10 +110,12 @@ export default function ScriptList({ projectId, scripts, loading, error, meta })
                 <Link to={`/projects/${projectId}/scripts/${script.id}`} className="project-card card border-0 shadow-sm text-decoration-none">
                   <div className="card-body p-4">
                     <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
-                      <h3 className="h6 mb-0 text-body">{script.title}</h3>
-                      <span className={`status-pill status-${script.status || 'draft'}`}>{scriptStatusLabel(script.status)}</span>
+                      <h3 className="card-heading mb-0">{script.title}</h3>
+                      <span className={`status-pill ${scriptStatusClass(script.status)}`}>{scriptStatusLabel(script.status)}</span>
                     </div>
-                    <p className="small text-secondary mb-0">Updated {formatProjectDate(script.updated_at)}</p>
+                    <p className="small text-secondary mb-0">
+                      {scriptOriginLabel(script.source)} · Updated {formatProjectDate(script.updated_at)}
+                    </p>
                   </div>
                 </Link>
               </div>

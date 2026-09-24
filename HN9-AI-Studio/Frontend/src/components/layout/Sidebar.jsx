@@ -11,7 +11,7 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   return (
     <aside className="app-sidebar d-flex flex-column">
-      <div className="sidebar-brand px-4 py-4">
+      <div className="sidebar-brand">
         <div className="brand-mark">HN9</div>
         <div>
           <div className="brand-title">HN9 AI Studio</div>
@@ -19,7 +19,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <nav className="sidebar-nav flex-grow-1 px-3" aria-label="Primary">
+      <nav className="sidebar-nav flex-grow-1" aria-label="Primary">
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
@@ -27,13 +27,15 @@ export default function Sidebar() {
             end={item.to !== '/projects'}
             className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
           >
-            <i className={`bi ${item.icon}`} aria-hidden="true" />
+            <span className="sidebar-link-icon" aria-hidden="true">
+              <i className={`bi ${item.icon}`} />
+            </span>
             <span>{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div className="sidebar-footnote px-4 py-3">Connected to the Laravel API</div>
+      <div className="sidebar-footnote">Connected to the Laravel API</div>
     </aside>
   );
 }

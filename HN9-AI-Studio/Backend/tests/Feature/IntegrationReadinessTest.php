@@ -13,14 +13,16 @@ final class IntegrationReadinessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_export_store_does_not_pretend_a_job_was_created(): void
+    public function test_export_store_requires_a_project_and_creates_no_row_for_csv(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/v1/exports', ['format' => 'csv'])
-            ->assertStatus(501)
-            ->assertJsonPath('error_code', 'not_implemented');
+            ->assertStatus(422)
+            ->assertJsonPath('error_code', 'export_invalid_request');
+
+        $this->assertDatabaseCount('exports', 0);
     }
 
     public function test_brand_brain_update_returns_public_project_uuid_not_integer_ids(): void

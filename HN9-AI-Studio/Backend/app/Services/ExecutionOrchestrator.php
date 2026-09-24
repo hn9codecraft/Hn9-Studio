@@ -6,10 +6,17 @@ namespace App\Services;
 
 use App\AI\Contracts\ProviderDispatcherInterface;
 use App\AI\Contracts\ProviderResponseInterface;
+use App\AI\Exceptions\NoProviderAvailableException;
+use App\AI\Exceptions\ProviderNotConfiguredException;
 use App\AI\Execution\DispatchOptions;
+use App\AI\Execution\DispatchResult;
+use App\AI\Requests\ImageRequest;
 use App\AI\Requests\TextRequest;
+use App\AI\Responses\ImageResponse;
 use App\AI\Responses\TextResponse;
 use App\AI\Responses\UsageResponse;
+use App\AI\Support\Capability;
+use App\AI\Support\Modality;
 use App\Contracts\Services\AgentExecutionServiceInterface;
 use App\Contracts\Services\AssetServiceInterface;
 use App\Contracts\Services\ContentServiceInterface;
@@ -29,8 +36,10 @@ use App\DTOs\Workflow\WorkflowRunData;
 use App\Enums\ExecutionStatus;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\GenerationException;
+use App\Exceptions\ImageGenerationException;
 use App\Models\AgentExecution;
 use App\Models\Project;
+use App\Models\User;
 use App\Models\WorkflowRun;
 use Illuminate\Support\Arr;
 
@@ -56,12 +65,17 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
         private ProviderDispatcherInterface $dispatcher,
         private ContentServiceInterface $content,
         private AssetServiceInterface $assets,
+        private ImageBinaryStore $imageFiles,
         private ?WorkflowServiceInterface $workflows = null,
         private ?AgentExecutionServiceInterface $agentExecutions = null,
     ) {}
 
     public function execute(Project $project, GenerationRequestData $data, array $options = []): array
     {
+        if (($options['modality'] ?? null) === Modality::Image->value) {
+            return $this->executeImage($project, $data, $options);
+        }
+
         $user = $options['user'] ?? null;
         $templateKey = (string) ($options['template_key'] ?? $data->deliverable_type);
 
@@ -119,7 +133,18 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
         ));
 
         $request = new TextRequest(prompt: $renderedPrompt, model: Arr::get($options, 'model'));
-        $dispatchResult = $this->dispatcher->dispatch($request, DispatchOptions::make());
+
+        try {
+            $dispatchResult = $this->dispatcher->dispatch($request, DispatchOptions::make());
+        } catch (NoProviderAvailableException $exception) {
+            $this->prompts->markFailed($promptExecution, $exception->getMessage());
+
+            throw $this->mapUnavailableProvider($exception);
+        } catch (\Throwable $exception) {
+            $this->prompts->markFailed($promptExecution, $exception->getMessage());
+
+            throw $exception;
+        }
 
         $text = $dispatchResult->response instanceof TextResponse
             ? $dispatchResult->response->text
@@ -136,6 +161,9 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
             $dispatchResult->providerKey,
             $dispatchResult->durationMs > 0 ? $dispatchResult->durationMs : null,
         );
+
+        $causer = $user instanceof User ? $user : null;
+        $dispatch = $this->publicDispatch($dispatchResult);
 
         $content = $this->content->create(new ContentData(
             project_id: $project->getKey(),
@@ -154,9 +182,9 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
             status: ExecutionStatus::Completed->value,
             metadata: [
                 'provider' => $dispatchResult->providerKey,
-                'dispatch' => $dispatchResult->toArray(),
+                'dispatch' => $dispatch,
             ],
-        ));
+        ), $causer);
 
         $asset = $this->assets->create(new AssetData(
             project_id: $project->getKey(),
@@ -169,18 +197,181 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
             prompt: $renderedPrompt,
             metadata: [
                 'source' => 'execution_orchestrator',
-                'provider_result' => $dispatchResult->toArray(),
+                'provider_result' => $dispatch,
             ],
-        ));
+        ), $causer);
 
         return [
             'project_input' => $input,
             'workflow_run' => $workflowRun,
             'agent_execution' => $agentExecution,
             'prompt_execution' => $promptExecution,
-            'dispatch' => $dispatchResult->toArray(),
+            'dispatch' => $dispatch,
             'content' => $content,
             'asset' => $asset,
+        ];
+    }
+
+    /**
+     * Image modality uses the same request, prompt-execution and dispatcher path
+     * as text. The caller's prompt is sent to an image-capable adapter. The file
+     * is stored before any completed asset row is written.
+     *
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    private function executeImage(Project $project, GenerationRequestData $data, array $options): array
+    {
+        $store = $this->imageFiles;
+
+        $user = $options['user'] ?? null;
+        $prompt = trim((string) ($options['image_prompt'] ?? ''));
+
+        if ($prompt === '') {
+            throw ImageGenerationException::promptRequired();
+        }
+
+        $input = $this->generation->submit($project, $data, $user instanceof User ? $user : null);
+        $workflowRun = $this->createWorkflowRun($project, $data, $user);
+        $agentExecution = $this->createAgentExecution($workflowRun, $data, $user);
+
+        $promptExecutionId = (int) ($agentExecution?->getKey() ?? $workflowRun?->getKey() ?? $input->getKey() ?? 0);
+        if ($promptExecutionId <= 0) {
+            throw new \RuntimeException('Execution orchestrator requires a persisted agent execution or project input before prompt recording.');
+        }
+
+        $model = isset($options['model']) && is_string($options['model']) && $options['model'] !== ''
+            ? $options['model']
+            : null;
+        $size = isset($options['size']) && is_string($options['size']) && $options['size'] !== ''
+            ? $options['size']
+            : null;
+        $quality = isset($options['quality']) && is_string($options['quality']) && $options['quality'] !== ''
+            ? $options['quality']
+            : null;
+
+        $promptExecution = $this->prompts->record(new PromptExecutionData(
+            agent_execution_id: $promptExecutionId,
+            template_key: 'image',
+            model: $model,
+            status: ExecutionStatus::Queued->value,
+            variables: [
+                'prompt' => $prompt,
+                'size' => $size ?? '',
+                'quality' => $quality ?? '',
+            ],
+        ));
+
+        $request = new ImageRequest(
+            prompt: $prompt,
+            model: $model,
+            size: $size,
+            quality: $quality,
+            count: 1,
+        );
+
+        $dispatchOptions = isset($options['provider']) && is_string($options['provider']) && $options['provider'] !== ''
+            ? DispatchOptions::only($options['provider'])
+            : DispatchOptions::make();
+
+        try {
+            $dispatchResult = $this->dispatcher->dispatch($request, $dispatchOptions);
+        } catch (NoProviderAvailableException $exception) {
+            $this->prompts->markFailed($promptExecution, $exception->getMessage());
+
+            throw $this->mapUnavailableProvider($exception);
+        } catch (\Throwable $exception) {
+            $this->prompts->markFailed($promptExecution, $exception->getMessage());
+
+            throw $exception;
+        }
+
+        if (! $dispatchResult->response instanceof ImageResponse || $dispatchResult->response->images === []) {
+            $this->prompts->markFailed($promptExecution, 'Provider did not return an image.');
+
+            throw ImageGenerationException::malformed();
+        }
+
+        $imageResponse = $dispatchResult->response;
+
+        try {
+            $stored = $store->store($project, $imageResponse);
+        } catch (\Throwable $exception) {
+            $this->prompts->markFailed($promptExecution, $exception->getMessage());
+
+            throw $exception;
+        }
+
+        $responseModel = $imageResponse->model;
+        $promptExecution = $this->prompts->recordProviderUsage(
+            $promptExecution,
+            $imageResponse->usage,
+            $responseModel,
+            $dispatchResult->providerKey,
+            $dispatchResult->durationMs > 0 ? $dispatchResult->durationMs : null,
+        );
+
+        $causer = $user instanceof User ? $user : null;
+        $dispatch = $this->publicDispatch($dispatchResult);
+        $dispatch['model'] = $responseModel;
+        $dispatch['usage'] = $imageResponse->usage?->toArray();
+
+        $content = $this->content->create(new ContentData(
+            project_id: $project->getKey(),
+            type: 'image',
+            workflow_run_id: $workflowRun?->getKey(),
+            agent_execution_id: $agentExecution?->getKey(),
+            channel: 'default',
+            language: $data->language,
+            title: $data->topic,
+            body: $prompt,
+            structured: [
+                'template_key' => 'image',
+                'model' => $responseModel,
+                'mime_type' => $stored->mimeType,
+                'size' => $stored->size,
+                'width' => $stored->width,
+                'height' => $stored->height,
+            ],
+            status: ExecutionStatus::Completed->value,
+            metadata: [
+                'model' => $responseModel,
+                'synchronous' => true,
+            ],
+        ), $causer);
+
+        $asset = $this->assets->create(new AssetData(
+            project_id: $project->getKey(),
+            type: 'image',
+            generated_content_id: $content->getKey(),
+            workflow_run_id: $workflowRun?->getKey(),
+            agent_execution_id: $agentExecution?->getKey(),
+            provider: $dispatchResult->providerKey,
+            status: ExecutionStatus::Completed->value,
+            prompt: $prompt,
+            metadata: [
+                'source' => 'execution_orchestrator',
+                'model' => $responseModel,
+                'mime_type' => $stored->mimeType,
+                'extension' => $stored->extension,
+                'size' => $stored->size,
+                'width' => $stored->width,
+                'height' => $stored->height,
+                'checksum' => $stored->checksum,
+                'disk' => $stored->disk,
+                'path' => $stored->path,
+            ],
+        ), $causer);
+
+        return [
+            'project_input' => $input,
+            'workflow_run' => $workflowRun,
+            'agent_execution' => $agentExecution,
+            'prompt_execution' => $promptExecution,
+            'dispatch' => $dispatch,
+            'content' => $content,
+            'asset' => $asset,
+            'stored_image' => $stored,
         ];
     }
 
@@ -251,6 +442,40 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
         }
 
         return is_scalar($value) ? (string) $value : (string) json_encode($value);
+    }
+
+    private function mapUnavailableProvider(NoProviderAvailableException $exception): NoProviderAvailableException|ProviderNotConfiguredException
+    {
+        $rejected = $exception->context()['rejected'] ?? null;
+        $capability = Capability::tryFrom((string) ($exception->context()['capability'] ?? Capability::Text->value))
+            ?? Capability::Text;
+
+        if (is_array($rejected) && $rejected === []) {
+            return ProviderNotConfiguredException::forCapability($capability);
+        }
+
+        return $exception;
+    }
+
+    /**
+     * Client-safe dispatch summary. Omits vendor payloads, attempt error text,
+     * and routing cost estimates that are not billed usage.
+     *
+     * @return array<string, mixed>
+     */
+    private function publicDispatch(DispatchResult $result): array
+    {
+        $usage = $this->usageFromResponse($result->response);
+
+        return [
+            'provider' => $result->providerKey,
+            'modality' => $result->modality->value,
+            'duration_ms' => $result->durationMs,
+            'retries' => $result->retries,
+            'fallbacks' => $result->fallbacks,
+            'cost' => ($usage !== null && $usage->hasBilledCost()) ? $usage->cost : null,
+            'plan' => $result->plan?->keys() ?? [],
+        ];
     }
 
     private function usageFromResponse(ProviderResponseInterface $response): ?UsageResponse

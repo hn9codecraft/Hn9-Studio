@@ -29,6 +29,7 @@ export const WORKSPACE_SECTIONS = [
   { key: 'images', label: 'Images', path: 'images' },
   { key: 'videos', label: 'Videos', path: 'videos' },
   { key: 'assets', label: 'Assets', path: 'assets' },
+  { key: 'final', label: 'Final', path: 'final' },
   { key: 'activity', label: 'Activity', path: 'activity' },
 ];
 

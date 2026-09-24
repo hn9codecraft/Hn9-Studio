@@ -10,17 +10,25 @@ use App\AI\Execution\DispatchResult;
 use App\AI\Responses\TextResponse;
 use App\AI\Support\Capability;
 use App\AI\Support\Modality;
+use App\Enums\ExecutionStatus;
 use App\Models\GeneratedAsset;
 use App\Models\GeneratedContent;
 use App\Models\Project;
+use App\Models\PromptExecution;
 use App\Models\User;
+use App\Providers\AIServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use Mockery;
+use Tests\Support\InteractsWithProviderPlatform;
 use Tests\TestCase;
 
 final class GenerationApiTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithProviderPlatform;
 
     /**
      * blog.md declares placeholders the brand context does not yet source —
@@ -120,6 +128,9 @@ final class GenerationApiTest extends TestCase
             ->assertJsonPath('error_code', 'ai_all_providers_failed');
 
         $this->assertDatabaseCount('generated_contents', 0);
+        $this->assertDatabaseHas('prompt_executions', [
+            'status' => ExecutionStatus::Failed->value,
+        ]);
     }
 
     public function test_generate_endpoint_reports_a_prompt_variable_the_request_cannot_fill(): void
@@ -190,6 +201,214 @@ final class GenerationApiTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/"user_id"\s*:\s*\d+/', $preview->getContent() ?: '');
 
         $this->assertDatabaseCount('project_inputs', 0);
+    }
+
+    public function test_generate_endpoint_rejects_unauthenticated_requests(): void
+    {
+        $project = Project::factory()->create(['status' => 'draft']);
+
+        $this->postJson('/api/v1/projects/'.$project->uuid.'/generate', [
+            'deliverable_type' => 'blog',
+            'language' => 'en',
+            'topic' => 'AI automation',
+            'payload' => self::BLOG_TEMPLATE_VARIABLES,
+        ])->assertUnauthorized();
+
+        $this->assertDatabaseCount('generated_contents', 0);
+    }
+
+    public function test_generate_endpoint_rejects_another_users_project(): void
+    {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $project = Project::factory()->for($owner)->create(['status' => 'draft']);
+
+        $this->actingAs($intruder, 'sanctum')
+            ->postJson('/api/v1/projects/'.$project->uuid.'/generate', [
+                'deliverable_type' => 'blog',
+                'language' => 'en',
+                'topic' => 'AI automation',
+                'payload' => self::BLOG_TEMPLATE_VARIABLES,
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('generated_contents', 0);
+    }
+
+    public function test_generate_endpoint_reports_when_no_runtime_provider_is_configured(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create(['status' => 'draft']);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/projects/'.$project->uuid.'/generate', [
+                'deliverable_type' => 'blog',
+                'language' => 'en',
+                'topic' => 'AI automation',
+                'payload' => self::BLOG_TEMPLATE_VARIABLES,
+            ]);
+
+        $response->assertStatus(409)
+            ->assertJsonPath('error_code', 'ai_provider_not_configured')
+            ->assertJsonPath('context.reason', 'not_configured');
+
+        $this->assertDatabaseCount('generated_contents', 0);
+        $this->assertDatabaseHas('prompt_executions', [
+            'status' => ExecutionStatus::Failed->value,
+        ]);
+    }
+
+    public function test_generate_endpoint_dispatches_through_the_real_adapter_with_http_fake(): void
+    {
+        $this->bootOpenAiRuntime();
+
+        Http::fake([
+            'https://api.openai.com/v1/responses' => Http::response([
+                'model' => 'configured-openai-model',
+                'output_text' => 'Adapter-generated blog body',
+                'usage' => ['input_tokens' => 4, 'output_tokens' => 6, 'total_tokens' => 10],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create(['status' => 'draft']);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/projects/'.$project->uuid.'/generate', [
+                'deliverable_type' => 'blog',
+                'language' => 'en',
+                'topic' => 'AI automation',
+                'payload' => self::BLOG_TEMPLATE_VARIABLES + ['title' => 'Hello world'],
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.content.body', 'Adapter-generated blog body')
+            ->assertJsonPath('data.dispatch.provider', 'openai')
+            ->assertJsonPath('data.dispatch.cost', null);
+
+        $this->assertStringNotContainsString('sk-test-openai-key', $response->getContent() ?: '');
+        $this->assertDatabaseHas('generated_contents', [
+            'project_id' => $project->id,
+            'body' => 'Adapter-generated blog body',
+        ]);
+        $this->assertDatabaseHas('prompt_executions', [
+            'status' => ExecutionStatus::Completed->value,
+            'prompt_tokens' => 4,
+            'completion_tokens' => 6,
+            'total_tokens' => 10,
+        ]);
+        $this->assertNull(PromptExecution::query()->first()?->cost);
+
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.openai.com/v1/responses');
+    }
+
+    public function test_generate_endpoint_does_not_invent_usage_when_the_vendor_omits_it(): void
+    {
+        $this->bootOpenAiRuntime();
+
+        Http::fake([
+            'https://api.openai.com/v1/responses' => Http::response([
+                'model' => 'configured-openai-model',
+                'output_text' => 'Text without usage',
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create(['status' => 'draft']);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/projects/'.$project->uuid.'/generate', [
+                'deliverable_type' => 'blog',
+                'language' => 'en',
+                'topic' => 'AI automation',
+                'payload' => self::BLOG_TEMPLATE_VARIABLES,
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.dispatch.cost', null);
+
+        $execution = PromptExecution::query()->first();
+        $this->assertNotNull($execution);
+        $this->assertNull($execution->prompt_tokens);
+        $this->assertNull($execution->cost);
+        $this->assertNull($execution->cost_source);
+    }
+
+    public function test_generate_endpoint_sanitizes_provider_errors_and_never_returns_secrets(): void
+    {
+        $this->bootOpenAiRuntime();
+        Sleep::fake();
+
+        Http::fake([
+            'https://api.openai.com/v1/responses' => Http::response([
+                'error' => ['message' => 'Incorrect API key provided: sk-live-should-never-leak'],
+            ], 401),
+        ]);
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create(['status' => 'draft']);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/projects/'.$project->uuid.'/generate', [
+                'deliverable_type' => 'blog',
+                'language' => 'en',
+                'topic' => 'AI automation',
+                'payload' => self::BLOG_TEMPLATE_VARIABLES,
+            ]);
+
+        $response->assertStatus(502)
+            ->assertJsonPath('error_code', 'ai_all_providers_failed');
+
+        $body = $response->getContent() ?: '';
+        $this->assertStringNotContainsString('sk-live-should-never-leak', $body);
+        $this->assertStringNotContainsString('sk-test-openai-key', $body);
+        $this->assertDatabaseCount('generated_contents', 0);
+    }
+
+    public function test_generate_endpoint_reports_provider_timeout_without_fake_content(): void
+    {
+        $this->bootOpenAiRuntime();
+        Sleep::fake();
+
+        Http::fake(fn (): never => throw new ConnectionException('cURL error 28: Operation timed out after 30000 milliseconds'));
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create(['status' => 'draft']);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/projects/'.$project->uuid.'/generate', [
+                'deliverable_type' => 'blog',
+                'language' => 'en',
+                'topic' => 'AI automation',
+                'payload' => self::BLOG_TEMPLATE_VARIABLES,
+            ])
+            ->assertStatus(502)
+            ->assertJsonPath('error_code', 'ai_all_providers_failed');
+
+        $this->assertDatabaseCount('generated_contents', 0);
+        $this->assertDatabaseHas('prompt_executions', [
+            'status' => ExecutionStatus::Failed->value,
+        ]);
+    }
+
+    private function bootOpenAiRuntime(): void
+    {
+        config()->set('ai.providers.openai', [
+            'enabled' => true,
+            'api_key' => 'sk-test-openai-key',
+            'base_url' => 'https://api.openai.com/v1',
+            'default_model' => 'configured-openai-model',
+            'models' => ['configured-openai-model'],
+            'priority' => 100,
+        ]);
+
+        (new AIServiceProvider($this->app))->boot();
+
+        $this->configurePlatform([
+            'ai.routing.strategy' => 'priority',
+            'ai.retry.jitter' => false,
+            'ai.retry.delay_ms' => 1,
+            'ai.retry.max_attempts' => 1,
+        ]);
     }
 
     public function test_generation_history_returns_inputs_contents_and_assets(): void

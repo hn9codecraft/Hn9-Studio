@@ -13,16 +13,21 @@ export default function VideoList({ projectId, videos, loading, error, meta }) {
 
   return (
     <div className="video-list">
-      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+      <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <p className="text-uppercase small text-secondary mb-1">Video Studio</p>
-          <h3 className="h4 mb-1">Video requests</h3>
-          <p className="text-secondary mb-0">Save prompts and settings for this project. AI generation is not configured yet.</p>
+          <p className="section-kicker mb-1">Video Studio</p>
+          <h2 className="section-title mb-1">Video requests</h2>
+          <p className="text-secondary mb-0">Generate a video from a prompt, or save a manual video request.</p>
         </div>
-        <Link className="btn btn-primary" to={`/projects/${projectId}/videos/new`}>
-          <i className="bi bi-plus-lg me-2" aria-hidden="true" />
-          New Video Request
-        </Link>
+        <div className="d-flex flex-wrap gap-2">
+          <Link className="btn btn-outline-primary" to={`/projects/${projectId}/videos/new`}>
+            New video request
+          </Link>
+          <Link className="btn btn-primary" to={`/projects/${projectId}/videos/generate`}>
+            <i className="bi bi-stars me-2" aria-hidden="true" />
+            Generate video
+          </Link>
+        </div>
       </div>
 
       {error ? (
@@ -35,10 +40,10 @@ export default function VideoList({ projectId, videos, loading, error, meta }) {
         <EmptyState
           icon="bi-camera-reels"
           title="No video requests yet"
-          description="Create a video request to save a prompt and settings. AI video generation is not configured yet."
+          description="Generate a video from a prompt, or save a manual request for later."
         >
-          <Link className="btn btn-primary" to={`/projects/${projectId}/videos/new`}>
-            New Video Request
+          <Link className="btn btn-primary" to={`/projects/${projectId}/videos/generate`}>
+            Generate video
           </Link>
         </EmptyState>
       ) : null}
@@ -51,12 +56,14 @@ export default function VideoList({ projectId, videos, loading, error, meta }) {
                 <table className="table studio-table mb-0 align-middle">
                   <thead>
                     <tr>
-                      <th>Title</th>
-                      <th>Aspect ratio</th>
-                      <th>Duration</th>
-                      <th>Status</th>
-                      <th>Updated</th>
-                      <th />
+                      <th scope="col">Title</th>
+                      <th scope="col">Aspect ratio</th>
+                      <th scope="col">Duration</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Updated</th>
+                      <th scope="col">
+                        <span className="visually-hidden">Actions</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
