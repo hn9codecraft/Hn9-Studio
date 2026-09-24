@@ -53,10 +53,10 @@ return [
         |----------------------------------------------------------------------
         |
         | Dedicated disks for each media/output category in the content supply
-        | chain. Private disks hold in-progress source material; the "exports"
-        | disk is publicly served for delivery-ready output. Every disk is
-        | driver-agnostic and can be repointed to S3 via env without code
-        | changes (Repository-ready: consumers depend on the disk name only).
+        | chain. All HN9 disks are private, including exports. Completed
+        | packages are downloaded only through authenticated API routes.
+        | Every disk is driver-agnostic and can be repointed to S3 via env
+        | without code changes (consumers depend on the disk name only).
         |
         */
 
@@ -95,8 +95,7 @@ return [
         'exports' => [
             'driver' => env('HN9_DISK_DRIVER', 'local'),
             'root' => storage_path('app/hn9/exports'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/exports',
-            'visibility' => 'public',
+            'visibility' => 'private',
             'throw' => false,
             'report' => false,
         ],
@@ -137,7 +136,6 @@ return [
 
     'links' => [
         public_path('storage') => storage_path('app/public'),
-        public_path('exports') => storage_path('app/hn9/exports'),
     ],
 
 ];

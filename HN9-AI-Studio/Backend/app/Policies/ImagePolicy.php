@@ -13,6 +13,8 @@ use App\Models\User;
  */
 class ImagePolicy
 {
+    public const REVIEW_PERMISSION = 'image.review';
+
     public function before(User $user, string $ability): ?bool
     {
         return $user->isAdmin() ? true : null;
@@ -47,6 +49,21 @@ class ImagePolicy
     }
 
     public function delete(User $user, Image $image): bool
+    {
+        return $this->owns($user, $image);
+    }
+
+    public function submit(User $user, Image $image): bool
+    {
+        return $this->owns($user, $image);
+    }
+
+    public function review(User $user, Image $image): bool
+    {
+        return $this->owns($user, $image) && $user->hasPermission(self::REVIEW_PERMISSION);
+    }
+
+    public function viewReviewHistory(User $user, Image $image): bool
     {
         return $this->owns($user, $image);
     }

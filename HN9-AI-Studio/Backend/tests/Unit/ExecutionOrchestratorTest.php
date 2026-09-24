@@ -26,7 +26,10 @@ use App\Contracts\Services\PromptServiceInterface;
 use App\Contracts\Services\WorkflowServiceInterface;
 use App\DTOs\Generation\GenerationRequestData;
 use App\DTOs\Prompt\PromptExecutionData;
+use App\Contracts\Storage\StorageInterface;
 use App\Models\AgentExecution;
+use App\Services\ImageBinaryStore;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use App\Models\GeneratedAsset;
 use App\Models\GeneratedContent;
 use App\Models\Project;
@@ -215,6 +218,10 @@ class ExecutionOrchestratorTest extends TestCase
             dispatcher: $dispatcher,
             content: $content,
             assets: $assets,
+            imageFiles: new ImageBinaryStore(
+                Mockery::mock(StorageInterface::class),
+                Mockery::mock(HttpFactory::class),
+            ),
             workflows: $workflowService,
             agentExecutions: $agentExecutions,
         );

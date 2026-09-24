@@ -19,6 +19,7 @@ final readonly class GeminiConfig
      * @param  list<string>  $models  Generative text models.
      * @param  list<string>  $imageModels  Models permitted to return image output.
      * @param  list<string>  $imageResponseModalities  `generationConfig.responseModalities` for image requests.
+     * @param  list<string>  $videoModels  Models permitted to call predictLongRunning (Veo).
      * @param  array<string, array{input?: float|int, output?: float|int}>  $pricing
      */
     public function __construct(
@@ -32,6 +33,8 @@ final readonly class GeminiConfig
         public array $imageModels,
         public ?string $imageDefaultModel,
         public array $imageResponseModalities,
+        public array $videoModels,
+        public ?string $videoDefaultModel,
         public bool $remoteTokenCounting,
         public bool $supportsStreaming,
         public bool $supportsFunctionCalling,
@@ -51,6 +54,7 @@ final readonly class GeminiConfig
         }
 
         $imageDefault = $config->option('image_default_model');
+        $videoDefault = $config->option('video_default_model');
         $pricing = $config->option('pricing', []);
 
         return new self(
@@ -64,6 +68,8 @@ final readonly class GeminiConfig
             imageModels: ConfigNormalizer::stringList($config->option('image_models', [])),
             imageDefaultModel: is_string($imageDefault) && $imageDefault !== '' ? $imageDefault : null,
             imageResponseModalities: ConfigNormalizer::stringList($config->option('image_response_modalities', [])),
+            videoModels: ConfigNormalizer::stringList($config->option('video_models', [])),
+            videoDefaultModel: is_string($videoDefault) && $videoDefault !== '' ? $videoDefault : null,
             remoteTokenCounting: (bool) $config->option('remote_token_counting', false),
             supportsStreaming: (bool) $config->option('supports_streaming', false),
             supportsFunctionCalling: (bool) $config->option('supports_function_calling', false),

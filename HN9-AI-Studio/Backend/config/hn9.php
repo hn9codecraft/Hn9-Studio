@@ -77,4 +77,20 @@ return [
 
     'locales' => ['en', 'hi', 'gu'],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Studio video generation
+    |--------------------------------------------------------------------------
+    |
+    | Bounds for server-side Veo operation polling. These are application
+    | limits, not invented provider progress values.
+    |
+    */
+
+    'video' => [
+        'poll_interval_seconds' => (int) env('HN9_VIDEO_POLL_INTERVAL', 5),
+        'timeout_seconds' => (int) env('HN9_VIDEO_TIMEOUT', 900),
+        'max_poll_attempts' => (int) env('HN9_VIDEO_MAX_POLL_ATTEMPTS', 60),
+    ],
+
 ];

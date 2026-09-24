@@ -4,90 +4,60 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Contracts\Services\ExportServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ExportResource;
+use App\Models\Export;
 use App\Support\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Completes the existing global export routes. A project UUID is required;
+ * CSV and other formats are rejected without creating a row.
+ */
 final class ExportController extends Controller
 {
-    public function index(Request $request)
-    {
-        if (class_exists('App\\Services\\ExportService')) {
-            $svc = app('App\\Services\\ExportService');
-            if (method_exists($svc, 'index')) {
-                return ApiResponse::success($svc->index($request->user()));
-            }
-        }
+    public function __construct(private ExportServiceInterface $exports) {}
 
-        return ApiResponse::success([]);
+    public function index(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Export::class);
+
+        return ApiResponse::success(ExportResource::collection($this->exports->index($request->user())));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $payload = $request->all();
+        $this->authorize('create', Export::class);
 
-        if (class_exists('App\\Services\\ExportService')) {
-            $svc = app('App\\Services\\ExportService');
-            if (method_exists($svc, 'create')) {
-                $export = $svc->create($request->user(), $payload);
+        $export = $this->exports->create($request->user(), $request->all());
 
-                // Dispatch job if available
-                if (class_exists('App\\Jobs\\ExportJob')) {
-                    $job = app('App\\Jobs\\ExportJob', ['export' => $export]);
-                    Bus::dispatch($job);
-                }
-
-                return ApiResponse::created($export);
-            }
-        }
-
-        return ApiResponse::error(
-            'Exports are not available yet. Nothing was created or queued.',
-            'not_implemented',
-            501,
-        );
+        return ApiResponse::created(new ExportResource($export));
     }
 
-    public function show(Request $request, string $uuid)
+    public function show(Request $request, string $uuid): JsonResponse
     {
-        if (class_exists('App\\Services\\ExportService')) {
-            $svc = app('App\\Services\\ExportService');
-            if (method_exists($svc, 'show')) {
-                $item = $svc->show($request->user(), $uuid);
-                if ($item === null) {
-                    return ApiResponse::error('Not found', 'not_found', 404);
-                }
+        $export = $this->exports->show($request->user(), $uuid);
 
-                return ApiResponse::success($item);
-            }
+        if ($export === null) {
+            return ApiResponse::error('Not found', 'not_found', 404);
         }
 
-        return ApiResponse::error('Not found', 'not_found', 404);
+        $this->authorize('view', $export);
+
+        return ApiResponse::success(new ExportResource($export));
     }
 
-    public function download(Request $request, string $uuid)
+    public function download(Request $request, string $uuid): StreamedResponse
     {
-        if (class_exists('App\\Services\\ExportService')) {
-            $svc = app('App\\Services\\ExportService');
-            if (method_exists($svc, 'download')) {
-                $result = $svc->download($request->user(), $uuid);
+        $export = $this->exports->show($request->user(), $uuid);
 
-                // If service returned a response, return it directly.
-                if ($result instanceof Response || $result instanceof BinaryFileResponse) {
-                    return $result;
-                }
+        abort_if($export === null, 404);
 
-                // If service returned a storage path, stream download.
-                if (is_string($result) && Storage::exists($result)) {
-                    return response()->download(Storage::path($result));
-                }
-            }
-        }
+        $this->authorize('download', $export);
 
-        return ApiResponse::error('Not found', 'not_found', 404);
+        return $this->exports->download($request->user(), $uuid);
     }
 }

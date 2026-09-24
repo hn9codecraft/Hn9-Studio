@@ -12,6 +12,7 @@ use App\AI\Exceptions\ProviderAuthenticationException;
 use App\AI\Exceptions\ProviderNetworkException;
 use App\AI\Exceptions\ProviderRateLimitException;
 use App\AI\Exceptions\ProviderTimeoutException;
+use App\AI\Support\ProviderErrorSanitizer;
 use Closure;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
@@ -166,7 +167,9 @@ abstract readonly class AbstractProviderClient
 
         $message = $body['error']['message'] ?? null;
 
-        return is_string($message) && $message !== '' ? $message : null;
+        return is_string($message) && $message !== ''
+            ? ProviderErrorSanitizer::message($message)
+            : null;
     }
 
     /**

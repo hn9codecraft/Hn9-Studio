@@ -57,4 +57,19 @@ class UserFactory extends Factory
             'role' => 'admin',
         ]);
     }
+
+    /**
+     * Project owners who may approve / request rework on their own scripts.
+     */
+    public function reviewer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'permissions' => array_values(array_unique([
+                ...((array) ($attributes['permissions'] ?? [])),
+                'script.review',
+                'image.review',
+                'video.review',
+            ])),
+        ]);
+    }
 }

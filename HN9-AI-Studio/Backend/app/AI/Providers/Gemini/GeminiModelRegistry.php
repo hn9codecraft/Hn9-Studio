@@ -25,7 +25,11 @@ final readonly class GeminiModelRegistry extends AbstractModelRegistry
      */
     public function all(): array
     {
-        return array_values(array_unique([...$this->config->models, ...$this->config->imageModels]));
+        return array_values(array_unique([
+            ...$this->config->models,
+            ...$this->config->imageModels,
+            ...$this->config->videoModels,
+        ]));
     }
 
     /**
@@ -47,5 +51,18 @@ final readonly class GeminiModelRegistry extends AbstractModelRegistry
     public function resolveImage(?string $model): string
     {
         return $this->resolveFrom($model, $this->config->imageModels, $this->config->imageDefaultModel);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function videoModels(): array
+    {
+        return $this->config->videoModels;
+    }
+
+    public function resolveVideo(?string $model): string
+    {
+        return $this->resolveFrom($model, $this->config->videoModels, $this->config->videoDefaultModel);
     }
 }

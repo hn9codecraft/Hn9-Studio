@@ -36,6 +36,7 @@ interface PromptServiceInterface
     /**
      * Persist real UsageResponse telemetry onto an existing prompt execution.
      * Missing usage stays NULL. Cost is stored only when billed.
+     * Successful recording marks the execution completed.
      */
     public function recordProviderUsage(
         PromptExecution $execution,
@@ -44,4 +45,9 @@ interface PromptServiceInterface
         ?string $providerKey = null,
         ?int $latencyMs = null,
     ): PromptExecution;
+
+    /**
+     * Mark a prompt execution as failed without inventing usage or cost.
+     */
+    public function markFailed(PromptExecution $execution, string $error): PromptExecution;
 }

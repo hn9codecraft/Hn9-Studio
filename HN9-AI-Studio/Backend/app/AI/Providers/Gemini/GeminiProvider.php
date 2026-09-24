@@ -7,6 +7,7 @@ namespace App\AI\Providers\Gemini;
 use App\AI\DTOs\ProviderConfigDTO;
 use App\AI\DTOs\ProviderHealthDTO;
 use App\AI\DTOs\ProviderRequestDTO;
+use App\AI\Exceptions\ProviderApiException;
 use App\AI\Exceptions\UnsupportedCapabilityException;
 use App\AI\Providers\AbstractProvider;
 use App\AI\Requests\ImageRequest;
@@ -28,8 +29,8 @@ use Throwable;
  *
  * Text and image output both travel through `generateContent`; image models are
  * configured separately and requested with the configured response modalities.
- * Video (Veo) and speech generation are out of this adapter's scope and raise
- * the shared unsupported-capability exception rather than being approximated.
+ * Video uses Veo `predictLongRunning` when `video_models` are configured.
+ * Speech generation remains out of this adapter's scope.
  */
 final class GeminiProvider extends AbstractProvider
 {
@@ -84,7 +85,37 @@ final class GeminiProvider extends AbstractProvider
 
     public function generateVideo(VideoRequest $request): VideoResponse
     {
-        throw UnsupportedCapabilityException::make(self::KEY, Capability::Video);
+        if ($this->geminiConfig->videoModels === []) {
+            throw UnsupportedCapabilityException::make(self::KEY, Capability::Video);
+        }
+
+        $model = $this->models->resolveVideo($request->model);
+        $operation = $request->options['operation'] ?? null;
+
+        if (is_string($operation) && $operation !== '') {
+            return $this->videoOperation($model, $operation);
+        }
+
+        $startedAt = hrtime(true);
+        $response = $this->client->predictLongRunning($model, $this->videoPayload($request));
+        $name = $response['name'] ?? null;
+
+        if (! is_string($name) || $name === '') {
+            throw ProviderApiException::forProvider(
+                self::KEY,
+                'Gemini did not return a video operation name.',
+            );
+        }
+
+        return new VideoResponse(
+            video: '',
+            model: $model,
+            durationSeconds: $request->durationSeconds,
+            format: $request->format,
+            raw: $response,
+            jobId: $name,
+            done: false,
+        );
     }
 
     public function generateVoice(VoiceRequest $request): VoiceResponse
@@ -157,6 +188,7 @@ final class GeminiProvider extends AbstractProvider
                     'model_verified' => isset($metadata['name']),
                     'text_models' => $this->models->textModels(),
                     'image_models' => $this->models->imageModels(),
+                    'video_models' => $this->models->videoModels(),
                 ],
             );
         } catch (Throwable $exception) {
@@ -265,5 +297,100 @@ final class GeminiProvider extends AbstractProvider
     private function userContent(string $text): array
     {
         return ['role' => 'user', 'parts' => [['text' => $text]]];
+    }
+
+    /**
+     * Official Veo REST body: instances[].prompt plus optional first-frame
+     * image, and parameters documented by the Gemini video API.
+     *
+     * @return array<string, mixed>
+     */
+    private function videoPayload(VideoRequest $request): array
+    {
+        $instance = array_filter([
+            'prompt' => $request->prompt,
+            'image' => $this->videoImage($request),
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
+
+        $parameters = array_filter([
+            'aspectRatio' => $this->supportedAspectRatio($request->aspectRatio),
+            'durationSeconds' => $this->supportedDuration($request->durationSeconds),
+            'resolution' => $this->supportedResolution($request->resolution),
+        ], static fn (mixed $value): bool => $value !== null);
+
+        return array_filter([
+            'instances' => [$instance],
+            'parameters' => $parameters !== [] ? $parameters : null,
+        ], static fn (mixed $value): bool => $value !== null);
+    }
+
+    /**
+     * @return array{mimeType: string, bytesBase64Encoded: string}|null
+     */
+    private function videoImage(VideoRequest $request): ?array
+    {
+        $image = $request->options['image'] ?? null;
+
+        if (! is_array($image)) {
+            return null;
+        }
+
+        $mime = $image['mimeType'] ?? $image['mime_type'] ?? null;
+        $bytes = $image['bytesBase64Encoded'] ?? $image['bytes'] ?? null;
+
+        if (! is_string($mime) || $mime === '' || ! is_string($bytes) || $bytes === '') {
+            return null;
+        }
+
+        return [
+            'mimeType' => $mime,
+            'bytesBase64Encoded' => $bytes,
+        ];
+    }
+
+    private function videoOperation(string $model, string $name): VideoResponse
+    {
+        $response = $this->client->operation($name);
+        $error = $response['error']['message'] ?? null;
+        $done = ($response['done'] ?? false) === true;
+
+        if (is_string($error) && $error !== '') {
+            return new VideoResponse(
+                video: '',
+                model: $model,
+                raw: $response,
+                jobId: $name,
+                done: true,
+                error: $error,
+            );
+        }
+
+        $uri = data_get($response, 'response.generateVideoResponse.generatedSamples.0.video.uri');
+
+        return new VideoResponse(
+            video: is_string($uri) ? $uri : '',
+            model: $model,
+            raw: $response,
+            jobId: $name,
+            done: $done,
+            error: $done && (! is_string($uri) || $uri === '') ? 'Gemini completed without a video URI.' : null,
+        );
+    }
+
+    private function supportedAspectRatio(?string $ratio): ?string
+    {
+        return in_array($ratio, ['16:9', '9:16'], true) ? $ratio : null;
+    }
+
+    private function supportedDuration(?float $seconds): ?int
+    {
+        $value = $seconds === null ? null : (int) $seconds;
+
+        return $value === 8 ? 8 : null;
+    }
+
+    private function supportedResolution(?string $resolution): ?string
+    {
+        return in_array($resolution, ['720p', '1080p', '4k'], true) ? $resolution : null;
     }
 }

@@ -87,6 +87,15 @@ class ActivityLogRepository extends BaseRepository implements ActivityLogReposit
             ->get();
     }
 
+    public function paginateStudioForOwnedProjects(int $userId, int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->ownedStudioQuery($userId)
+            ->with($this->studioSubjectEagerLoad(withProject: true))
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+    }
+
     public function studioAnalyticsForOwnedProjects(int $userId, ?string $from = null, ?string $to = null): array
     {
         $recentStart = now()->subDays(7)->startOfDay();

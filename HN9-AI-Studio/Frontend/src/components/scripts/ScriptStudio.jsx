@@ -4,13 +4,14 @@ import AlertMessage from '../ui/AlertMessage';
 import { ApiError } from '../../services/apiClient';
 import { listScripts } from '../../services/scriptService';
 import ScriptEditor from './ScriptEditor';
+import ScriptGenerateForm from './ScriptGenerateForm';
 import ScriptList from './ScriptList';
 
-export default function ScriptStudio({ project, creating = false, scriptId = null }) {
+export default function ScriptStudio({ project, creating = false, generating = false, scriptId = null }) {
   const location = useLocation();
   const [scripts, setScripts] = useState([]);
   const [meta, setMeta] = useState(null);
-  const [loading, setLoading] = useState(!creating && !scriptId);
+  const [loading, setLoading] = useState(!creating && !generating && !scriptId);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState(location.state?.notice || '');
 
@@ -21,9 +22,10 @@ export default function ScriptStudio({ project, creating = false, scriptId = nul
   }, [location.state]);
 
   const showEditor = creating || Boolean(scriptId);
+  const showGenerator = generating;
 
   useEffect(() => {
-    if (showEditor) {
+    if (showEditor || showGenerator) {
       return undefined;
     }
 
@@ -55,7 +57,11 @@ export default function ScriptStudio({ project, creating = false, scriptId = nul
     return () => {
       cancelled = true;
     };
-  }, [project.id, showEditor]);
+  }, [project.id, showEditor, showGenerator]);
+
+  if (showGenerator) {
+    return <ScriptGenerateForm project={project} />;
+  }
 
   if (showEditor) {
     return <ScriptEditor projectId={project.id} scriptId={scriptId} creating={creating} />;

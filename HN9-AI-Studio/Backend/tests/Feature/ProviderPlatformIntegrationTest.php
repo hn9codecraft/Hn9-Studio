@@ -41,6 +41,7 @@ class ProviderPlatformIntegrationTest extends TestCase
         config()->set('ai.providers.openai', [
             'enabled' => true, 'api_key' => 'openai-test-key', 'base_url' => 'https://api.openai.com/v1',
             'default_model' => 'configured-openai-model', 'models' => ['configured-openai-model'],
+            'image_models' => ['configured-openai-image-model'], 'image_default_model' => 'configured-openai-image-model',
             'pricing' => ['configured-openai-model' => ['input' => 10.0, 'output' => 30.0]],
             'priority' => 100,
         ]);

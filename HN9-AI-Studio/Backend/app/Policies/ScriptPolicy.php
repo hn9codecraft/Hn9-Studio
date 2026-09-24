@@ -10,9 +10,17 @@ use App\Models\User;
 
 /**
  * Ownership for studio scripts is resolved through the owning project.
+ *
+ * Review actions reuse the existing role/permission columns:
+ * - admin: all abilities via before()
+ * - member who owns the project: create, submit, edit, resubmit, view history
+ * - member who owns the project AND has `script.review`: approve / needs rework
+ * - non-owner member: denied
  */
 class ScriptPolicy
 {
+    public const REVIEW_PERMISSION = 'script.review';
+
     public function before(User $user, string $ability): ?bool
     {
         return $user->isAdmin() ? true : null;
@@ -47,6 +55,21 @@ class ScriptPolicy
     }
 
     public function delete(User $user, Script $script): bool
+    {
+        return $this->owns($user, $script);
+    }
+
+    public function submit(User $user, Script $script): bool
+    {
+        return $this->owns($user, $script);
+    }
+
+    public function review(User $user, Script $script): bool
+    {
+        return $this->owns($user, $script) && $user->hasPermission(self::REVIEW_PERMISSION);
+    }
+
+    public function viewReviewHistory(User $user, Script $script): bool
     {
         return $this->owns($user, $script);
     }

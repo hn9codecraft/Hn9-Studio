@@ -12,13 +12,20 @@ use App\Contracts\Services\AssetServiceInterface;
 use App\Contracts\Services\ContentServiceInterface;
 use App\Contracts\Services\GenerationRequestServiceInterface;
 use App\Contracts\Services\DashboardServiceInterface;
+use App\Contracts\Services\ExportServiceInterface;
 use App\Contracts\Services\HealthServiceInterface;
 use App\Contracts\Services\HistoryServiceInterface;
+use App\Contracts\Services\ImageGenerationServiceInterface;
+use App\Contracts\Services\ImageReviewServiceInterface;
 use App\Contracts\Services\ImageServiceInterface;
 use App\Contracts\Services\ProjectActivityServiceInterface;
 use App\Contracts\Services\ProjectAssetServiceInterface;
 use App\Contracts\Services\ProjectServiceInterface;
+use App\Contracts\Services\VideoGenerationServiceInterface;
+use App\Contracts\Services\VideoReviewServiceInterface;
 use App\Contracts\Services\VideoServiceInterface;
+use App\Contracts\Services\ScriptGenerationServiceInterface;
+use App\Contracts\Services\ScriptReviewServiceInterface;
 use App\Contracts\Services\ScriptServiceInterface;
 use App\Contracts\Services\PromptServiceInterface;
 use App\Contracts\Services\ProviderRegistryServiceInterface;
@@ -36,8 +43,10 @@ use App\Repositories\Contracts\ProjectInputRepositoryInterface;
 use App\Repositories\Contracts\ImageRepositoryInterface;
 use App\Repositories\Contracts\ProjectAssetRepositoryInterface;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
+use App\Repositories\Contracts\VideoReviewEventRepositoryInterface;
 use App\Repositories\Contracts\VideoRepositoryInterface;
 use App\Repositories\Contracts\ScriptRepositoryInterface;
+use App\Repositories\Contracts\ScriptReviewEventRepositoryInterface;
 use App\Repositories\Contracts\PromptExecutionRepositoryInterface;
 use App\Repositories\Contracts\ProviderRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
@@ -54,8 +63,10 @@ class ContainerBindingsTest extends TestCase
         return [
             ProjectRepositoryInterface::class,
             ScriptRepositoryInterface::class,
+            ScriptReviewEventRepositoryInterface::class,
             ImageRepositoryInterface::class,
             VideoRepositoryInterface::class,
+            VideoReviewEventRepositoryInterface::class,
             ProjectAssetRepositoryInterface::class,
             ProjectInputRepositoryInterface::class,
             AssetRepositoryInterface::class,
@@ -73,10 +84,17 @@ class ContainerBindingsTest extends TestCase
             StorageInterface::class,
             ExecutionTrackerInterface::class,
             DashboardServiceInterface::class,
+            ExportServiceInterface::class,
             ProjectServiceInterface::class,
             ScriptServiceInterface::class,
+            ScriptGenerationServiceInterface::class,
+            ScriptReviewServiceInterface::class,
             ImageServiceInterface::class,
+            ImageGenerationServiceInterface::class,
+            ImageReviewServiceInterface::class,
             VideoServiceInterface::class,
+            VideoGenerationServiceInterface::class,
+            VideoReviewServiceInterface::class,
             ProjectAssetServiceInterface::class,
             ProjectActivityServiceInterface::class,
             AssetServiceInterface::class,

@@ -37,7 +37,8 @@ final class ScriptApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.title', 'Launch VO')
             ->assertJsonPath('data.body', 'Hook. Problem. Offer.')
-            ->assertJsonPath('data.project_id', $project->uuid);
+            ->assertJsonPath('data.project_id', $project->uuid)
+            ->assertJsonPath('data.source', 'manual');
 
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/v1/projects/'.$project->uuid.'/scripts')

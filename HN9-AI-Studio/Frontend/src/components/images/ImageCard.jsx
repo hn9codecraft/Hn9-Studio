@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { formatProjectDate } from '../../services/projectConstants';
-import { imageAspectRatioLabel, imageStatusLabel } from '../../services/imageConstants';
+import { imageAspectRatioLabel, imageStatusClass, imageStatusLabel } from '../../services/imageConstants';
 
 export default function ImageCard({ projectId, image }) {
   return (
@@ -8,7 +8,7 @@ export default function ImageCard({ projectId, image }) {
       <div className="card-body p-4">
         <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
           <h3 className="card-heading mb-0">{image.title}</h3>
-          <span className={`status-pill status-${image.status || 'draft'}`}>{imageStatusLabel(image.status)}</span>
+          <span className={`status-pill ${imageStatusClass(image.status)}`}>{imageStatusLabel(image.status)}</span>
         </div>
         <p className="small text-secondary mb-2">{imageAspectRatioLabel(image.aspect_ratio)}</p>
         <p className="small text-secondary mb-0">Updated {formatProjectDate(image.updated_at)}</p>

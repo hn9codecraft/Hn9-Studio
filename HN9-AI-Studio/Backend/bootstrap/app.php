@@ -1,5 +1,6 @@
 <?php
 
+use App\AI\Support\ProviderErrorSanitizer;
 use App\Exceptions\DomainException;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Support\ApiResponse;
@@ -50,10 +51,10 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return ApiResponse::error(
-                message: $exception->getMessage(),
+                message: ProviderErrorSanitizer::message($exception->getMessage(), $exception->getMessage()),
                 errorCode: $exception->errorCode(),
                 status: $exception->statusCode(),
-                context: $exception->context(),
+                context: ProviderErrorSanitizer::context($exception->context()),
             );
         });
     })->create();

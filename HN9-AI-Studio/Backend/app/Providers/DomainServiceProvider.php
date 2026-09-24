@@ -14,13 +14,20 @@ use App\Contracts\Services\ContentServiceInterface;
 use App\Contracts\Services\ExecutionOrchestratorInterface;
 use App\Contracts\Services\GenerationRequestServiceInterface;
 use App\Contracts\Services\DashboardServiceInterface;
+use App\Contracts\Services\ExportServiceInterface;
 use App\Contracts\Services\HealthServiceInterface;
 use App\Contracts\Services\HistoryServiceInterface;
+use App\Contracts\Services\ImageGenerationServiceInterface;
+use App\Contracts\Services\ImageReviewServiceInterface;
 use App\Contracts\Services\ImageServiceInterface;
 use App\Contracts\Services\ProjectActivityServiceInterface;
 use App\Contracts\Services\ProjectAssetServiceInterface;
 use App\Contracts\Services\ProjectServiceInterface;
+use App\Contracts\Services\VideoGenerationServiceInterface;
+use App\Contracts\Services\VideoReviewServiceInterface;
 use App\Contracts\Services\VideoServiceInterface;
+use App\Contracts\Services\ScriptGenerationServiceInterface;
+use App\Contracts\Services\ScriptReviewServiceInterface;
 use App\Contracts\Services\ScriptServiceInterface;
 use App\Contracts\Services\PromptRuntime\BrandContextServiceInterface;
 use App\Contracts\Services\PromptRuntime\PromptContextBuilderInterface;
@@ -46,10 +53,13 @@ use App\Repositories\Contracts\GeneratedContentRepositoryInterface;
 use App\Repositories\Contracts\MediaFileRepositoryInterface;
 use App\Repositories\Contracts\ProjectInputRepositoryInterface;
 use App\Repositories\Contracts\ImageRepositoryInterface;
+use App\Repositories\Contracts\ImageReviewEventRepositoryInterface;
 use App\Repositories\Contracts\ProjectAssetRepositoryInterface;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
+use App\Repositories\Contracts\VideoReviewEventRepositoryInterface;
 use App\Repositories\Contracts\VideoRepositoryInterface;
 use App\Repositories\Contracts\ScriptRepositoryInterface;
+use App\Repositories\Contracts\ScriptReviewEventRepositoryInterface;
 use App\Repositories\Contracts\PromptExecutionRepositoryInterface;
 use App\Repositories\Contracts\ProviderRepositoryInterface;
 use App\Repositories\Contracts\ProviderSettingRepositoryInterface;
@@ -59,10 +69,13 @@ use App\Repositories\GeneratedContentRepository;
 use App\Repositories\MediaFileRepository;
 use App\Repositories\ProjectInputRepository;
 use App\Repositories\ImageRepository;
+use App\Repositories\ImageReviewEventRepository;
 use App\Repositories\ProjectAssetRepository;
 use App\Repositories\ProjectRepository;
+use App\Repositories\VideoReviewEventRepository;
 use App\Repositories\VideoRepository;
 use App\Repositories\ScriptRepository;
+use App\Repositories\ScriptReviewEventRepository;
 use App\Repositories\PromptExecutionRepository;
 use App\Repositories\ProviderRepository;
 use App\Repositories\ProviderSettingRepository;
@@ -72,18 +85,25 @@ use App\Services\AgentExecutionService;
 use App\Services\AssetService;
 use App\Services\ContentRegenerationService;
 use App\Services\DashboardService;
+use App\Services\ExportService;
 use App\Services\ContentService;
 use App\Services\Execution\ExecutionTracker;
 use App\Services\ExecutionOrchestrator;
 use App\Services\GenerationRequestService;
 use App\Services\HealthService;
 use App\Services\HistoryService;
+use App\Services\ImageGenerationService;
+use App\Services\ImageReviewService;
 use App\Services\ImageService;
 use App\Services\Logging\ActivityLogger;
+use App\Services\VideoGenerationService;
+use App\Services\VideoReviewService;
 use App\Services\VideoService;
 use App\Services\ProjectActivityService;
 use App\Services\ProjectAssetService;
 use App\Services\ProjectService;
+use App\Services\ScriptGenerationService;
+use App\Services\ScriptReviewService;
 use App\Services\ScriptService;
 use App\Services\PromptRuntime\BrandContextService;
 use App\Services\PromptRuntime\PromptContextBuilder;
@@ -113,8 +133,11 @@ class DomainServiceProvider extends ServiceProvider
     private const REPOSITORIES = [
         ProjectRepositoryInterface::class => ProjectRepository::class,
         ScriptRepositoryInterface::class => ScriptRepository::class,
+        ScriptReviewEventRepositoryInterface::class => ScriptReviewEventRepository::class,
         ImageRepositoryInterface::class => ImageRepository::class,
+        ImageReviewEventRepositoryInterface::class => ImageReviewEventRepository::class,
         VideoRepositoryInterface::class => VideoRepository::class,
+        VideoReviewEventRepositoryInterface::class => VideoReviewEventRepository::class,
         ProjectAssetRepositoryInterface::class => ProjectAssetRepository::class,
         ProjectInputRepositoryInterface::class => ProjectInputRepository::class,
         AssetRepositoryInterface::class => AssetRepository::class,
@@ -143,10 +166,17 @@ class DomainServiceProvider extends ServiceProvider
 
         // Domain services
         DashboardServiceInterface::class => DashboardService::class,
+        ExportServiceInterface::class => ExportService::class,
         ProjectServiceInterface::class => ProjectService::class,
         ScriptServiceInterface::class => ScriptService::class,
+        ScriptGenerationServiceInterface::class => ScriptGenerationService::class,
+        ScriptReviewServiceInterface::class => ScriptReviewService::class,
         ImageServiceInterface::class => ImageService::class,
+        ImageGenerationServiceInterface::class => ImageGenerationService::class,
+        ImageReviewServiceInterface::class => ImageReviewService::class,
         VideoServiceInterface::class => VideoService::class,
+        VideoGenerationServiceInterface::class => VideoGenerationService::class,
+        VideoReviewServiceInterface::class => VideoReviewService::class,
         ProjectAssetServiceInterface::class => ProjectAssetService::class,
         ProjectActivityServiceInterface::class => ProjectActivityService::class,
         AssetServiceInterface::class => AssetService::class,

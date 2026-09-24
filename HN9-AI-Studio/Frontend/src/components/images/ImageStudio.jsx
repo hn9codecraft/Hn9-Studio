@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import AlertMessage from '../ui/AlertMessage';
 import { ApiError } from '../../services/apiClient';
-import { listImages } from '../../services/imageService';
+import { getImage, listImages } from '../../services/imageService';
 import ImageEditor from './ImageEditor';
+import ImageGenerateForm from './ImageGenerateForm';
 import ImageList from './ImageList';
+import LoadingSpinner from '../ui/LoadingSpinner';
 
-export default function ImageStudio({ project, creating = false, imageId = null }) {
+export default function ImageStudio({ project, creating = false, imageId = null, generating = false, parentImageId = null }) {
   const location = useLocation();
   const [images, setImages] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -23,7 +25,7 @@ export default function ImageStudio({ project, creating = false, imageId = null 
   const showEditor = creating || Boolean(imageId);
 
   useEffect(() => {
-    if (showEditor) {
+    if (showEditor || generating || parentImageId) {
       return undefined;
     }
 
@@ -55,7 +57,15 @@ export default function ImageStudio({ project, creating = false, imageId = null 
     return () => {
       cancelled = true;
     };
-  }, [project.id, showEditor]);
+  }, [project.id, showEditor, generating, parentImageId]);
+
+  if (generating) {
+    return <ImageGenerateForm project={project} />;
+  }
+
+  if (parentImageId) {
+    return <RegenerateImage project={project} imageId={parentImageId} />;
+  }
 
   if (showEditor) {
     return <ImageEditor projectId={project.id} imageId={imageId} creating={creating} />;
@@ -74,4 +84,39 @@ export default function ImageStudio({ project, creating = false, imageId = null 
       <ImageList projectId={project.id} images={images} loading={loading} error={error} meta={meta} />
     </div>
   );
+}
+
+function RegenerateImage({ project, imageId }) {
+  const [image, setImage] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getImage(project.id, imageId)
+      .then((data) => {
+        if (!cancelled) {
+          setImage(data);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : 'Unable to load this image.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [project.id, imageId]);
+
+  if (error) {
+    return <AlertMessage>{error}</AlertMessage>;
+  }
+
+  if (!image) {
+    return <LoadingSpinner label="Opening image…" />;
+  }
+
+  return <ImageGenerateForm project={project} parentImage={image} />;
 }

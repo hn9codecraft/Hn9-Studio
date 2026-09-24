@@ -17,12 +17,15 @@ final readonly class VideoResponse implements ProviderResponseInterface
      * @param  array<string, mixed>  $raw
      */
     public function __construct(
-        public string $video,
+        public string $video = '',
         public ?string $model = null,
         public ?float $durationSeconds = null,
         public ?string $format = null,
         public ?UsageResponse $usage = null,
         public array $raw = [],
+        public ?string $jobId = null,
+        public bool $done = true,
+        public ?string $error = null,
     ) {}
 
     public function modality(): Modality
@@ -39,6 +42,9 @@ final readonly class VideoResponse implements ProviderResponseInterface
             'duration_seconds' => $this->durationSeconds,
             'format' => $this->format,
             'usage' => $this->usage?->toArray(),
+            'job_id' => $this->jobId,
+            'done' => $this->done,
+            'error' => $this->error,
         ];
     }
 }

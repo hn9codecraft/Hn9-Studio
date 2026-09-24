@@ -10,12 +10,14 @@ use App\Http\Requests\DashboardActionsRequest;
 use App\Http\Requests\DashboardAnalyticsRequest;
 use App\Http\Requests\DashboardUsageRequest;
 use App\Http\Resources\DashboardActionsResource;
+use App\Http\Resources\DashboardActivityResource;
 use App\Http\Resources\DashboardAnalyticsResource;
 use App\Http\Resources\DashboardCostsResource;
 use App\Http\Resources\DashboardSummaryResource;
 use App\Http\Resources\DashboardUsageResource;
 use App\Models\Project;
 use App\Support\ApiResponse;
+use App\Support\PageSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -32,6 +34,21 @@ final class DashboardController extends Controller
         return ApiResponse::success(
             new DashboardSummaryResource($this->dashboard->summary($request->user())),
         );
+    }
+
+    public function activity(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Project::class);
+
+        $perPage = PageSize::fromRequest($request, 20);
+        $page = $this->dashboard->activity($request->user(), $perPage);
+
+        return ApiResponse::success(DashboardActivityResource::collection($page->items()), 200, [
+            'page' => $page->currentPage(),
+            'perPage' => $page->perPage(),
+            'total' => $page->total(),
+            'lastPage' => $page->lastPage(),
+        ]);
     }
 
     public function analytics(DashboardAnalyticsRequest $request): JsonResponse

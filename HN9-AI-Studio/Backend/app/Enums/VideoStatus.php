@@ -7,10 +7,8 @@ namespace App\Enums;
 use App\Enums\Concerns\InteractsWithEnum;
 
 /**
- * Lifecycle of a studio video request. Mirrors the `status` column on `videos`.
- *
- * processing / completed / failed exist for a future provider job.
- * Until a provider is connected, user-facing writes stay on draft, pending, or archived.
+ * Lifecycle of a studio video. Generation states and M10.3 review states
+ * share one column so there is not a second workflow architecture.
  */
 enum VideoStatus: string
 {
@@ -21,10 +19,13 @@ enum VideoStatus: string
     case Processing = 'processing';
     case Completed = 'completed';
     case Failed = 'failed';
+    case PendingReview = 'pending_review';
+    case NeedsRework = 'needs_rework';
+    case Approved = 'approved';
     case Archived = 'archived';
 
     /**
-     * Statuses a studio user may set while no video provider is connected.
+     * Statuses a studio user may set through create/update payloads.
      *
      * @return list<string>
      */
@@ -35,5 +36,35 @@ enum VideoStatus: string
             self::Pending->value,
             self::Archived->value,
         ];
+    }
+
+    public function isSubmittable(): bool
+    {
+        return in_array($this, [self::Completed, self::NeedsRework], true);
+    }
+
+    public function isReviewable(): bool
+    {
+        return $this === self::PendingReview;
+    }
+
+    public function allowsContentEdit(): bool
+    {
+        return in_array($this, [self::Draft, self::Pending, self::Failed, self::NeedsRework], true);
+    }
+
+    public function allowsRegeneration(): bool
+    {
+        return in_array($this, [self::Completed, self::Failed, self::NeedsRework, self::Approved], true);
+    }
+
+    public function isInFlight(): bool
+    {
+        return in_array($this, [self::Pending, self::Processing], true);
+    }
+
+    public function hasPlayableOutput(): bool
+    {
+        return in_array($this, [self::Completed, self::PendingReview, self::NeedsRework, self::Approved], true);
     }
 }

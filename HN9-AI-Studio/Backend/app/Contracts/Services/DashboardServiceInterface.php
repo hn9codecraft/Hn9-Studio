@@ -7,6 +7,7 @@ namespace App\Contracts\Services;
 use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface DashboardServiceInterface
@@ -25,6 +26,13 @@ interface DashboardServiceInterface
      * }
      */
     public function summary(User $user): array;
+
+    /**
+     * Owner-scoped paginated studio activity (not capped like the summary feed).
+     *
+     * @return LengthAwarePaginator<int, ActivityLog>
+     */
+    public function activity(User $user, int $perPage = 20): LengthAwarePaginator;
 
     /**
      * Owner-scoped studio analytics. Date bounds are inclusive calendar days.

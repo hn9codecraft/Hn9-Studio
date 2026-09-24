@@ -33,7 +33,8 @@ class OpenAIProviderTest extends TestCase
     {
         $dto = ProviderConfigDTO::fromArray('openai', [...[
             'api_key' => 'test-key', 'base_url' => 'https://api.openai.com/v1',
-            'default_model' => 'configured-text-model', 'models' => ['configured-text-model', 'configured-image-model'],
+            'default_model' => 'configured-text-model', 'models' => ['configured-text-model'],
+            'image_models' => ['configured-image-model'], 'image_default_model' => 'configured-image-model',
             'supports_streaming' => true, 'supports_function_calling' => true,
             'pricing' => ['configured-text-model' => ['input' => 2.0, 'output' => 8.0]],
         ], ...$overrides]);
@@ -131,5 +132,20 @@ class OpenAIProviderTest extends TestCase
         $provider = $this->app->make(ProviderFactoryInterface::class)->make('openai');
         $this->assertTrue($registry->has('openai'));
         $this->assertSame('openai', $provider->providerName());
+    }
+
+    public function test_enabled_without_api_key_does_not_register_or_crash_boot(): void
+    {
+        config()->set('ai.providers.openai', [
+            'enabled' => true,
+            'api_key' => '',
+            'base_url' => 'https://api.openai.com/v1',
+            'default_model' => 'future-model',
+            'models' => ['future-model'],
+        ]);
+
+        (new AIServiceProvider($this->app))->boot();
+
+        $this->assertFalse($this->app->make(ProviderRegistryInterface::class)->has('openai'));
     }
 }

@@ -285,6 +285,66 @@ class GeminiProviderTest extends TestCase
         $provider->generateVoice(new VoiceRequest(input: 'x'));
     }
 
+    public function test_video_start_returns_an_operation_and_does_not_mark_done(): void
+    {
+        Http::fake([
+            'https://generativelanguage.googleapis.com/v1beta/models/configured-video-model:predictLongRunning' => Http::response([
+                'name' => 'operations/abc',
+            ]),
+        ]);
+
+        $response = $this->provider([
+            'video_models' => ['configured-video-model'],
+            'video_default_model' => 'configured-video-model',
+        ])->generateVideo(new VideoRequest(
+            prompt: 'Orbit the bottle',
+            aspectRatio: '16:9',
+            durationSeconds: 8,
+        ));
+
+        $this->assertSame('', $response->video);
+        $this->assertSame('operations/abc', $response->jobId);
+        $this->assertFalse($response->done);
+        $this->assertNull($response->error);
+
+        Http::assertSent(function (Request $request): bool {
+            return $request->url() === 'https://generativelanguage.googleapis.com/v1beta/models/configured-video-model:predictLongRunning'
+                && $request['instances'][0]['prompt'] === 'Orbit the bottle'
+                && $request['parameters']['aspectRatio'] === '16:9'
+                && $request['parameters']['durationSeconds'] === 8
+                && $request->hasHeader('x-goog-api-key', 'test-key');
+        });
+    }
+
+    public function test_video_poll_returns_done_only_when_the_operation_is_complete(): void
+    {
+        Http::fake([
+            'https://generativelanguage.googleapis.com/v1beta/operations/abc' => Http::response([
+                'name' => 'operations/abc',
+                'done' => true,
+                'response' => [
+                    'generateVideoResponse' => [
+                        'generatedSamples' => [
+                            ['video' => ['uri' => 'https://generativelanguage.googleapis.com/v1beta/files/vid:download']],
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $response = $this->provider([
+            'video_models' => ['configured-video-model'],
+            'video_default_model' => 'configured-video-model',
+        ])->generateVideo(new VideoRequest(
+            prompt: 'Orbit the bottle',
+            options: ['operation' => 'operations/abc'],
+        ));
+
+        $this->assertTrue($response->done);
+        $this->assertSame('operations/abc', $response->jobId);
+        $this->assertSame('https://generativelanguage.googleapis.com/v1beta/files/vid:download', $response->video);
+    }
+
     public function test_http_401_is_mapped_to_a_typed_authentication_exception(): void
     {
         Http::fake([self::TEXT_URL => Http::response([], 401)]);

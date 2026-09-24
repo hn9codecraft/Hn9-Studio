@@ -57,7 +57,11 @@ final class OpenAIProvider extends AbstractProvider
 
     public function generateImage(ImageRequest $request): ImageResponse
     {
-        $model = $this->models->resolve($request->model);
+        if ($this->openAIConfig->imageModels === []) {
+            throw UnsupportedCapabilityException::make($this->providerName(), Capability::Image);
+        }
+
+        $model = $this->models->resolveImage($request->model);
         $payload = array_filter([
             'model' => $model, 'prompt' => $request->prompt, 'n' => $request->count,
             'size' => $request->size, 'quality' => $request->quality, 'style' => $request->style,

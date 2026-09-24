@@ -58,6 +58,53 @@ final readonly class GeminiClient extends AbstractProviderClient
         return $this->getJson('models/'.rawurlencode($model));
     }
 
+    /**
+     * `POST /{version}/models/{model}:predictLongRunning` — Veo video start.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function predictLongRunning(string $model, array $payload): array
+    {
+        return $this->postJson($this->method($model, 'predictLongRunning'), $payload);
+    }
+
+    /**
+     * `GET /{version}/{operation}` — poll a Veo long-running operation.
+     *
+     * @return array<string, mixed>
+     */
+    public function operation(string $name): array
+    {
+        return $this->getJson(ltrim($name, '/'));
+    }
+
+    /**
+     * Download a completed Veo file. The vendor URI is a full HTTPS URL and
+     * still requires the same API key used to start the operation.
+     */
+    public function download(string $uri): string
+    {
+        $response = $this->dispatch(
+            fn ($request) => $request->timeout(max($this->timeout, 120))->withHeaders($this->headers())->get($uri),
+        );
+
+        if ($response->failed()) {
+            throw $this->failureFor($response, is_array($response->json()) ? $response->json() : null);
+        }
+
+        $body = $response->body();
+
+        if ($body === '') {
+            throw \App\AI\Exceptions\ProviderApiException::forProvider(
+                $this->providerKey,
+                'Gemini returned an empty video download.',
+            );
+        }
+
+        return $body;
+    }
+
     protected function headers(): array
     {
         return ['x-goog-api-key' => $this->config->apiKey];

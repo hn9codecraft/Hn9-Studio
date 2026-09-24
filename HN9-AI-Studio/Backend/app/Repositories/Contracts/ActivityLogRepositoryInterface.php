@@ -45,6 +45,13 @@ interface ActivityLogRepositoryInterface extends RepositoryInterface
     public function recentStudioForOwnedProjects(int $userId, int $limit = 15): Collection;
 
     /**
+     * Paginated studio activity for the user's non-deleted projects.
+     *
+     * @return LengthAwarePaginator<int, ActivityLog>
+     */
+    public function paginateStudioForOwnedProjects(int $userId, int $perPage = 20): LengthAwarePaginator;
+
+    /**
      * Owner-scoped studio activity aggregations. Days/actions without rows are omitted from maps
      * that are derived from the database; module keys are always present with real zeros.
      *

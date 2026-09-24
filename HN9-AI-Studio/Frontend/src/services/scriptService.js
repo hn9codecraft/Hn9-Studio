@@ -33,10 +33,52 @@ export function deleteScript(projectId, scriptId) {
   return apiRequest(`/projects/${projectId}/scripts/${scriptId}`, { method: 'DELETE' });
 }
 
+export function generateScript(projectId, payload) {
+  return unwrap(apiRequest(`/projects/${projectId}/scripts/generate`, { method: 'POST', body: payload }));
+}
+
+export function regenerateScript(projectId, scriptId, payload) {
+  return unwrap(apiRequest(`/projects/${projectId}/scripts/${scriptId}/regenerate`, { method: 'POST', body: payload }));
+}
+
+export function submitScriptReview(projectId, scriptId, payload = {}) {
+  return unwrap(apiRequest(`/projects/${projectId}/scripts/${scriptId}/submit-review`, { method: 'POST', body: payload }));
+}
+
+export function approveScript(projectId, scriptId, payload = {}) {
+  return unwrap(apiRequest(`/projects/${projectId}/scripts/${scriptId}/approve`, { method: 'POST', body: payload }));
+}
+
+export function requestScriptRework(projectId, scriptId, payload) {
+  return unwrap(apiRequest(`/projects/${projectId}/scripts/${scriptId}/needs-rework`, { method: 'POST', body: payload }));
+}
+
+export function listScriptReviewHistory(projectId, scriptId) {
+  return apiRequest(`/projects/${projectId}/scripts/${scriptId}/review-history`).then((payload) => {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    if (Array.isArray(payload?.data)) {
+      return payload.data;
+    }
+
+    return [];
+  });
+}
+
 async function unwrap(promise) {
   const payload = await promise;
+  if (payload && typeof payload === 'object' && payload.script?.id) {
+    return payload;
+  }
+
   if (payload && typeof payload === 'object' && payload.id) {
     return payload;
+  }
+
+  if (payload && typeof payload === 'object' && payload.data?.script?.id) {
+    return payload.data;
   }
 
   if (payload && typeof payload === 'object' && payload.data?.id) {

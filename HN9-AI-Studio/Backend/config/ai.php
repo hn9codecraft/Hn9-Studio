@@ -129,6 +129,9 @@ return [
             'image_models' => $list('GEMINI_IMAGE_MODELS'),
             'image_default_model' => env('GEMINI_IMAGE_DEFAULT_MODEL'),
             'image_response_modalities' => $list('GEMINI_IMAGE_RESPONSE_MODALITIES', 'IMAGE'),
+            // Models permitted to call predictLongRunning video generation (Veo).
+            'video_models' => $list('GEMINI_VIDEO_MODELS'),
+            'video_default_model' => env('GEMINI_VIDEO_DEFAULT_MODEL'),
             // Gemini publishes a tokenizer endpoint; disable to count locally only.
             'remote_token_counting' => (bool) env('GEMINI_REMOTE_TOKEN_COUNTING', true),
             'supports_streaming' => (bool) env('GEMINI_SUPPORTS_STREAMING', true),
@@ -147,6 +150,9 @@ return [
             'max_retries' => (int) env('OPENAI_MAX_RETRIES', 2),
             // Comma-separated to keep the environment representation portable.
             'models' => $list('OPENAI_MODELS'),
+            // Models permitted to call images/generations. Text models are not assumed to draw.
+            'image_models' => $list('OPENAI_IMAGE_MODELS'),
+            'image_default_model' => env('OPENAI_IMAGE_DEFAULT_MODEL'),
             'supports_streaming' => (bool) env('OPENAI_SUPPORTS_STREAMING', true),
             'supports_function_calling' => (bool) env('OPENAI_SUPPORTS_FUNCTION_CALLING', true),
             // Per-million-token USD prices, keyed by configured model identifier.

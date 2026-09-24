@@ -17,6 +17,7 @@ use App\Repositories\Contracts\ExecutionUsageRepositoryInterface;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
 use App\Support\DashboardActionRules;
 use DateTimeInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -46,6 +47,11 @@ final readonly class DashboardService implements DashboardServiceInterface
             'recent_projects' => $this->dashboard->recentProjectsForUser($userId, 8),
             'recent_activity' => $this->activityLogs->recentStudioForOwnedProjects($userId, 15),
         ];
+    }
+
+    public function activity(User $user, int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->activityLogs->paginateStudioForOwnedProjects($user->getKey(), $perPage);
     }
 
     public function analytics(User $user, ?string $from = null, ?string $to = null): array

@@ -17,12 +17,17 @@ export default function VideoList({ projectId, videos, loading, error, meta }) {
         <div>
           <p className="section-kicker mb-1">Video Studio</p>
           <h2 className="section-title mb-1">Video requests</h2>
-          <p className="text-secondary mb-0">Save prompts and settings for this project. AI generation is not configured yet.</p>
+          <p className="text-secondary mb-0">Generate a video from a prompt, or save a manual video request.</p>
         </div>
-        <Link className="btn btn-primary" to={`/projects/${projectId}/videos/new`}>
-          <i className="bi bi-plus-lg me-2" aria-hidden="true" />
-          New Video Request
-        </Link>
+        <div className="d-flex flex-wrap gap-2">
+          <Link className="btn btn-outline-primary" to={`/projects/${projectId}/videos/new`}>
+            New video request
+          </Link>
+          <Link className="btn btn-primary" to={`/projects/${projectId}/videos/generate`}>
+            <i className="bi bi-stars me-2" aria-hidden="true" />
+            Generate video
+          </Link>
+        </div>
       </div>
 
       {error ? (
@@ -35,10 +40,10 @@ export default function VideoList({ projectId, videos, loading, error, meta }) {
         <EmptyState
           icon="bi-camera-reels"
           title="No video requests yet"
-          description="Create a video request to save a prompt and settings. AI video generation is not configured yet."
+          description="Generate a video from a prompt, or save a manual request for later."
         >
-          <Link className="btn btn-primary" to={`/projects/${projectId}/videos/new`}>
-            New Video Request
+          <Link className="btn btn-primary" to={`/projects/${projectId}/videos/generate`}>
+            Generate video
           </Link>
         </EmptyState>
       ) : null}

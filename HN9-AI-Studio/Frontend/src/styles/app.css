@@ -912,6 +912,70 @@ small {
   color: var(--hn9-muted);
 }
 
+.status-pending-review {
+  background: var(--hn9-warning-bg);
+  color: var(--hn9-warning);
+}
+
+.status-approved {
+  background: var(--hn9-success-bg);
+  color: var(--hn9-success);
+}
+
+.status-needs-rework {
+  background: var(--hn9-danger-bg);
+  color: var(--hn9-danger);
+}
+
+.script-status-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.script-status-copy {
+  color: var(--hn9-muted);
+  font-size: var(--text-sm);
+  max-width: 42rem;
+}
+
+.script-workflow-actions .btn {
+  min-height: 2.5rem;
+}
+
+.script-review-timeline {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.script-review-event {
+  padding: var(--space-3);
+  border: 1px solid var(--hn9-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--hn9-surface-muted);
+}
+
+.script-review-comment {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--hn9-text);
+}
+
+.status-dot.status-pending-review,
+.status-dot.status-pending_review {
+  background: var(--brand-secondary);
+}
+
+.status-dot.status-approved {
+  background: #2f9e68;
+}
+
+.status-dot.status-needs-rework,
+.status-dot.status-needs_rework {
+  background: #c45b63;
+}
+
 .image-prompt-editor,
 .video-prompt-editor {
   min-height: 12rem;

@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\ImageController;
 use App\Http\Controllers\Api\V1\ProjectActivityController;
 use App\Http\Controllers\Api\V1\ProjectAssetController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ProjectExportController;
 use App\Http\Controllers\Api\V1\VideoController;
 use App\Http\Controllers\Api\V1\ScriptController;
 use App\Http\Controllers\Api\V1\ProjectInputController;
@@ -68,26 +69,47 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('projects/{uuid}/archive', [ProjectController::class, 'archive'])->name('projects.archive');
     Route::post('projects/{uuid}/restore', [ProjectController::class, 'restore'])->name('projects.restore');
 
-    // Project scripts (manual studio drafts — not pipeline generated_contents)
+    // Project scripts (manual drafts + AI-generated studio scripts)
     Route::get('projects/{uuid}/scripts', [ScriptController::class, 'index'])->name('projects.scripts.index');
     Route::post('projects/{uuid}/scripts', [ScriptController::class, 'store'])->name('projects.scripts.store');
+    Route::post('projects/{uuid}/scripts/generate', [ScriptController::class, 'generate'])->name('projects.scripts.generate');
+    Route::post('projects/{uuid}/scripts/{scriptUuid}/regenerate', [ScriptController::class, 'regenerate'])->name('projects.scripts.regenerate');
     Route::get('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'show'])->name('projects.scripts.show');
     Route::patch('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'update'])->name('projects.scripts.update');
     Route::delete('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'destroy'])->name('projects.scripts.destroy');
+    Route::post('projects/{uuid}/scripts/{scriptUuid}/submit-review', [ScriptController::class, 'submitReview'])->name('projects.scripts.submit-review');
+    Route::post('projects/{uuid}/scripts/{scriptUuid}/approve', [ScriptController::class, 'approve'])->name('projects.scripts.approve');
+    Route::post('projects/{uuid}/scripts/{scriptUuid}/needs-rework', [ScriptController::class, 'needsRework'])->name('projects.scripts.needs-rework');
+    Route::get('projects/{uuid}/scripts/{scriptUuid}/review-history', [ScriptController::class, 'reviewHistory'])->name('projects.scripts.review-history');
 
-    // Project image requests (studio drafts — not pipeline generated_assets)
+    // Project image requests and real AI image generation
     Route::get('projects/{uuid}/images', [ImageController::class, 'index'])->name('projects.images.index');
     Route::post('projects/{uuid}/images', [ImageController::class, 'store'])->name('projects.images.store');
+    Route::post('projects/{uuid}/images/generate', [ImageController::class, 'generate'])->name('projects.images.generate');
+    Route::post('projects/{uuid}/images/{imageUuid}/regenerate', [ImageController::class, 'regenerate'])->name('projects.images.regenerate');
     Route::get('projects/{uuid}/images/{imageUuid}', [ImageController::class, 'show'])->name('projects.images.show');
+    Route::get('projects/{uuid}/images/{imageUuid}/file', [ImageController::class, 'file'])->name('projects.images.file');
     Route::patch('projects/{uuid}/images/{imageUuid}', [ImageController::class, 'update'])->name('projects.images.update');
     Route::delete('projects/{uuid}/images/{imageUuid}', [ImageController::class, 'destroy'])->name('projects.images.destroy');
+    Route::post('projects/{uuid}/images/{imageUuid}/submit-review', [ImageController::class, 'submitReview'])->name('projects.images.submit-review');
+    Route::post('projects/{uuid}/images/{imageUuid}/approve', [ImageController::class, 'approve'])->name('projects.images.approve');
+    Route::post('projects/{uuid}/images/{imageUuid}/needs-rework', [ImageController::class, 'needsRework'])->name('projects.images.needs-rework');
+    Route::get('projects/{uuid}/images/{imageUuid}/review-history', [ImageController::class, 'reviewHistory'])->name('projects.images.review-history');
 
-    // Project video requests (studio drafts — not pipeline generated_assets)
+    // Project video requests and real AI video generation
     Route::get('projects/{uuid}/videos', [VideoController::class, 'index'])->name('projects.videos.index');
     Route::post('projects/{uuid}/videos', [VideoController::class, 'store'])->name('projects.videos.store');
+    Route::post('projects/{uuid}/videos/generate', [VideoController::class, 'generate'])->name('projects.videos.generate');
+    Route::post('projects/{uuid}/videos/{videoUuid}/regenerate', [VideoController::class, 'regenerate'])->name('projects.videos.regenerate');
     Route::get('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'show'])->name('projects.videos.show');
+    Route::get('projects/{uuid}/videos/{videoUuid}/status', [VideoController::class, 'status'])->name('projects.videos.status');
+    Route::get('projects/{uuid}/videos/{videoUuid}/file', [VideoController::class, 'file'])->name('projects.videos.file');
     Route::patch('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'update'])->name('projects.videos.update');
     Route::delete('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'destroy'])->name('projects.videos.destroy');
+    Route::post('projects/{uuid}/videos/{videoUuid}/submit-review', [VideoController::class, 'submitReview'])->name('projects.videos.submit-review');
+    Route::post('projects/{uuid}/videos/{videoUuid}/approve', [VideoController::class, 'approve'])->name('projects.videos.approve');
+    Route::post('projects/{uuid}/videos/{videoUuid}/needs-rework', [VideoController::class, 'needsRework'])->name('projects.videos.needs-rework');
+    Route::get('projects/{uuid}/videos/{videoUuid}/review-history', [VideoController::class, 'reviewHistory'])->name('projects.videos.review-history');
 
     // Project studio assets (catalog — not pipeline generated_assets)
     Route::get('projects/{uuid}/assets', [ProjectAssetController::class, 'index'])->name('projects.assets.index');
@@ -98,6 +120,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     // Project studio activity (read-only — written by real studio actions)
     Route::get('projects/{uuid}/activities', [ProjectActivityController::class, 'index'])->name('projects.activities.index');
+
+    // Final assets, finalization, and real project export packages
+    Route::get('projects/{uuid}/final-assets', [ProjectExportController::class, 'finalAssets'])->name('projects.final-assets.show');
+    Route::post('projects/{uuid}/finalize', [ProjectExportController::class, 'finalize'])->name('projects.finalize');
+    Route::post('projects/{uuid}/export', [ProjectExportController::class, 'store'])->name('projects.export.store');
+    Route::get('projects/{uuid}/exports', [ProjectExportController::class, 'index'])->name('projects.exports.index');
+    Route::get('projects/{uuid}/exports/{exportUuid}', [ProjectExportController::class, 'show'])->name('projects.exports.show');
+    Route::get('projects/{uuid}/exports/{exportUuid}/download', [ProjectExportController::class, 'download'])->name('projects.exports.download');
 
     // Project inputs
     Route::get('projects/{uuid}/inputs', [ProjectInputController::class, 'index'])->name('projects.inputs.index');
@@ -158,6 +188,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     // Dashboard
     Route::get('dashboard/summary', [DashboardController::class, 'summary'])->name('dashboard.summary');
+    Route::get('dashboard/activity', [DashboardController::class, 'activity'])->name('dashboard.activity');
     Route::get('dashboard/analytics', [DashboardController::class, 'analytics'])->name('dashboard.analytics');
     Route::get('dashboard/projects', [DashboardController::class, 'projects'])->name('dashboard.projects');
     Route::get('dashboard/usage', [DashboardController::class, 'usage'])->name('dashboard.usage');
