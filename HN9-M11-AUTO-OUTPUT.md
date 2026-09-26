@@ -1,6 +1,6 @@
 # HN9 M11 AUTO EXECUTION
 
-CURRENT_SPRINT: M11.10
+CURRENT_SPRINT: M11.11
 STATUS: PASS — IMPLEMENTATION COMPLETE
 
 ## LIVE EXECUTION DASHBOARD
@@ -20,7 +20,8 @@ M11.9 — PASS — MERGED
 Live Validation: PENDING
 M11.10 — PASS — MERGED
 Live Validation: PENDING
-M11.11 — PENDING
+M11.11 — PASS — IMPLEMENTATION COMPLETE
+Live Validation: PENDING
 M11.12 — PENDING
 M11.13 — PENDING
 M11.14 — PENDING
@@ -32,7 +33,7 @@ Dashboard note: after an accepted M11.6–M11.17 sprint completes AUTOMATIC GIT 
 ## HUMAN STATUS SUMMARY
 
 Current Sprint:
-M11.10
+M11.11
 
 Current Status:
 PASS — IMPLEMENTATION COMPLETE
@@ -43,15 +44,21 @@ M11.0
 M11.1
 M11.5
 M11.6
-M11.7 implementation
+M11.7
+M11.8
+M11.9
+M11.10
 
 Implementation Verified / Live Pending:
 M11.2
 M11.3
 M11.4
+M11.7
+M11.9
+M11.10
 
 Next:
-M11.11 after this sprint is merged
+M11.12 after this sprint is merged
 
 Blocker:
 None. Live Validation: PENDING. No real provider call was made.
@@ -585,59 +592,121 @@ M11.11 after merge.
 
 ### M11.11
 
-STATUS: PENDING
-STARTED:
-COMPLETED:
-VERDICT:
+STATUS: PASS — IMPLEMENTATION COMPLETE
+STARTED: 2026-09-26
+COMPLETED: 2026-09-26
+VERDICT: PASS
+LIVE VALIDATION: PENDING
 
 #### HUMAN SUMMARY
 
-Not started yet.
+Audio Studio stores voice, narration, dialogue, music, SFX, ambient, and generated audio on the scene version.
+Files stay on the private voice disk. output_url stays null.
+An unsupported role does not substitute another role. A missing provider returns the existing not-enabled error and stores no file.
+Live Validation: PENDING. HTTP fakes proved the path. No real provider call was made.
 
 #### FULL TECHNICAL RESULT
 
 Implementation:
 
+Audio Studio through the existing AUDIO capability. Roles are request data (voice, narration, dialogue, music, sfx, ambient, generated). Live adapter role filtering rejects unsupported roles with no silent substitute. Private files use the voice disk. output_url stays null.
+
 Files:
+
+Backend: StoryAudioRole, story_scene_audios migration, StorySceneAudio, StoryAudioService, StoryAudioController, CreateStorySceneAudioRequest, StoryAudioApiTest; adapter/router/catalog/live AUDIO role support; GeminiStoryVideoAdapter audio submit/status/result; StoryVideoDispatchService::liveAudioRoles; routes; StoryVideoGenerationApiTest audio-via-video-generate expectation updated.
+Frontend: StoryAudioStudioPanel, storyService audio client methods, ProjectStoryPage Audio Studio tab.
+Control: HN9-M11-AUTO-OUTPUT.md, .cursor/cli.json
 
 API:
 
+GET story/audio/roles
+GET/POST story/projects/{uuid}/reels/{reel}/scenes/{scene}/audio
+GET .../audio/{audioUuid}
+GET .../audio/{audioUuid}/file
+
 Database:
+
+story_scene_audios (role, job, private file columns, scene version). Applied with artisan migrate. Not migrate:fresh.
 
 Tests:
 
+StoryAudioApiTest: 6 passed, 43 assertions.
+
 Build:
+
+Frontend production build succeeded.
 
 Migration:
 
+2026_09_26_180000_create_story_scene_audios_table applied.
+
 Security:
+
+Owner and admin can create and read. A non-owner and a user with only M10 review permissions receive 403. Anonymous routes receive 401. No public audio URL. Responses do not include the provider key.
 
 Regression:
 
+M11 story tests: 104 passed, 707 assertions. M10 tests: 158 passed, 826 assertions.
+
 Live Validation:
 
+PENDING. No real provider call was made.
+
 Provider/API Calls:
+
+0 live calls. Tests used HTTP fakes. One fake operation id was story-audio-1.
 
 #### GIT INTEGRATION
 
 Sprint Branch:
+m11/m11-11-audio
+
 Commit:
+713f1a37610ca46e579e566480d2b4bccc5fbb8d
+
 Commit Message:
+feat(m11.11): complete audio studio
+
 Files Committed:
+Audio studio implementation, CLI permissions, and this output file. No .env. No Frontend/dist.
+
 Secret Scan:
+No live API keys.
+
 Push:
+Pending.
+
 Main Sync:
+Pending.
+
 Merge:
+Pending.
+
 Main Push:
+Pending.
+
 Local Main:
+Pending.
+
 Origin/Main:
+Pending.
+
 Working Tree:
+Clean after the hash record.
+
 Force Push:
+No.
+
 Status:
+Implementation ready to commit.
 
 Blockers:
 
+None.
+
 Next Sprint:
+
+M11.12 after merge.
 
 ### M11.12
 

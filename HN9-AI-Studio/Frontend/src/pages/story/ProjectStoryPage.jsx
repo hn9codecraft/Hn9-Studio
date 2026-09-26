@@ -13,6 +13,7 @@ import StoryPlannerPanel from '../../components/story/StoryPlannerPanel';
 import StoryReelsPanel from '../../components/story/StoryReelsPanel';
 import StoryStylePanel from '../../components/story/StoryStylePanel';
 import StoryVideoEnginePanel from '../../components/story/StoryVideoEnginePanel';
+import StoryAudioStudioPanel from '../../components/story/StoryAudioStudioPanel';
 import { getStoryEntry, getStoryWorkspace } from '../../services/storyService';
 
 export default function ProjectStoryPage() {
@@ -181,7 +182,7 @@ export default function ProjectStoryPage() {
               Status: {statusLabel(selectedProject?.status || workspace.project?.status)}
             </p>
             <p className="mb-4">
-              This project has a Project Story workspace. Configure Story Bible, Characters, Style Bible, Story Planner, Reels / Scenes, and Video Engine below.
+              This project has a Project Story workspace. Configure Story Bible, Characters, Style Bible, Story Planner, Reels / Scenes, Video Engine, and Audio Studio below.
             </p>
             <dl className="story-meta mb-0">
               <div>
@@ -253,6 +254,15 @@ export default function ProjectStoryPage() {
           >
             Video Engine
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={section === 'audio'}
+            className={`btn ${section === 'audio' ? 'btn-primary' : 'btn-outline-primary'}`}
+            onClick={() => setSection('audio')}
+          >
+            Audio Studio
+          </button>
         </div>
       ) : null}
 
@@ -277,6 +287,9 @@ export default function ProjectStoryPage() {
       ) : null}
       {!workspaceLoading && workspace && section === 'video' ? (
         <StoryVideoEnginePanel projectId={projectId} />
+      ) : null}
+      {!workspaceLoading && workspace && section === 'audio' ? (
+        <StoryAudioStudioPanel projectId={projectId} />
       ) : null}
 
       {!loading && capabilities.length > 0 ? (

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "permissions": {
+    "allow": [
+      "Shell(git)",
+      "Shell(php)",
+      "Shell(npm)",
+      "Shell(node)",
+      "Shell(powershell)"
+    ],
+    "deny": [
+      "Shell(rm)",
+      "Shell(git:*--force*)",
+      "Shell(git:*reset*--hard*)",
+      "Shell(git:*clean*)",
+      "Shell(php:*migrate:fresh*)",
+      "Shell(php:*migrate:reset*)",
+      "Shell(php:*db:wipe*)",
+      "Shell(php.exe:*migrate:fresh*)",
+      "Shell(php.exe:*migrate:reset*)",
+      "Shell(php.exe:*db:wipe*)",
+      "Shell(powershell:*--force*)",
+      "Shell(powershell:*reset --hard*)",
+      "Shell(powershell:*git clean*)",
+      "Shell(powershell:*migrate:fresh*)",
+      "Shell(powershell:*migrate:reset*)",
+      "Shell(powershell:*db:wipe*)",
+      "Read(.env*)",
+      "Read(**/.env)",
+      "Read(**/.env*)",
+      "Read(**/*credentials*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Write(.env*)",
+      "Write(**/.env)",
+      "Write(**/.env*)",
+      "Write(**/*.pem)",
+      "Write(**/*.key)"
+    ]
+  }
+}

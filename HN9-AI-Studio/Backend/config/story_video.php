@@ -31,6 +31,15 @@ return [
         'enabled' => env('STORY_VIDEO_REAL_PROVIDER'),
         'key' => 'video.live',
         'durations' => [8],
+        'audio_roles' => [
+            'voice',
+            'narration',
+            'dialogue',
+            'music',
+            'sfx',
+            'ambient',
+            'generated',
+        ],
     ],
 
     'providers' => [
@@ -56,6 +65,7 @@ return [
             'polling' => true,
             'webhook' => false,
             'download' => true,
+            'audio_roles' => ['voice', 'narration', 'dialogue', 'generated'],
             'models' => [
                 [
                     'key' => 'catalog-alpha-default',
@@ -136,6 +146,15 @@ return [
             'polling' => false,
             'webhook' => false,
             'download' => true,
+            'audio_roles' => [
+                'voice',
+                'narration',
+                'dialogue',
+                'music',
+                'sfx',
+                'ambient',
+                'generated',
+            ],
             'models' => [
                 [
                     'key' => 'catalog-gamma-default',

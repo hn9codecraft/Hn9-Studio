@@ -81,6 +81,7 @@ final class StoryVideoCatalogFactory
                 webhook: (bool) ($provider['webhook'] ?? false),
                 download: (bool) ($provider['download'] ?? false),
                 models: $models,
+                audioRoles: array_map('strval', $provider['audio_roles'] ?? []),
             );
         }
 

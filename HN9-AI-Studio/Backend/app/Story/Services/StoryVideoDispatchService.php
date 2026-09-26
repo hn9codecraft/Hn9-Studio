@@ -45,6 +45,20 @@ final readonly class StoryVideoDispatchService
     }
 
     /**
+     * @return list<string>
+     */
+    public function liveAudioRoles(): array
+    {
+        foreach ($this->router->adapters() as $candidate) {
+            if ($candidate->key() === self::LIVE_PROVIDER_KEY) {
+                return $candidate->supportedAudioRoles(StoryVideoCapability::Audio);
+            }
+        }
+
+        return [];
+    }
+
+    /**
      * @return array{job: StoryVideoGenerationJob, created: bool, units: list<int>}
      */
     public function start(Project $project, StoryVideoGenerationRequest $request): array

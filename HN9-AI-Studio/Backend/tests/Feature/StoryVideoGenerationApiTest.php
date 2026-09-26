@@ -258,13 +258,14 @@ final class StoryVideoGenerationApiTest extends TestCase
         Http::fake();
         [$user, $project] = $this->ownerProject();
 
+        // Audio without a role is rejected by the router — no silent audio substitute.
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/v1/story/projects/{$project->uuid}/video/generate", [
                 'capability' => 'audio',
                 'duration_seconds' => 8,
-                'prompt' => 'not this sprint',
+                'prompt' => 'not via video generate',
             ])
-            ->assertStatus(501);
+            ->assertStatus(422);
 
         Http::assertNothingSent();
         $this->assertSame(0, StoryVideoGenerationJob::query()->count());
