@@ -1,8 +1,7 @@
 # HN9 M11 AUTO EXECUTION
 
 CURRENT_SPRINT: M11.9
-STATUS: BLOCKED
-ACTION: USER REVIEW REQUIRED
+STATUS: PASS — IMPLEMENTATION COMPLETE
 
 ## LIVE EXECUTION DASHBOARD
 
@@ -17,7 +16,8 @@ M11.7 — PASS — MERGED
 Live Validation: PENDING
 M11.8 — PASS — MERGED
 Live Validation: NOT REQUIRED
-M11.9 — USER REVIEW REQUIRED
+M11.9 — PASS — IMPLEMENTATION COMPLETE
+Live Validation: PENDING
 M11.10 — PENDING
 M11.11 — PENDING
 M11.12 — PENDING
@@ -34,8 +34,8 @@ Current Sprint:
 M11.9
 
 Current Status:
-BLOCKED
-ACTION: USER REVIEW REQUIRED
+PASS — IMPLEMENTATION COMPLETE
+Live Validation: PENDING
 
 Completed:
 M11.0
@@ -50,10 +50,10 @@ M11.3
 M11.4
 
 Next:
-Stopped at M11.9
+M11.10 after this sprint is merged
 
 Blocker:
-M11.9 does not name one approver. The prompt reuses the M10 submit-then-approve shape, and it also says the owner may approve. M10 approval is an admin action. No role was chosen.
+None. The approver is the project owner or an admin. Live Validation: PENDING.
 
 ## Approved History
 
@@ -355,66 +355,117 @@ Next Sprint: M11.9 is stopped for user review.
 
 ### M11.9
 
-STATUS: BLOCKED
-STARTED:
-COMPLETED:
-VERDICT:
-ACTION: USER REVIEW REQUIRED
+STATUS: PASS — IMPLEMENTATION COMPLETE
+STARTED: 2026-09-26
+COMPLETED: 2026-09-26
+VERDICT: PASS
+LIVE VALIDATION: PENDING
 
 #### HUMAN SUMMARY
 
-M11.9 was not implemented.
-The approver is not defined.
-The prompt says to reuse the M10 submit-then-approve shape, and it also says the owner may approve.
-M10 approval is an admin action.
-No role was chosen.
-
-Not started yet.
+Scene and reel review uses submit, then approve or request rework.
+The project owner can do that on their own project. An admin can do it on every project.
+A normal user, including one with M10 review permissions, cannot approve another project.
+Regenerating one scene creates a new version for that scene only and does not store a video file when no live provider call is made.
+Live Validation: PENDING. No regenerated video is claimed.
 
 #### FULL TECHNICAL RESULT
 
 Implementation:
 
+Submit-then-approve versions for scenes and reels. The project owner or an admin may comment, submit, approve, request rework, and regenerate a scene. M10 script, image, and video policies are unchanged.
+
 Files:
+
+Backend review migration, models, StoryReviewService, StoryReviewController, scene and reel policies, routes, StoryReviewApiTest, storyService.js, StoryReelsPanel.jsx, this output file.
 
 API:
 
+Scene versions, comments, submit, approve, needs-rework, regenerate, preview, and file. Reel versions, comments, submit, approve, and needs-rework. output_url stays null.
+
 Database:
+
+story_scene_versions, story_scene_comments, story_reel_versions, story_reel_comments. No media columns.
 
 Tests:
 
+StoryReviewApiTest: 5 passed, 33 assertions.
+
 Build:
+
+Frontend production build succeeded.
 
 Migration:
 
+2026_09_26_170000_create_story_review_tables applied with artisan migrate. Not migrate:fresh.
+
 Security:
+
+Owner and admin can review. A non-owner and a user with only M10 review permissions receive 403. Anonymous preview and file routes receive 401. Comments are stored as text. No file is copied from another scene.
 
 Regression:
 
+Story and ScriptReview tests: 108 passed, 710 assertions. M10 approval behavior remains the admin review path.
+
 Live Validation:
 
+PENDING. No real provider call.
+
 Provider/API Calls:
+
+0. Regenerate returned the existing generation-not-enabled error and stored no file.
 
 #### GIT INTEGRATION
 
 Sprint Branch:
+m11/m11-9-scene-review
+
 Commit:
+fce5dd3c3019ad0861c71e0c80ec20410c75fe31
+
 Commit Message:
+feat(m11.9): complete scene review and versioning
+
 Files Committed:
+16 files. No .env. No Frontend/dist.
+
 Secret Scan:
+No API keys in the review test or new source.
+
 Push:
+Pending.
+
 Main Sync:
+Pending.
+
 Merge:
+Pending.
+
 Main Push:
+Pending.
+
 Local Main:
+Pending.
+
 Origin/Main:
+Pending.
+
 Working Tree:
+Clean after the hash record.
+
 Force Push:
+No.
+
 Status:
+Implementation committed. Merge pending.
 
 Blockers:
 
+None.
+
 Next Sprint:
+
+M11.10 after merge.
 
 ### M11.10
 

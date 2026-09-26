@@ -29,6 +29,15 @@ class StoryScenePolicy
         return $this->owns($user, $scene);
     }
 
+    /**
+     * Comment, submit, approve, rework, and regenerate.
+     * Admin is already allowed by before(). A non-owner is not.
+     */
+    public function review(User $user, StoryScene $scene): bool
+    {
+        return $this->owns($user, $scene);
+    }
+
     private function owns(User $user, StoryScene $scene): bool
     {
         $reel = $scene->reel ?? $scene->reel()->first();
