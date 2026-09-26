@@ -245,19 +245,19 @@ Provider/API Calls:
 #### GIT INTEGRATION
 
 Sprint Branch: m11/m11-7-video-generation
-Commit:
+Commit: 9710ebcd97acf565a70838f735436ad4b1fab425
 Commit Message: feat(m11.7): complete real video generation
 Files Committed: M11.7 story video implementation, tests, Video Engine UI, and the three M11 control files
-Secret Scan:
+Secret Scan: PASS. No .env or live credential was staged. Tests use fixture strings only.
 Push:
 Main Sync:
 Merge:
 Main Push:
 Local Main:
 Origin/Main:
-Working Tree:
+Working Tree: clean at commit
 Force Push: NO
-Status: READY TO COMMIT
+Status: COMMITTED
 
 Blockers:
 
