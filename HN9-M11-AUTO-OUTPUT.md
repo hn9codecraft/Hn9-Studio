@@ -1,7 +1,7 @@
 # HN9 M11 AUTO EXECUTION
 
-CURRENT_SPRINT: M11.11
-STATUS: PASS — IMPLEMENTATION COMPLETE
+CURRENT_SPRINT: M11.12
+STATUS: PASS
 
 ## LIVE EXECUTION DASHBOARD
 
@@ -22,7 +22,8 @@ M11.10 — PASS — MERGED
 Live Validation: PENDING
 M11.11 — PASS — MERGED
 Live Validation: PENDING
-M11.12 — PENDING
+M11.12 — PASS
+Live Validation: NOT REQUIRED
 M11.13 — PENDING
 M11.14 — PENDING
 M11.15 — PENDING
@@ -33,11 +34,11 @@ Dashboard note: after an accepted M11.6–M11.17 sprint completes AUTOMATIC GIT 
 ## HUMAN STATUS SUMMARY
 
 Current Sprint:
-M11.11
+M11.12
 
 Current Status:
-PASS — IMPLEMENTATION COMPLETE
-Live Validation: PENDING
+PASS
+Live Validation: NOT REQUIRED
 
 Completed:
 M11.0
@@ -58,10 +59,10 @@ M11.9
 M11.10
 
 Next:
-M11.12 after this sprint is merged
+M11.13 after this sprint is merged
 
 Blocker:
-None. Live Validation: PENDING. No real provider call was made.
+None. Timeline operations do not call a provider.
 
 ## Approved History
 
@@ -711,55 +712,107 @@ M11.12 after merge.
 
 ### M11.12
 
-STATUS: PENDING
-STARTED:
-COMPLETED:
-VERDICT:
+STATUS: PASS
+STARTED: 2026-09-26
+COMPLETED: 2026-09-26
+VERDICT: PASS
+LIVE VALIDATION: NOT REQUIRED
 
 #### HUMAN SUMMARY
 
-Not started yet.
+The timeline stores order, trim points, splits, replacements, duplicates, deletes, and transitions between adjacent clips.
+Clips point at stored scene video and audio. They do not copy the files and they do not call a provider.
+Deleting a clip leaves the source version in place. A clip cannot use another project's file.
 
 #### FULL TECHNICAL RESULT
 
 Implementation:
 
+Timeline records for a reel. Operations are reorder, trim, split, replace, duplicate, delete, and cut/dissolve/fade transitions. Place adds a stored video version or audio record. No provider client is used.
+
 Files:
+
+story timeline migration, models, StoryTimelineService, StoryTimelineController, routes, StoryTimelineApiTest, storyService.js, StoryTimelinePanel.jsx, ProjectStoryPage.jsx, this output file.
 
 API:
 
+GET timeline. POST clips, reorder, trim, split, replace, duplicate, transitions. DELETE clip. output_url stays null.
+
 Database:
+
+story_timelines, story_timeline_clips, story_timeline_transitions. Applied with artisan migrate. Not migrate:fresh.
 
 Tests:
 
+StoryTimelineApiTest: 3 passed, 42 assertions. Zero HTTP calls.
+
 Build:
+
+Frontend production build succeeded.
 
 Migration:
 
+2026_09_26_190000_create_story_timeline_tables applied.
+
 Security:
+
+Owner can edit. A non-owner receives 403. Anonymous read receives 401. Cross-project replace returns 422 and leaves the clip path unchanged.
 
 Regression:
 
+Story timeline and nearby story tests: 60 passed, 454 assertions. M10 video, image, script review, export, and Gemini tests: 125 passed, 641 assertions.
+
 Live Validation:
 
+NOT REQUIRED. No provider is involved.
+
 Provider/API Calls:
+
+0.
 
 #### GIT INTEGRATION
 
 Sprint Branch:
+m11/m11-12-timeline
+
 Commit:
+c265d3f15d7b3996368d46628da17fe8b19ef834
+
 Commit Message:
+feat(m11.12): complete timeline and transitions
+
 Files Committed:
+13 files. No .env. No Frontend/dist.
+
 Secret Scan:
+No API keys.
+
 Push:
+Pending.
+
 Main Sync:
+Pending.
+
 Merge:
+Pending.
+
 Main Push:
+Pending.
+
 Local Main:
+Pending.
+
 Origin/Main:
+Pending.
+
 Working Tree:
+Clean after the hash record.
+
 Force Push:
+No.
+
 Status:
+Implementation committed. Merge pending.
 
 Blockers:
 

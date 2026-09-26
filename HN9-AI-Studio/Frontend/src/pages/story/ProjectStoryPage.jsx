@@ -14,6 +14,7 @@ import StoryReelsPanel from '../../components/story/StoryReelsPanel';
 import StoryStylePanel from '../../components/story/StoryStylePanel';
 import StoryVideoEnginePanel from '../../components/story/StoryVideoEnginePanel';
 import StoryAudioStudioPanel from '../../components/story/StoryAudioStudioPanel';
+import StoryTimelinePanel from '../../components/story/StoryTimelinePanel';
 import { getStoryEntry, getStoryWorkspace } from '../../services/storyService';
 
 export default function ProjectStoryPage() {
@@ -263,6 +264,15 @@ export default function ProjectStoryPage() {
           >
             Audio Studio
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={section === 'timeline'}
+            className={`btn ${section === 'timeline' ? 'btn-primary' : 'btn-outline-primary'}`}
+            onClick={() => setSection('timeline')}
+          >
+            Timeline
+          </button>
         </div>
       ) : null}
 
@@ -290,6 +300,9 @@ export default function ProjectStoryPage() {
       ) : null}
       {!workspaceLoading && workspace && section === 'audio' ? (
         <StoryAudioStudioPanel projectId={projectId} />
+      ) : null}
+      {!workspaceLoading && workspace && section === 'timeline' ? (
+        <StoryTimelinePanel projectId={projectId} />
       ) : null}
 
       {!loading && capabilities.length > 0 ? (
