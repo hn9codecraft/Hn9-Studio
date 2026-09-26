@@ -1,6 +1,6 @@
 # HN9 M11 AUTO EXECUTION
 
-CURRENT_SPRINT: M11.9
+CURRENT_SPRINT: M11.10
 STATUS: PASS — IMPLEMENTATION COMPLETE
 
 ## LIVE EXECUTION DASHBOARD
@@ -16,9 +16,10 @@ M11.7 — PASS — MERGED
 Live Validation: PENDING
 M11.8 — PASS — MERGED
 Live Validation: NOT REQUIRED
-M11.9 — PASS — IMPLEMENTATION COMPLETE
+M11.9 — PASS — MERGED
 Live Validation: PENDING
-M11.10 — PENDING
+M11.10 — PASS — IMPLEMENTATION COMPLETE
+Live Validation: PENDING
 M11.11 — PENDING
 M11.12 — PENDING
 M11.13 — PENDING
@@ -31,7 +32,7 @@ Dashboard note: after an accepted M11.6–M11.17 sprint completes AUTOMATIC GIT 
 ## HUMAN STATUS SUMMARY
 
 Current Sprint:
-M11.9
+M11.10
 
 Current Status:
 PASS — IMPLEMENTATION COMPLETE
@@ -50,10 +51,10 @@ M11.3
 M11.4
 
 Next:
-M11.10 after this sprint is merged
+M11.11 after this sprint is merged
 
 Blocker:
-None. The approver is the project owner or an admin. Live Validation: PENDING.
+None. Live Validation: PENDING. No real provider call was made.
 
 ## Approved History
 
@@ -446,10 +447,10 @@ Main Push:
 origin/main c4519898742bcc872e5d8612e390141b5037feb0
 
 Local Main:
-c4519898742bcc872e5d8612e390141b5037feb0
+f757e14eac05d51007667584349d6932b8b5590b
 
 Origin/Main:
-c4519898742bcc872e5d8612e390141b5037feb0
+f757e14eac05d51007667584349d6932b8b5590b
 
 Working Tree:
 Clean.
@@ -470,38 +471,64 @@ M11.10 after merge.
 
 ### M11.10
 
-STATUS: PENDING
-STARTED:
-COMPLETED:
-VERDICT:
+STATUS: PASS — IMPLEMENTATION COMPLETE
+STARTED: 2026-09-26
+COMPLETED: 2026-09-26
+VERDICT: PASS
+LIVE VALIDATION: PENDING
 
 #### HUMAN SUMMARY
 
-Not started yet.
+Edit and Extend create a new scene version from a stored scene video.
+The previous file stays in place. A missing source video does not call a provider.
+When the live provider is not enabled, the request returns the existing not-enabled error and stores no new file.
+Live Validation: PENDING. HTTP fakes proved the adapter path. No real provider call was made.
 
 #### FULL TECHNICAL RESULT
 
 Implementation:
 
+Video Edit and Video Extend go through the capability router. The adapter receives the private storage location and sends the stored bytes. Core code does not name a vendor endpoint. An accepted job with the same instruction is not submitted again. The project owner or an admin may edit or extend. A normal user cannot.
+
 Files:
+
+StoryReviewService revision methods, StoryReviewController, routes, StoryVideoDispatchService, StoryVideoAssetResolver, GeminiStoryVideoAdapter, GeminiProvider source video field, live catalog capabilities, StoryVideoRevisionApiTest, StoryVideoGenerationApiTest, storyService.js, StoryReelsPanel.jsx, this output file.
 
 API:
 
+POST scene version edit and extend. GET version status and authenticated file. output_url stays null.
+
 Database:
+
+No new tables. Jobs and scene versions already represent edit and extend.
 
 Tests:
 
+StoryVideoRevisionApiTest: 5 passed, 47 assertions.
+
 Build:
+
+Frontend production build succeeded.
 
 Migration:
 
+None.
+
 Security:
+
+Owner and admin can edit. A non-owner and a user with only M10 review permissions receive 403. Anonymous edit, status, and file routes receive 401. A missing or foreign stored video returns 422 and sends no request. Responses do not include the provider key. The previous file is not replaced.
 
 Regression:
 
+Story and ScriptReview tests: 114 passed, 760 assertions.
+
 Live Validation:
 
+PENDING. No real provider call.
+
 Provider/API Calls:
+
+0 live calls. Tests used HTTP fakes. Operation ids in those fakes were story-edit-1, story-extend-1, and story-admin-edit.
 
 #### GIT INTEGRATION
 

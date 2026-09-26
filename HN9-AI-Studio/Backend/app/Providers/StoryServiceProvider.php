@@ -166,6 +166,8 @@ class StoryServiceProvider extends ServiceProvider
             StoryVideoCapability::TextToVideo,
             StoryVideoCapability::ImageToVideo,
             StoryVideoCapability::ReferenceToVideo,
+            StoryVideoCapability::VideoEdit,
+            StoryVideoCapability::VideoExtend,
         ];
 
         return new CatalogStoryVideoAdapter(
@@ -180,7 +182,7 @@ class StoryServiceProvider extends ServiceProvider
             maxDuration: max($durations),
             aspectRatios: ['16:9', '9:16', '1:1'],
             resolutions: ['720p'],
-            inputTypes: ['text', 'image', 'reference_image'],
+            inputTypes: ['text', 'image', 'reference_image', 'video'],
             audio: false,
             mode: StoryVideoAsyncMode::AsyncPoll,
             polling: true,
@@ -197,7 +199,7 @@ class StoryServiceProvider extends ServiceProvider
                     durations: $durations,
                     aspectRatios: ['16:9', '9:16', '1:1'],
                     resolutions: ['720p'],
-                    inputTypes: ['text', 'image', 'reference_image'],
+                    inputTypes: ['text', 'image', 'reference_image', 'video'],
                     audioSupported: false,
                 ),
             ],

@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Story\Contracts\StoryCapabilityRouterInterface;
 use App\Story\Contracts\StoryVideoEngineInterface;
 use App\Story\Contracts\StoryVideoProviderAdapterInterface;
+use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Exceptions\StoryVideoEngineException;
 use App\Story\Models\StoryVideoGenerationJob;
@@ -31,6 +32,17 @@ final readonly class StoryVideoDispatchService
         private StoryVideoUnitPlanner $units,
         private StoryVideoAssetResolver $assets,
     ) {}
+
+    public function liveSupports(StoryVideoCapability $capability): bool
+    {
+        foreach ($this->router->adapters() as $candidate) {
+            if ($candidate->key() === self::LIVE_PROVIDER_KEY && $candidate->supports($capability)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * @return array{job: StoryVideoGenerationJob, created: bool, units: list<int>}

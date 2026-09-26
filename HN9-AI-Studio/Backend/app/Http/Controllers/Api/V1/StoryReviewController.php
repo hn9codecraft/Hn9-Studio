@@ -124,6 +124,46 @@ class StoryReviewController extends Controller
         ), 201);
     }
 
+    public function editScene(Request $request, string $uuid, string $reelUuid, string $sceneUuid, string $versionUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('review', $this->scene($project->id, $reelUuid, $sceneUuid));
+        $payload = $request->validate(['instruction' => ['required', 'string', 'max:5000']]);
+        $result = $this->reviews->editScene($project, $reelUuid, $sceneUuid, $versionUuid, $payload['instruction']);
+
+        return ApiResponse::success($result, ($result['created'] ?? false) === true ? 201 : 200);
+    }
+
+    public function extendScene(Request $request, string $uuid, string $reelUuid, string $sceneUuid, string $versionUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('review', $this->scene($project->id, $reelUuid, $sceneUuid));
+        $payload = $request->validate(['instruction' => ['required', 'string', 'max:5000']]);
+        $result = $this->reviews->extendScene($project, $reelUuid, $sceneUuid, $versionUuid, $payload['instruction']);
+
+        return ApiResponse::success($result, ($result['created'] ?? false) === true ? 201 : 200);
+    }
+
+    public function versionStatus(string $uuid, string $reelUuid, string $sceneUuid, string $versionUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('view', $this->scene($project->id, $reelUuid, $sceneUuid));
+
+        return ApiResponse::success($this->reviews->versionStatus($project, $reelUuid, $sceneUuid, $versionUuid));
+    }
+
+    public function versionFile(string $uuid, string $reelUuid, string $sceneUuid, string $versionUuid): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('view', $this->scene($project->id, $reelUuid, $sceneUuid));
+
+        return $this->reviews->versionFile($project, $reelUuid, $sceneUuid, $versionUuid);
+    }
+
     public function reelVersions(string $uuid, string $reelUuid): JsonResponse
     {
         $project = $this->projects->getByUuid($uuid);

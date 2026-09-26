@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Story\Contracts\StoryReelServiceInterface;
 use App\Story\Contracts\StorySceneServiceInterface;
 use App\Story\Enums\StoryReviewStatus;
+use App\Story\Enums\StoryVideoInputType;
+use App\Story\Exceptions\StoryException;
 use App\Story\Exceptions\StoryReviewException;
 use App\Story\Exceptions\StoryVideoEngineException;
 use App\Story\Models\StoryReel;
@@ -20,6 +22,8 @@ use App\Story\Models\StorySceneVersion;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Video\StoryVideoGenerationRequest;
+use App\Story\Video\StoryVideoInput;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Submit-then-approve review for story scenes and reels.
@@ -148,6 +152,61 @@ final readonly class StoryReviewService
     /**
      * @return array<string, mixed>
      */
+    public function editScene(
+        Project $project,
+        string $reelUuid,
+        string $sceneUuid,
+        string $versionUuid,
+        string $instruction,
+    ): array {
+        return $this->reviseScene($project, $reelUuid, $sceneUuid, $versionUuid, $instruction, StoryVideoCapability::VideoEdit);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function extendScene(
+        Project $project,
+        string $reelUuid,
+        string $sceneUuid,
+        string $versionUuid,
+        string $instruction,
+    ): array {
+        return $this->reviseScene($project, $reelUuid, $sceneUuid, $versionUuid, $instruction, StoryVideoCapability::VideoExtend);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function versionStatus(Project $project, string $reelUuid, string $sceneUuid, string $versionUuid): array
+    {
+        $scene = $this->scene($project, $reelUuid, $sceneUuid);
+        $version = $this->sceneVersion($scene, $versionUuid);
+        $job = $this->versionJob($scene, $version);
+
+        return [
+            'version_id' => $version->uuid,
+            'output_url' => null,
+            'has_file' => $this->jobHasFile($job),
+            'job' => $job instanceof StoryVideoGenerationJob ? $this->jobSummary($job) : null,
+        ];
+    }
+
+    public function versionFile(Project $project, string $reelUuid, string $sceneUuid, string $versionUuid): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $scene = $this->scene($project, $reelUuid, $sceneUuid);
+        $version = $this->sceneVersion($scene, $versionUuid);
+        $job = $this->versionJob($scene, $version);
+        if (! $job instanceof StoryVideoGenerationJob || ! $this->jobHasFile($job)) {
+            throw StoryVideoEngineException::invalidInput('No private video file is stored for this scene version.');
+        }
+
+        return $this->dispatch->file($project, $job);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function scenePreview(Project $project, string $reelUuid, string $sceneUuid): array
     {
         $scene = $this->scene($project, $reelUuid, $sceneUuid);
@@ -247,6 +306,143 @@ final readonly class StoryReviewService
     public function reworkReel(Project $project, string $reelUuid, User $actor, string $comment): array
     {
         return $this->decideReel($project, $reelUuid, $actor, $comment, StoryReviewStatus::NeedsRework);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function reviseScene(
+        Project $project,
+        string $reelUuid,
+        string $sceneUuid,
+        string $versionUuid,
+        string $instruction,
+        StoryVideoCapability $capability,
+    ): array {
+        $scene = $this->scene($project, $reelUuid, $sceneUuid);
+        $source = $this->sceneVersion($scene, $versionUuid);
+        $instruction = trim($instruction);
+        if ($instruction === '') {
+            throw StoryVideoEngineException::invalidInput('An edit instruction is required.');
+        }
+
+        $sourceJob = $this->versionJob($scene, $source);
+        $storage = is_array($sourceJob?->provider_metadata['storage'] ?? null)
+            ? $sourceJob->provider_metadata['storage']
+            : null;
+        if (! $sourceJob instanceof StoryVideoGenerationJob
+            || ! $this->jobHasFile($sourceJob)
+            || ! is_array($storage)
+            || ! Storage::disk((string) $storage['disk'])->exists((string) $storage['path'])) {
+            throw StoryVideoEngineException::invalidInput('A stored scene video is required.');
+        }
+
+        if (! $this->dispatch->liveSupports($capability)) {
+            throw StoryVideoEngineException::generationNotEnabled();
+        }
+
+        $scene->loadMissing('reel');
+        $key = $capability->value.':'.$source->uuid.':'.hash('sha256', $instruction);
+        $existing = StoryVideoGenerationJob::query()
+            ->where('story_workspace_id', $scene->reel->story_workspace_id)
+            ->where('idempotency_key', $key)
+            ->first();
+
+        if ($existing instanceof StoryVideoGenerationJob) {
+            $existingVersionId = $existing->provider_metadata['version_id'] ?? null;
+            $existingVersion = is_string($existingVersionId)
+                ? StorySceneVersion::query()->where('uuid', $existingVersionId)->where('story_scene_id', $scene->id)->first()
+                : null;
+            if ($existingVersion instanceof StorySceneVersion) {
+                return $this->revisionPayload($existingVersion, $existing, false);
+            }
+        }
+
+        $continuity = is_array($source->continuity) ? $source->continuity : [];
+        $continuity['review_comment'] = $instruction;
+        $version = $this->openSceneVersion($scene, $source, $instruction, $continuity);
+        $started = $this->dispatch->start($project, new StoryVideoGenerationRequest(
+            capability: $capability,
+            reelUuid: $reelUuid,
+            sceneUuid: $sceneUuid,
+            prompt: $instruction,
+            durationSeconds: 8,
+            inputs: [
+                new StoryVideoInput(
+                    type: StoryVideoInputType::Video,
+                    assetId: $source->uuid,
+                    metadata: [
+                        'disk' => (string) $storage['disk'],
+                        'path' => (string) $storage['path'],
+                        'mime' => (string) ($storage['mime'] ?? 'video/mp4'),
+                    ],
+                ),
+            ],
+            idempotencyKey: $key,
+            metadata: [
+                'version_id' => $version->uuid,
+                'source_version_id' => $source->uuid,
+            ],
+        ));
+
+        $job = $started['job'];
+        $metadata = is_array($job->provider_metadata) ? $job->provider_metadata : [];
+        $metadata['version_id'] = $version->uuid;
+        $metadata['source_version_id'] = $source->uuid;
+        $job->forceFill(['provider_metadata' => $metadata])->save();
+
+        return $this->revisionPayload($version->fresh(['comments.author', 'parentVersion']), $job->fresh() ?? $job, true);
+    }
+
+    private function sceneVersion(StoryScene $scene, string $versionUuid): StorySceneVersion
+    {
+        $version = StorySceneVersion::query()
+            ->where('story_scene_id', $scene->id)
+            ->where('uuid', $versionUuid)
+            ->first();
+
+        if (! $version instanceof StorySceneVersion) {
+            throw StoryException::notFound('Scene version');
+        }
+
+        return $version;
+    }
+
+    private function versionJob(StoryScene $scene, StorySceneVersion $version): ?StoryVideoGenerationJob
+    {
+        return StoryVideoGenerationJob::query()
+            ->where('story_scene_id', $scene->id)
+            ->orderByDesc('id')
+            ->get()
+            ->first(static function (StoryVideoGenerationJob $job) use ($version): bool {
+                return ($job->provider_metadata['version_id'] ?? null) === $version->uuid;
+            });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function jobSummary(StoryVideoGenerationJob $job): array
+    {
+        return [
+            'id' => $job->uuid,
+            'capability' => $job->capability,
+            'status' => $job->status,
+            'operation_id' => $job->operation_id,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function revisionPayload(StorySceneVersion $version, StoryVideoGenerationJob $job, bool $created): array
+    {
+        return [
+            ...$this->sceneVersionPayload($version),
+            'created' => $created,
+            'job' => $this->jobSummary($job),
+            'output_url' => null,
+        ];
     }
 
     private function scene(Project $project, string $reelUuid, string $sceneUuid): StoryScene

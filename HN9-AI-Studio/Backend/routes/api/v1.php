@@ -296,6 +296,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/approve', [StoryReviewController::class, 'approveScene'])->name('story.projects.reels.scenes.approve');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/needs-rework', [StoryReviewController::class, 'reworkScene'])->name('story.projects.reels.scenes.needs-rework');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/regenerate', [StoryReviewController::class, 'regenerateScene'])->name('story.projects.reels.scenes.regenerate');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/edit', [StoryReviewController::class, 'editScene'])->name('story.projects.reels.scenes.versions.edit');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/extend', [StoryReviewController::class, 'extendScene'])->name('story.projects.reels.scenes.versions.extend');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}', [StoryReviewController::class, 'versionStatus'])->name('story.projects.reels.scenes.versions.show');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/file', [StoryReviewController::class, 'versionFile'])->name('story.projects.reels.scenes.versions.file');
     Route::get('story/capabilities', [StoryController::class, 'capabilities'])->name('story.capabilities.index');
     Route::get('story/video/capabilities', [StoryVideoEngineController::class, 'capabilities'])->name('story.video.capabilities');
     Route::get('story/video/providers', [StoryVideoEngineController::class, 'providers'])->name('story.video.providers');

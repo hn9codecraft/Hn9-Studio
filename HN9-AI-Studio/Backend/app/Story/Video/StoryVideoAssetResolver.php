@@ -10,6 +10,7 @@ use App\Story\Enums\StoryVideoInputType;
 use App\Story\Exceptions\StoryVideoEngineException;
 use App\Story\Models\StoryCharacterReference;
 use App\Story\Models\StoryStyleReference;
+use App\Story\Models\StoryVideoGenerationJob;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -24,6 +25,7 @@ final class StoryVideoAssetResolver
         $input = match ($request->capability) {
             StoryVideoCapability::ImageToVideo => $this->characterImage($project, $request),
             StoryVideoCapability::ReferenceToVideo => $this->referenceImage($project, $request),
+            StoryVideoCapability::VideoEdit, StoryVideoCapability::VideoExtend => $this->storedSceneVideo($project, $request),
             default => null,
         };
 
@@ -59,6 +61,46 @@ final class StoryVideoAssetResolver
             idempotencyKey: $request->idempotencyKey,
             metadata: $request->metadata,
             extensions: $request->extensions,
+        );
+    }
+
+    private function storedSceneVideo(Project $project, StoryVideoGenerationRequest $request): StoryVideoInput
+    {
+        $input = $this->requireInput($request, StoryVideoInputType::Video, 'A stored scene video is required.');
+        $disk = $input->metadata['disk'] ?? null;
+        $path = $input->metadata['path'] ?? null;
+        $mime = $input->metadata['mime'] ?? null;
+        if ($disk !== 'videos' || ! is_string($path) || $path === '' || str_contains($path, '..') || str_contains($path, '://')) {
+            throw StoryVideoEngineException::invalidInput('A stored scene video is required.');
+        }
+
+        $owned = StoryVideoGenerationJob::query()
+            ->whereHas('workspace', static function ($query) use ($project): void {
+                $query->where('project_id', $project->id);
+            })
+            ->get()
+            ->contains(static function (StoryVideoGenerationJob $job) use ($disk, $path): bool {
+                $storage = $job->provider_metadata['storage'] ?? null;
+
+                return is_array($storage)
+                    && ($storage['disk'] ?? null) === $disk
+                    && ($storage['path'] ?? null) === $path;
+            });
+
+        if (! $owned || ! Storage::disk($disk)->exists($path)) {
+            throw StoryVideoEngineException::invalidInput('A stored scene video is required.');
+        }
+
+        return new StoryVideoInput(
+            type: StoryVideoInputType::Video,
+            assetId: $input->assetId,
+            metadata: [
+                'disk' => $disk,
+                'path' => $path,
+                'mime' => is_string($mime) && $mime !== '' ? $mime : 'video/mp4',
+            ],
+            role: $input->role,
+            order: $input->order,
         );
     }
 
