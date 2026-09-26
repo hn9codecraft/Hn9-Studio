@@ -285,6 +285,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('story/video/providers', [StoryVideoEngineController::class, 'providers'])->name('story.video.providers');
     Route::post('story/projects/{uuid}/video/validate', [StoryVideoEngineController::class, 'validateCompatibility'])->name('story.projects.video.validate');
     Route::post('story/projects/{uuid}/video/jobs', [StoryVideoEngineController::class, 'prepareJob'])->name('story.projects.video.jobs.store');
+    Route::post('story/projects/{uuid}/video/generate', [StoryVideoEngineController::class, 'generate'])->name('story.projects.video.generate');
+    Route::get('story/projects/{uuid}/video/jobs/{jobUuid}', [StoryVideoEngineController::class, 'showJob'])->name('story.projects.video.jobs.show');
+    Route::get('story/projects/{uuid}/video/jobs/{jobUuid}/file', [StoryVideoEngineController::class, 'file'])->name('story.projects.video.jobs.file');
 
     // Workflow runs
     Route::get('workflow-runs', [WorkflowRunController::class, 'index'])->name('workflow-runs.index');

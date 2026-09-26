@@ -1,0 +1,385 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Story\Video\Adapters;
+
+use App\AI\Providers\Gemini\GeminiProvider;
+use App\AI\Support\ProviderErrorSanitizer;
+use App\AI\Requests\VideoRequest;
+use App\Models\Project;
+use App\Services\VideoBinaryStore;
+use App\Story\Contracts\StoryVideoProviderAdapterInterface;
+use App\Story\Enums\StoryVideoAsyncMode;
+use App\Story\Enums\StoryVideoCapability;
+use App\Story\Enums\StoryVideoInputType;
+use App\Story\Enums\StoryVideoJobStatus;
+use App\Story\Exceptions\StoryVideoEngineException;
+use App\Story\Models\StoryVideoGenerationJob;
+use App\Story\Video\CatalogStoryVideoAdapter;
+use App\Story\Video\StoryVideoGenerationOutput;
+use App\Story\Video\StoryVideoGenerationRequest;
+use App\Story\Video\StoryVideoSubmission;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
+
+/**
+ * Real video adapter. Vendor client usage stays in this class.
+ * Core services see only the adapter key and normalized jobs.
+ */
+final readonly class GeminiStoryVideoAdapter implements StoryVideoProviderAdapterInterface
+{
+    public function __construct(
+        private CatalogStoryVideoAdapter $catalog,
+        private GeminiProvider $provider,
+        private VideoBinaryStore $binaries,
+    ) {}
+
+    public function key(): string
+    {
+        return $this->catalog->key();
+    }
+
+    public function displayName(): string
+    {
+        return $this->catalog->displayName();
+    }
+
+    public function enabled(): bool
+    {
+        return $this->catalog->enabled();
+    }
+
+    public function priority(): int
+    {
+        return $this->catalog->priority();
+    }
+
+    public function supports(StoryVideoCapability $capability): bool
+    {
+        return $this->catalog->supports($capability);
+    }
+
+    public function isAvailable(StoryVideoCapability $capability): bool
+    {
+        return $this->catalog->isAvailable($capability);
+    }
+
+    public function supportedDurations(StoryVideoCapability $capability): array
+    {
+        return $this->catalog->supportedDurations($capability);
+    }
+
+    public function minDurationSeconds(StoryVideoCapability $capability): ?int
+    {
+        return $this->catalog->minDurationSeconds($capability);
+    }
+
+    public function maxDurationSeconds(StoryVideoCapability $capability): ?int
+    {
+        return $this->catalog->maxDurationSeconds($capability);
+    }
+
+    public function supportedAspectRatios(StoryVideoCapability $capability): array
+    {
+        return $this->catalog->supportedAspectRatios($capability);
+    }
+
+    public function supportedResolutions(StoryVideoCapability $capability): array
+    {
+        return $this->catalog->supportedResolutions($capability);
+    }
+
+    public function supportedInputTypes(StoryVideoCapability $capability): array
+    {
+        return $this->catalog->supportedInputTypes($capability);
+    }
+
+    public function audioSupported(StoryVideoCapability $capability): bool
+    {
+        return $this->catalog->audioSupported($capability);
+    }
+
+    public function asyncMode(StoryVideoCapability $capability): StoryVideoAsyncMode
+    {
+        return $this->catalog->asyncMode($capability);
+    }
+
+    public function supportsPolling(StoryVideoCapability $capability): bool
+    {
+        return $this->catalog->supportsPolling($capability);
+    }
+
+    public function supportsWebhook(StoryVideoCapability $capability): bool
+    {
+        return $this->catalog->supportsWebhook($capability);
+    }
+
+    public function supportsDownload(StoryVideoCapability $capability): bool
+    {
+        return $this->catalog->supportsDownload($capability);
+    }
+
+    public function models(): array
+    {
+        return $this->catalog->models();
+    }
+
+    public function validate(StoryVideoGenerationRequest $request): void
+    {
+        $this->catalog->validate($request);
+        if (in_array($request->capability, [StoryVideoCapability::ImageToVideo, StoryVideoCapability::ReferenceToVideo], true)) {
+            $image = $this->imagePayload($request);
+            if ($image === null) {
+                throw StoryVideoEngineException::invalidInput('An owned image reference is required for this capability.');
+            }
+        }
+    }
+
+    public function submit(StoryVideoGenerationRequest $request): StoryVideoSubmission
+    {
+        $this->validate($request);
+
+        try {
+            $response = $this->provider->generateVideo($this->toVideoRequest($request, null));
+        } catch (Throwable $exception) {
+            throw StoryVideoEngineException::invalidInput($this->safeMessage($exception));
+        }
+
+        $operationId = $response->jobId;
+        if (! is_string($operationId) || $operationId === '') {
+            throw StoryVideoEngineException::invalidInput('The video provider did not return an operation id.');
+        }
+
+        return new StoryVideoSubmission(
+            operationId: $operationId,
+            status: $response->done
+                ? ($response->error ? StoryVideoJobStatus::Failed : StoryVideoJobStatus::Completed)
+                : StoryVideoJobStatus::Submitted,
+            modelKey: $response->model,
+            done: $response->done,
+            downloadUri: $this->safeUri($response->video),
+        );
+    }
+
+    public function status(StoryVideoGenerationJob $job): StoryVideoJobStatus
+    {
+        $operation = (string) $job->operation_id;
+        if ($operation === '') {
+            return StoryVideoJobStatus::tryFrom((string) $job->status) ?? StoryVideoJobStatus::Queued;
+        }
+
+        try {
+            $response = $this->provider->generateVideo($this->toVideoRequest(
+                StoryVideoGenerationRequest::fromArray((array) $job->request_payload),
+                $operation,
+            ));
+        } catch (Throwable $exception) {
+            $job->forceFill([
+                'error_code' => 'upstream_error',
+                'error_message' => $this->safeMessage($exception),
+            ])->save();
+
+            return StoryVideoJobStatus::Failed;
+        }
+
+        if (is_string($response->error) && $response->error !== '') {
+            $job->forceFill([
+                'status' => StoryVideoJobStatus::Failed->value,
+                'error_code' => 'upstream_error',
+                'error_message' => $this->safeMessageText($response->error),
+                'failed_at' => now(),
+            ])->save();
+
+            return StoryVideoJobStatus::Failed;
+        }
+
+        if ($response->done) {
+            if ($this->safeUri($response->video) === null) {
+                $job->forceFill([
+                    'status' => StoryVideoJobStatus::Failed->value,
+                    'error_code' => 'upstream_error',
+                    'error_message' => 'The provider video could not be stored.',
+                    'failed_at' => now(),
+                ])->save();
+
+                return StoryVideoJobStatus::Failed;
+            }
+
+            $job->forceFill([
+                'provider_metadata' => array_merge((array) $job->provider_metadata, [
+                    'download_pending' => true,
+                ]),
+            ])->save();
+
+            return StoryVideoJobStatus::Processing;
+        }
+
+        $status = StoryVideoJobStatus::Processing;
+        $job->forceFill(['status' => $status->value])->save();
+
+        return $status;
+    }
+
+    public function cancel(StoryVideoGenerationJob $job): void
+    {
+        $job->forceFill([
+            'status' => StoryVideoJobStatus::Cancelled->value,
+        ])->save();
+    }
+
+    public function result(StoryVideoGenerationJob $job): StoryVideoGenerationOutput
+    {
+        $metadata = (array) $job->provider_metadata;
+        $stored = $metadata['storage'] ?? null;
+        if (is_array($stored) && isset($stored['path'], $stored['disk'])) {
+            return new StoryVideoGenerationOutput(
+                mediaReference: (string) $stored['path'],
+                mimeType: isset($stored['mime']) ? (string) $stored['mime'] : null,
+                providerOutputId: $job->operation_id,
+                downloadStrategy: 'private_file',
+                checksum: isset($stored['checksum']) ? (string) $stored['checksum'] : null,
+                metadata: ['disk' => (string) $stored['disk']],
+            );
+        }
+
+        $operation = (string) $job->operation_id;
+        $response = $this->provider->generateVideo($this->toVideoRequest(
+            StoryVideoGenerationRequest::fromArray((array) $job->request_payload),
+            $operation,
+        ));
+        $uri = $this->safeUri($response->video);
+        if ($uri === null) {
+            throw StoryVideoEngineException::invalidInput('The provider has not produced a downloadable video.');
+        }
+
+        $project = $job->workspace?->project;
+        if (! $project instanceof Project) {
+            $job->loadMissing('workspace.project');
+            $project = $job->workspace?->project;
+        }
+        if (! $project instanceof Project) {
+            throw StoryVideoEngineException::invalidInput('The story workspace has no project for private storage.');
+        }
+
+        try {
+            $file = $this->binaries->retrieveAndStore($project, 'gemini', $uri);
+        } catch (Throwable $exception) {
+            $job->forceFill([
+                'status' => StoryVideoJobStatus::Failed->value,
+                'error_code' => 'upstream_error',
+                'error_message' => $this->safeMessage($exception),
+                'failed_at' => now(),
+                'provider_metadata' => array_merge($metadata, [
+                    'download_pending' => false,
+                ]),
+            ])->save();
+            throw StoryVideoEngineException::invalidInput($this->safeMessage($exception));
+        }
+
+        $job->forceFill([
+            'status' => StoryVideoJobStatus::Completed->value,
+            'completed_at' => now(),
+            'provider_metadata' => array_merge($metadata, [
+                'download_pending' => false,
+                'storage' => [
+                    'disk' => $file->disk,
+                    'path' => $file->path,
+                    'mime' => $file->mimeType,
+                    'size' => $file->size,
+                    'checksum' => $file->checksum,
+                ],
+            ]),
+        ])->save();
+
+        return new StoryVideoGenerationOutput(
+            mediaReference: $file->path,
+            mimeType: $file->mimeType,
+            providerOutputId: $job->operation_id,
+            downloadStrategy: 'private_file',
+            checksum: $file->checksum,
+            metadata: ['disk' => $file->disk],
+        );
+    }
+
+    private function toVideoRequest(StoryVideoGenerationRequest $request, ?string $operation): VideoRequest
+    {
+        $options = [];
+        if ($operation !== null && $operation !== '') {
+            $options['operation'] = $operation;
+        }
+        $image = $this->imagePayload($request);
+        if ($image !== null) {
+            $options['image'] = $image;
+        }
+
+        $seconds = $request->durationSeconds;
+        $supported = $this->supportedDurations($request->capability);
+        if ($seconds !== null && $supported !== [] && ! in_array($seconds, $supported, true)) {
+            $seconds = max($supported);
+        }
+
+        return new VideoRequest(
+            prompt: (string) ($request->prompt ?? ''),
+            model: $request->preferredModel,
+            durationSeconds: $seconds !== null ? (float) $seconds : null,
+            resolution: $request->resolution,
+            aspectRatio: $request->aspectRatio,
+            format: 'mp4',
+            options: $options,
+        );
+    }
+
+    /**
+     * @return array{mimeType: string, bytesBase64Encoded: string}|null
+     */
+    private function imagePayload(StoryVideoGenerationRequest $request): ?array
+    {
+        foreach ($request->inputs as $input) {
+            if (! in_array($input->type, [StoryVideoInputType::Image, StoryVideoInputType::ReferenceImage], true)) {
+                continue;
+            }
+            $disk = $input->metadata['disk'] ?? null;
+            $path = $input->metadata['path'] ?? null;
+            $mime = $input->metadata['mime'] ?? null;
+            if ($disk !== 'images' || ! is_string($path) || $path === '' || str_contains($path, '..') || str_contains($path, '://')) {
+                continue;
+            }
+            if (! Storage::disk($disk)->exists($path)) {
+                continue;
+            }
+            $bytes = Storage::disk($disk)->get($path);
+            if (! is_string($bytes) || $bytes === '') {
+                continue;
+            }
+
+            return [
+                'mimeType' => is_string($mime) && $mime !== '' ? $mime : 'image/png',
+                'bytesBase64Encoded' => base64_encode($bytes),
+            ];
+        }
+
+        return null;
+    }
+
+    private function safeUri(string $uri): ?string
+    {
+        if ($uri === '' || str_contains($uri, 'key=')) {
+            return null;
+        }
+
+        return $uri;
+    }
+
+    private function safeMessage(Throwable $exception): string
+    {
+        return $this->safeMessageText($exception->getMessage());
+    }
+
+    private function safeMessageText(string $message): string
+    {
+        $message = preg_replace('/(?:^|[?&\s])(?:key|api_key)=\S+/i', ' [redacted]', $message) ?? $message;
+
+        return mb_substr(ProviderErrorSanitizer::message($message, 'The video provider request failed.'), 0, 300);
+    }
+}

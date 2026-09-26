@@ -30,8 +30,9 @@ Shared prohibitions for every sprint: no `migrate:fresh`, no git commit, push, m
 `LIVE_VALIDATION` values used below:
 
 - `NOT_REQUIRED` — do not call a provider for this sprint.
-- `REQUIRED` — PASS is illegal unless the specified live call actually happened.
-- `PENDING_BY_INTENTIONAL_CONFIGURATION` — do not restore keys and do not invent a live result. Continuation is allowed only when this prompt says that pending state may continue.
+- `PENDING_AFTER_IMPLEMENTATION` — for M11.7 through M11.17, implementation can PASS without a live provider call. Record `Live Validation: PENDING`. Do not invent a live result. Do not restore or request API keys. Missing credentials do not block the next sprint.
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 A sprint prompt that says not to implement the next sprint means the next sprint is out of scope for that execution. The auto agent may start it later only under `HN9-M11-AUTO-AGENT.md`.
 
@@ -1255,10 +1256,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -1268,8 +1272,8 @@ Do not modify any other sprint scope.
 ```
 SPRINT: M11.7
 TITLE: Real Video Generation
-LIVE_VALIDATION: REQUIRED
-CONTINUATION: ALLOWED_ONLY_AFTER_PASS
+LIVE_VALIDATION: PENDING_AFTER_IMPLEMENTATION
+CONTINUATION: ALLOWED_AFTER_IMPLEMENTATION_PASS
 SCOPE_LOCK: Do not implement M11.8 inside this execution.
 ```
 
@@ -1340,15 +1344,13 @@ M11.0–M11.6 and relevant M10 tests. `npm run build`.
 
 ### Real-Provider Requirements
 
-`LIVE_VALIDATION: REQUIRED`
+`LIVE_VALIDATION: PENDING_AFTER_IMPLEMENTATION`
 
-A real video provider call is allowed only through the M11.6 adapter, for this sprint's three modes.
+A real video provider call is allowed only through the M11.6 adapter, for this sprint's three modes. Do not restore API keys. Do not use an image provider as a stand-in for video.
 
-OpenAI and image API keys are intentionally unavailable. Do not restore them. Do not use an image provider as a stand-in for video.
+If credentials are unavailable, validate submit, poll, download, and failure paths with the provider abstraction and HTTP fakes. Do not create media. Do not invent a live result. Record `Live Validation: PENDING`. That pending state does not block M11.8.
 
-If no video-provider credential is configured, do not call a provider, do not create media, and do not write PASS. The only allowed verdict is `IMPLEMENTATION VERIFIED / LIVE VIDEO VALIDATION PENDING`. Then stop. Do not start M11.8.
-
-If a video-provider credential is already configured, run the real generation the prompt requires, wait for the terminal provider state, store the real file, and record provider, model, operation id, file key, and size. One failure stops the sprint. No automatic retry beyond the existing retry policy.
+A live call is not required for `PASS — IMPLEMENTATION COMPLETE`. Real generation is deferred to the M11 LIVE VALIDATION PHASE after M11.17.
 
 ### No-Compromise Rules
 
@@ -1356,7 +1358,7 @@ No fake video. No reused M10 connectivity-test file presented as this scene's ou
 
 ### Stop Conditions
 
-Stop on the first failed required test, build, migration, security failure, provider failure, or missing video credential. Do not implement M11.8 in this execution.
+Stop on the first failed required test, build, migration, or security failure. A missing video credential is not a stop. Do not implement M11.8 inside this sprint's implementation work. The auto agent may start M11.8 only after this sprint's implementation gate and Git integration pass.
 
 ### Final Report Format
 
@@ -1364,11 +1366,11 @@ Pre-existing dirty files, M11.7 files, adapters added, modes exercised, live-val
 
 ### Exact PASS / BLOCKED Rules
 
-`M11.7 — PASS` only when implementation, tests, build, migrations, regressions, and security pass and a real video file from a real provider call is stored for this sprint.
+`M11.7 — PASS — IMPLEMENTATION COMPLETE` when code, schema, API, UI, tests, security, build, and regressions pass. Record `Live Validation: PENDING` when no real provider call was made. Do not describe a fake as a live video.
 
-`M11.7 — IMPLEMENTATION VERIFIED / LIVE VIDEO VALIDATION PENDING` when everything non-live passed and no video credential exists. This is not PASS. The auto agent stops.
+`M11.7 — BLOCKED` when a required implementation, test, build, migration, or security check fails.
 
-`M11.7 — BLOCKED` for any other failure, with the exact stage and sanitized error.
+Missing credentials are not BLOCKED.
 
 ---
 
@@ -1394,10 +1396,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -1508,10 +1513,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -1622,10 +1630,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -1635,8 +1646,8 @@ Do not modify any other sprint scope.
 ```
 SPRINT: M11.10
 TITLE: Video Edit + Video Extend
-LIVE_VALIDATION: REQUIRED
-CONTINUATION: ALLOWED_ONLY_AFTER_PASS
+LIVE_VALIDATION: PENDING_AFTER_IMPLEMENTATION
+CONTINUATION: ALLOWED_AFTER_IMPLEMENTATION_PASS
 SCOPE_LOCK: Do not implement M11.11 inside this execution.
 ```
 
@@ -1690,11 +1701,9 @@ M11.0–M11.9 and relevant M10. `npm run build`.
 
 ### Real-Provider Requirements
 
-`LIVE_VALIDATION: REQUIRED`
+`LIVE_VALIDATION: PENDING_AFTER_IMPLEMENTATION`
 
-Same credential rule as M11.7. If no video-provider credential exists, do not call a provider and do not write PASS. Verdict: `IMPLEMENTATION VERIFIED / LIVE VIDEO VALIDATION PENDING`. Then stop.
-
-If a credential exists, one real edit and one real extend are required for PASS, each stored as its own version. A provider failure stops the sprint. No automatic retry beyond the existing policy.
+Same credential rule as M11.7. If credentials are unavailable, prove edit and extend through the adapter with HTTP fakes. Do not store a placeholder video. Record `Live Validation: PENDING`. Do not block M11.11.
 
 ### No-Compromise Rules
 
@@ -1702,7 +1711,7 @@ No placeholder video. No trimming local bytes and calling it a provider extend. 
 
 ### Stop Conditions
 
-Stop on test, build, security, or provider failure, or on missing credentials after recording the pending verdict. Do not implement M11.11 in this execution.
+Stop on test, build, or security failure. A missing video credential is not a stop. Do not implement M11.11 inside this sprint.
 
 ### Final Report Format
 
@@ -1710,11 +1719,9 @@ Capabilities wired, live verdict, operation ids if a live call happened, storage
 
 ### Exact PASS / BLOCKED Rules
 
-`M11.10 — PASS` only with real stored edit and extend outputs plus passing non-live gates.
+`M11.10 — PASS — IMPLEMENTATION COMPLETE` when edit and extend are implemented and the non-live gates pass. Record `Live Validation: PENDING` when no real provider call was made.
 
-Pending live validation is not PASS. The auto agent stops.
-
-`M11.10 — BLOCKED` for any other failure.
+`M11.10 — BLOCKED` for an implementation, test, build, or security failure. Missing credentials are not BLOCKED.
 
 ---
 
@@ -1740,10 +1747,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -1753,8 +1763,8 @@ Do not modify any other sprint scope.
 ```
 SPRINT: M11.11
 TITLE: Audio Studio
-LIVE_VALIDATION: REQUIRED
-CONTINUATION: ALLOWED_ONLY_AFTER_PASS
+LIVE_VALIDATION: PENDING_AFTER_IMPLEMENTATION
+CONTINUATION: ALLOWED_AFTER_IMPLEMENTATION_PASS
 SCOPE_LOCK: Do not implement M11.12 inside this execution.
 ```
 
@@ -1808,11 +1818,9 @@ M11.0–M11.10 and relevant M10. `npm run build`.
 
 ### Real-Provider Requirements
 
-`LIVE_VALIDATION: REQUIRED`
+`LIVE_VALIDATION: PENDING_AFTER_IMPLEMENTATION`
 
-Do not restore OpenAI or image keys. If no audio-provider credential is configured, do not call a provider and do not write PASS. Verdict: `IMPLEMENTATION VERIFIED / LIVE AUDIO VALIDATION PENDING`. Then stop.
-
-If a credential exists, one real generated audio file must be stored for PASS. A provider failure stops the sprint.
+Do not restore API keys. If no audio credential is configured, prove role routing and failure handling with HTTP fakes. Do not store silent audio. Record `Live Validation: PENDING`. Do not block M11.12.
 
 ### No-Compromise Rules
 
@@ -1820,7 +1828,7 @@ No silent audio file. No hard-coded vendor in the Audio Studio UI or core servic
 
 ### Stop Conditions
 
-Stop on test, build, security, or provider failure, or on missing audio credentials after the pending verdict. Do not implement M11.12 in this execution.
+Stop on test, build, or security failure. A missing audio credential is not a stop. Do not implement M11.12 inside this sprint.
 
 ### Final Report Format
 
@@ -1828,11 +1836,9 @@ Roles supported, live verdict, storage key if a live file exists, tests, regress
 
 ### Exact PASS / BLOCKED Rules
 
-`M11.11 — PASS` only with a real stored audio file and passing non-live gates.
+`M11.11 — PASS — IMPLEMENTATION COMPLETE` when the audio studio is implemented and the non-live gates pass. Record `Live Validation: PENDING` when no real provider call was made.
 
-Pending live validation is not PASS. The auto agent stops.
-
-`M11.11 — BLOCKED` otherwise.
+`M11.11 — BLOCKED` for an implementation, test, build, or security failure. Missing credentials are not BLOCKED.
 
 ---
 
@@ -1858,10 +1864,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -1972,10 +1981,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -2086,10 +2098,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -2200,10 +2215,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -2314,10 +2332,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -2428,10 +2449,13 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
@@ -2540,12 +2564,39 @@ If the sprint is BLOCKED:
 - no merge
 - stop
 
-If the sprint is IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING and that sprint's rules permit continuation:
-- Git integration may proceed for the verified implementation
-- clearly record live validation as pending
+If implementation is complete and live validation is pending because credentials are unavailable:
+- Git integration proceeds
+- record Live Validation: PENDING
 - do not claim live validation success
+- continue to the next sprint
+
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
 Do not modify any other sprint scope.
 
 
-`M11 — COMPLETE` is not written by this prompt. The auto agent may write it only after M11.6 through M11.17 each have a verdict that their own prompt accepts as complete.
+`M11 — COMPLETE` is not written by this prompt. The auto agent may write it only after M11.6 through M11.17 each have a verdict that their own prompt accepts as implementation-complete.
+
+## M11 LIVE VALIDATION PHASE
+
+This phase is not a sprint. Do not execute it while M11.7 through M11.17 are still being implemented.
+
+Run it only after M11.6 through M11.17 are implementation-complete and the user has configured the required provider credentials.
+
+It validates, where those credentials exist:
+
+- real GPT story planning
+- real image and reference generation
+- real video generation
+- real video edit and video extend
+- audio generation
+- storage
+- continuity
+- rendering
+- export
+- retry and recovery
+- provider fallback
+- usage and cost tracking
+- an end-to-end long-story workflow
+
+Do not invent results for any call that did not happen. Do not request API keys during M11.7–M11.17. A missing credential during this later phase is recorded as still pending. It does not reopen an implementation sprint that already passed.
