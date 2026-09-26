@@ -434,6 +434,69 @@ export function estimateStorySceneCount(durationSeconds) {
   return Math.ceil(total / 30);
 }
 
+export function getStoryTimeline(projectId, reelId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline`);
+}
+
+export function placeStoryTimelineClip(projectId, reelId, mediaKind, sourceId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/clips`, {
+    method: 'POST',
+    body: { media_kind: mediaKind, source_id: sourceId },
+  });
+}
+
+export function reorderStoryTimeline(projectId, reelId, orderedIds) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/reorder`, {
+    method: 'POST',
+    body: { ordered_ids: orderedIds },
+  });
+}
+
+export function trimStoryTimelineClip(projectId, reelId, clipId, inMs, outMs) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/clips/${clipId}/trim`, {
+    method: 'POST',
+    body: { in_ms: inMs, out_ms: outMs },
+  });
+}
+
+export function splitStoryTimelineClip(projectId, reelId, clipId, atMs) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/clips/${clipId}/split`, {
+    method: 'POST',
+    body: { at_ms: atMs },
+  });
+}
+
+export function replaceStoryTimelineClip(projectId, reelId, clipId, sourceId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/clips/${clipId}/replace`, {
+    method: 'POST',
+    body: { source_id: sourceId },
+  });
+}
+
+export function duplicateStoryTimelineClip(projectId, reelId, clipId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/clips/${clipId}/duplicate`, {
+    method: 'POST',
+  });
+}
+
+export function deleteStoryTimelineClip(projectId, reelId, clipId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/clips/${clipId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function setStoryTimelineTransition(projectId, reelId, fromClipId, toClipId, type, durationMs = 0) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/transitions`, {
+    method: 'POST',
+    body: {
+      from_clip_id: fromClipId,
+      to_clip_id: toClipId,
+      type,
+      duration_ms: durationMs,
+    },
+  });
+}
+
 export function getStoryVideoCapabilities() {
   return apiRequest('/story/video/capabilities').then((payload) =>
     Array.isArray(payload) ? payload : [],
