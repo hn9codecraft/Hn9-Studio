@@ -12,6 +12,7 @@ import {
   listStoryReels,
   reorderStoryReels,
   reorderStoryScenes,
+  getStorySceneContinuity,
   updateStoryReel,
   updateStoryScene,
 } from '../../services/storyService';
@@ -43,6 +44,7 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
   const [reels, setReels] = useState([]);
   const [selectedReelId, setSelectedReelId] = useState(null);
   const [selectedSceneId, setSelectedSceneId] = useState(null);
+  const [continuity, setContinuity] = useState(null);
   const [reelTitle, setReelTitle] = useState('');
   const [reelDescription, setReelDescription] = useState('');
   const [sceneForm, setSceneForm] = useState(emptySceneForm());
@@ -61,6 +63,24 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
     () => (Array.isArray(selectedReel?.scenes) ? selectedReel.scenes : []),
     [selectedReel],
   );
+
+  useEffect(() => {
+    if (!projectId || !selectedReelId || !selectedSceneId) {
+      setContinuity(null);
+      return undefined;
+    }
+    let cancelled = false;
+    getStorySceneContinuity(projectId, selectedReelId, selectedSceneId)
+      .then((payload) => {
+        if (!cancelled) setContinuity(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setContinuity(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, selectedReelId, selectedSceneId]);
 
   const selectedScene = useMemo(
     () => scenes.find((scene) => scene.id === selectedSceneId) || null,
@@ -455,6 +475,29 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
                   ) : null}
                 </div>
               </div>
+
+              {continuity ? (
+                <div className="card border-0 glass-card mb-3">
+                  <div className="card-body">
+                    <h3 className="h5 mb-2">Continuity</h3>
+                    <p className="small mb-2">
+                      Ready to generate: {continuity.ready ? 'Yes' : 'No'}
+                    </p>
+                    <p className="small text-secondary mb-1">
+                      Story bible: {continuity.story_bible?.concept || 'Missing'}
+                    </p>
+                    <p className="small text-secondary mb-1">
+                      Characters: {(continuity.characters || []).map((item) => item.name).join(', ') || 'Missing'}
+                    </p>
+                    <p className="small text-secondary mb-1">
+                      Style: {continuity.style_bible?.visual_style || 'Missing'}
+                    </p>
+                    <p className="small text-secondary mb-0">
+                      Previous scene: {continuity.previous_scene?.title || 'None'}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="card border-0 glass-card mb-3">
                 <div className="card-body">

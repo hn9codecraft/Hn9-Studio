@@ -345,6 +345,10 @@ export function reorderStoryScenes(projectId, reelId, orderedIds) {
   }).then((payload) => (Array.isArray(payload) ? payload : []));
 }
 
+export function getStorySceneContinuity(projectId, reelId, sceneId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/continuity`);
+}
+
 export function estimateStorySceneCount(durationSeconds) {
   const total = Number(durationSeconds) || 0;
   if (total < 30) return 0;

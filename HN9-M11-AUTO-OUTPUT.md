@@ -1,7 +1,8 @@
 # HN9 M11 AUTO EXECUTION
 
-CURRENT_SPRINT: M11.7
-STATUS: PASS — IMPLEMENTATION COMPLETE
+CURRENT_SPRINT: M11.9
+STATUS: BLOCKED
+ACTION: USER REVIEW REQUIRED
 
 ## LIVE EXECUTION DASHBOARD
 
@@ -12,10 +13,11 @@ M11.3 — IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING — INTEGRATED
 M11.4 — IMPLEMENTATION VERIFIED / LIVE GPT VALIDATION PENDING — INTEGRATED
 M11.5 — PASS — INTEGRATED
 M11.6 — PASS — INTEGRATED
-M11.7 — PASS — IMPLEMENTATION COMPLETE
+M11.7 — PASS — MERGED
 Live Validation: PENDING
-M11.8 — PENDING
-M11.9 — PENDING
+M11.8 — PASS — IMPLEMENTATION COMPLETE
+Live Validation: NOT REQUIRED
+M11.9 — USER REVIEW REQUIRED
 M11.10 — PENDING
 M11.11 — PENDING
 M11.12 — PENDING
@@ -29,11 +31,11 @@ Dashboard note: after an accepted M11.6–M11.17 sprint completes AUTOMATIC GIT 
 ## HUMAN STATUS SUMMARY
 
 Current Sprint:
-M11.7
+M11.9
 
 Current Status:
-PASS — IMPLEMENTATION COMPLETE
-Live Validation: PENDING
+BLOCKED
+ACTION: USER REVIEW REQUIRED
 
 Completed:
 M11.0
@@ -48,10 +50,10 @@ M11.3
 M11.4
 
 Next:
-M11.8 after this sprint is merged
+Stopped at M11.9
 
 Blocker:
-None. Live Validation: PENDING. Missing credentials are not a blocker.
+M11.9 does not name one approver. The prompt reuses the M10 submit-then-approve shape, and it also says the owner may approve. M10 approval is an admin action. No role was chosen.
 
 ## Approved History
 
@@ -249,15 +251,15 @@ Commit: 9710ebcd97acf565a70838f735436ad4b1fab425
 Commit Message: feat(m11.7): complete real video generation
 Files Committed: M11.7 story video implementation, tests, Video Engine UI, and the three M11 control files
 Secret Scan: PASS. No .env or live credential was staged. Tests use fixture strings only.
-Push:
-Main Sync:
-Merge:
-Main Push:
-Local Main:
-Origin/Main:
-Working Tree: clean at commit
+Push: origin/m11/m11-7-video-generation
+Main Sync: origin/main was 4ae5ecb and fast-forward pull was already up to date.
+Merge: 18befe31ca7a627a3a86849a7b954a84f05720b2 Merge branch 'm11/m11-7-video-generation'
+Main Push: 4ae5ecb..18befe3 main -> main
+Local Main: 18befe31ca7a627a3a86849a7b954a84f05720b2
+Origin/Main: 18befe31ca7a627a3a86849a7b954a84f05720b2
+Working Tree: clean at verification
 Force Push: NO
-Status: COMMITTED
+Status: MERGED
 
 Blockers:
 
@@ -267,46 +269,74 @@ Next Sprint: M11.8
 
 ### M11.8
 
-STATUS: PENDING
-STARTED:
-COMPLETED:
-VERDICT:
+STATUS: PASS — IMPLEMENTATION COMPLETE
+STARTED: 2026-09-26
+COMPLETED: 2026-09-26
+VERDICT: PASS
+LIVE VALIDATION: NOT REQUIRED
 
 #### HUMAN SUMMARY
 
-Not started yet.
+M11.8 reads the story bible, characters, character references, style bible, style references, and the immediately previous scene in the same reel.
+Missing sources stay missing. No substitute text is created.
+The Project Story reel screen shows that summary for the selected scene.
+No provider was called.
+Live validation is not required for this sprint.
 
 #### FULL TECHNICAL RESULT
 
 Implementation:
 
+A project-scoped continuity package is derived from the existing story records. The previous scene is the prior active scene in the same reel. Private file paths are not returned.
+
 Files:
+
+StoryContinuityService, StoryContinuityController, continuity route, StoryContinuityApiTest, story service client, and the reel screen summary.
 
 API:
 
+GET story/projects/{project}/reels/{reel}/scenes/{scene}/continuity
+
 Database:
+
+No new table. The existing scene continuity notes are not overwritten. `migrate:fresh` was not used.
 
 Tests:
 
+StoryContinuityApiTest: 3 passed, 20 assertions. Sources, previous scene, missing codes, anonymous 401, non-owner 403, and zero HTTP calls.
+
 Build:
+
+`npm run build` passed.
 
 Migration:
 
+Not required.
+
 Security:
+
+Anonymous 401. Non-owner 403. Another project's reel is not readable. The payload has no disk path or file URL.
 
 Regression:
 
+M11 story tests: 93 passed, 637 assertions.
+M10 video, image, script, export, and Gemini download tests: 157 passed, 823 assertions.
+
 Live Validation:
+
+NOT REQUIRED. No provider call was made.
 
 Provider/API Calls:
 
+0.
+
 #### GIT INTEGRATION
 
-Sprint Branch:
-Commit:
-Commit Message:
-Files Committed:
-Secret Scan:
+Sprint Branch: m11/m11-8-continuity
+Commit: 3c3a2b670fd060f3effcf9c1c109dd5cd76bc409
+Commit Message: feat(m11.8): complete story continuity engine
+Files Committed: continuity service, controller, route, tests, reel summary, and the execution output
+Secret Scan: PASS. No .env or live credential was staged.
 Push:
 Main Sync:
 Merge:
@@ -323,12 +353,19 @@ Next Sprint:
 
 ### M11.9
 
-STATUS: PENDING
+STATUS: BLOCKED
 STARTED:
 COMPLETED:
 VERDICT:
+ACTION: USER REVIEW REQUIRED
 
 #### HUMAN SUMMARY
+
+M11.9 was not implemented.
+The approver is not defined.
+The prompt says to reuse the M10 submit-then-approve shape, and it also says the owner may approve.
+M10 approval is an admin action.
+No role was chosen.
 
 Not started yet.
 

@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\StoryCharacterReferenceController;
 use App\Http\Controllers\Api\V1\StoryController;
 use App\Http\Controllers\Api\V1\StoryPlanController;
 use App\Http\Controllers\Api\V1\StoryReelController;
+use App\Http\Controllers\Api\V1\StoryContinuityController;
 use App\Http\Controllers\Api\V1\StorySceneController;
 use App\Http\Controllers\Api\V1\StoryStyleBibleController;
 use App\Http\Controllers\Api\V1\StoryStyleReferenceController;
@@ -277,6 +278,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes', [StorySceneController::class, 'store'])->name('story.projects.reels.scenes.store');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/reorder', [StorySceneController::class, 'reorder'])->name('story.projects.reels.scenes.reorder');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}', [StorySceneController::class, 'show'])->name('story.projects.reels.scenes.show');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/continuity', [StoryContinuityController::class, 'show'])->name('story.projects.reels.scenes.continuity');
     Route::patch('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}', [StorySceneController::class, 'update'])->name('story.projects.reels.scenes.update');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/duplicate', [StorySceneController::class, 'duplicate'])->name('story.projects.reels.scenes.duplicate');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/archive', [StorySceneController::class, 'archive'])->name('story.projects.reels.scenes.archive');
