@@ -226,6 +226,14 @@ final class StoryCapabilityRouter implements StoryCapabilityRouterInterface
             return 'audio_unsupported';
         }
 
+        if ($capability === StoryVideoCapability::Audio) {
+            $role = $request->metadata['audio_role'] ?? null;
+            $roles = $adapter->supportedAudioRoles($capability);
+            if (! is_string($role) || $role === '' || ($roles !== [] && ! in_array($role, $roles, true))) {
+                return 'audio_role_unsupported';
+            }
+        }
+
         if ($request->inputs !== []) {
             $supported = $adapter->supportedInputTypes($capability);
             foreach ($request->inputs as $input) {

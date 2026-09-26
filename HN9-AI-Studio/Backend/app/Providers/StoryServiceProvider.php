@@ -58,6 +58,7 @@ use App\Story\Services\StoryStyleReferenceService;
 use App\Story\Services\StoryWorkspaceService;
 use App\Story\Enums\StoryVideoAsyncMode;
 use App\Story\Enums\StoryVideoCapability;
+use App\Story\Enums\StoryAudioRole;
 use App\Story\Video\Adapters\GeminiStoryVideoAdapter;
 use App\Story\Video\CatalogStoryVideoAdapter;
 use App\Story\Video\StoryCapabilityRouter;
@@ -162,12 +163,14 @@ class StoryServiceProvider extends ServiceProvider
     private static function liveCatalogAdapter(): CatalogStoryVideoAdapter
     {
         $durations = array_map('intval', (array) config('story_video.real_provider.durations', [8]));
+        $audioRoles = array_map('strval', (array) config('story_video.real_provider.audio_roles', StoryAudioRole::values()));
         $capabilities = [
             StoryVideoCapability::TextToVideo,
             StoryVideoCapability::ImageToVideo,
             StoryVideoCapability::ReferenceToVideo,
             StoryVideoCapability::VideoEdit,
             StoryVideoCapability::VideoExtend,
+            StoryVideoCapability::Audio,
         ];
 
         return new CatalogStoryVideoAdapter(
@@ -182,8 +185,8 @@ class StoryServiceProvider extends ServiceProvider
             maxDuration: max($durations),
             aspectRatios: ['16:9', '9:16', '1:1'],
             resolutions: ['720p'],
-            inputTypes: ['text', 'image', 'reference_image', 'video'],
-            audio: false,
+            inputTypes: ['text', 'image', 'reference_image', 'video', 'audio'],
+            audio: true,
             mode: StoryVideoAsyncMode::AsyncPoll,
             polling: true,
             webhook: false,
@@ -199,10 +202,11 @@ class StoryServiceProvider extends ServiceProvider
                     durations: $durations,
                     aspectRatios: ['16:9', '9:16', '1:1'],
                     resolutions: ['720p'],
-                    inputTypes: ['text', 'image', 'reference_image', 'video'],
-                    audioSupported: false,
+                    inputTypes: ['text', 'image', 'reference_image', 'video', 'audio'],
+                    audioSupported: true,
                 ),
             ],
+            audioRoles: $audioRoles,
         );
     }
 }

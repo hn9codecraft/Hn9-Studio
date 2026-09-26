@@ -25,6 +25,7 @@ final readonly class CatalogStoryVideoAdapter implements StoryVideoProviderAdapt
      * @param  list<string>  $resolutions
      * @param  list<string>  $inputTypes
      * @param  list<StoryVideoModelSpec>  $models
+     * @param  list<string>  $audioRoles
      */
     public function __construct(
         private string $adapterKey,
@@ -45,6 +46,7 @@ final readonly class CatalogStoryVideoAdapter implements StoryVideoProviderAdapt
         private bool $webhook = false,
         private bool $download = true,
         private array $models = [],
+        private array $audioRoles = [],
     ) {}
 
     public function key(): string
@@ -112,6 +114,15 @@ final readonly class CatalogStoryVideoAdapter implements StoryVideoProviderAdapt
         return $this->supports($capability) && $this->audio;
     }
 
+    public function supportedAudioRoles(StoryVideoCapability $capability): array
+    {
+        if (! $this->supports(StoryVideoCapability::Audio) || $capability !== StoryVideoCapability::Audio) {
+            return [];
+        }
+
+        return array_values(array_unique(array_map('strval', $this->audioRoles)));
+    }
+
     public function asyncMode(StoryVideoCapability $capability): StoryVideoAsyncMode
     {
         return $this->mode;
@@ -168,6 +179,14 @@ final readonly class CatalogStoryVideoAdapter implements StoryVideoProviderAdapt
 
         if ($request->audioRequested && ! $this->audioSupported($request->capability)) {
             throw StoryVideoEngineException::invalidInput('Audio is not supported by the selected adapter.');
+        }
+
+        if ($request->capability === StoryVideoCapability::Audio) {
+            $role = $request->metadata['audio_role'] ?? null;
+            $roles = $this->supportedAudioRoles(StoryVideoCapability::Audio);
+            if (! is_string($role) || $role === '' || ($roles !== [] && ! in_array($role, $roles, true))) {
+                throw StoryVideoEngineException::invalidInput('The requested audio role is not supported by the selected adapter.');
+            }
         }
     }
 

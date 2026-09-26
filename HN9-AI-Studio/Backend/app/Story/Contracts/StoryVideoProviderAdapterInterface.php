@@ -57,6 +57,14 @@ interface StoryVideoProviderAdapterInterface
 
     public function audioSupported(StoryVideoCapability $capability): bool;
 
+    /**
+     * Audio roles this adapter may generate for the AUDIO capability.
+     * Empty means the adapter does not accept role-filtered AUDIO requests.
+     *
+     * @return list<string>
+     */
+    public function supportedAudioRoles(StoryVideoCapability $capability): array;
+
     public function asyncMode(StoryVideoCapability $capability): StoryVideoAsyncMode;
 
     public function supportsPolling(StoryVideoCapability $capability): bool;

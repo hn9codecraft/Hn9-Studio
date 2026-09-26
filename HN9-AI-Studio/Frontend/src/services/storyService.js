@@ -491,3 +491,44 @@ export async function getStoryVideoFileUrl(projectId, jobId) {
   const blob = await response.blob();
   return URL.createObjectURL(blob);
 }
+
+export function getStoryAudioRoles() {
+  return apiRequest('/story/audio/roles');
+}
+
+export function listStorySceneAudio(projectId, reelId, sceneId, role = null) {
+  const query = role ? `?role=${encodeURIComponent(role)}` : '';
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio${query}`);
+}
+
+export function createStorySceneAudio(projectId, reelId, sceneId, payload) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function getStorySceneAudio(projectId, reelId, sceneId, audioId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}`);
+}
+
+export async function getStorySceneAudioFileUrl(projectId, reelId, sceneId, audioId) {
+  const token = getToken();
+  const base = getApiBaseUrl();
+  const response = await fetch(
+    `${base}/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}/file`,
+    {
+      headers: {
+        Accept: 'audio/*',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error('Unable to load the stored audio.');
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
