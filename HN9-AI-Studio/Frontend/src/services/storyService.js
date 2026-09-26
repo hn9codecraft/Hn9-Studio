@@ -345,6 +345,65 @@ export function reorderStoryScenes(projectId, reelId, orderedIds) {
   }).then((payload) => (Array.isArray(payload) ? payload : []));
 }
 
+export function listStorySceneVersions(projectId, reelId, sceneId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/versions`).then((payload) =>
+    Array.isArray(payload) ? payload : [],
+  );
+}
+
+export function commentOnStoryScene(projectId, reelId, sceneId, body) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/comments`, {
+    method: 'POST',
+    body: { body },
+  });
+}
+
+export function submitStorySceneReview(projectId, reelId, sceneId, comment = null) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/submit-review`, {
+    method: 'POST',
+    body: { comment },
+  });
+}
+
+export function approveStoryScene(projectId, reelId, sceneId, comment = null) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/approve`, {
+    method: 'POST',
+    body: { comment },
+  });
+}
+
+export function reworkStoryScene(projectId, reelId, sceneId, comment) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/needs-rework`, {
+    method: 'POST',
+    body: { comment },
+  });
+}
+
+export function regenerateStoryScene(projectId, reelId, sceneId, comment = null) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/regenerate`, {
+    method: 'POST',
+    body: { comment },
+  });
+}
+
+export function getStoryScenePreview(projectId, reelId, sceneId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/preview`);
+}
+
+export function submitStoryReelReview(projectId, reelId, comment = null) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/submit-review`, {
+    method: 'POST',
+    body: { comment },
+  });
+}
+
+export function approveStoryReel(projectId, reelId, comment = null) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/approve`, {
+    method: 'POST',
+    body: { comment },
+  });
+}
+
 export function getStorySceneContinuity(projectId, reelId, sceneId) {
   return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/continuity`);
 }

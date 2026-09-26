@@ -29,6 +29,15 @@ class StoryReelPolicy
         return $this->owns($user, $reel);
     }
 
+    /**
+     * Comment, submit, approve, and rework.
+     * Admin is already allowed by before(). A non-owner is not.
+     */
+    public function review(User $user, StoryReel $reel): bool
+    {
+        return $this->owns($user, $reel);
+    }
+
     private function owns(User $user, StoryReel $reel): bool
     {
         $workspace = $reel->workspace ?? $reel->workspace()->first();

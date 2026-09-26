@@ -12,7 +12,16 @@ import {
   listStoryReels,
   reorderStoryReels,
   reorderStoryScenes,
+  approveStoryReel,
+  approveStoryScene,
+  commentOnStoryScene,
   getStorySceneContinuity,
+  getStoryScenePreview,
+  listStorySceneVersions,
+  regenerateStoryScene,
+  reworkStoryScene,
+  submitStoryReelReview,
+  submitStorySceneReview,
   updateStoryReel,
   updateStoryScene,
 } from '../../services/storyService';
@@ -45,6 +54,9 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
   const [selectedReelId, setSelectedReelId] = useState(null);
   const [selectedSceneId, setSelectedSceneId] = useState(null);
   const [continuity, setContinuity] = useState(null);
+  const [sceneVersions, setSceneVersions] = useState([]);
+  const [scenePreview, setScenePreview] = useState(null);
+  const [reviewComment, setReviewComment] = useState('');
   const [reelTitle, setReelTitle] = useState('');
   const [reelDescription, setReelDescription] = useState('');
   const [sceneForm, setSceneForm] = useState(emptySceneForm());
@@ -77,6 +89,32 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
       .catch(() => {
         if (!cancelled) setContinuity(null);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, selectedReelId, selectedSceneId]);
+
+  useEffect(() => {
+    if (!projectId || !selectedReelId || !selectedSceneId) {
+      setSceneVersions([]);
+      setScenePreview(null);
+      return undefined;
+    }
+    let cancelled = false;
+    Promise.all([
+      listStorySceneVersions(projectId, selectedReelId, selectedSceneId),
+      getStoryScenePreview(projectId, selectedReelId, selectedSceneId),
+    ]).then(([versions, preview]) => {
+      if (!cancelled) {
+        setSceneVersions(versions);
+        setScenePreview(preview);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setSceneVersions([]);
+        setScenePreview(null);
+      }
+    });
     return () => {
       cancelled = true;
     };
@@ -148,6 +186,39 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
       setError(err instanceof ApiError ? err.message : 'Unable to create reel.');
     } finally {
       setBusy('');
+    }
+  }
+
+  async function runReview(action) {
+    if (!projectId || !selectedReelId || !selectedSceneId) return;
+    setError('');
+    try {
+      if (action === 'comment') {
+        await commentOnStoryScene(projectId, selectedReelId, selectedSceneId, reviewComment);
+      } else if (action === 'submit') {
+        await submitStorySceneReview(projectId, selectedReelId, selectedSceneId, reviewComment || null);
+      } else if (action === 'approve') {
+        await approveStoryScene(projectId, selectedReelId, selectedSceneId, reviewComment || null);
+      } else if (action === 'rework') {
+        await reworkStoryScene(projectId, selectedReelId, selectedSceneId, reviewComment);
+      } else if (action === 'regenerate') {
+        await regenerateStoryScene(projectId, selectedReelId, selectedSceneId, reviewComment || null);
+      } else if (action === 'reel-submit') {
+        await submitStoryReelReview(projectId, selectedReelId, reviewComment || null);
+      } else if (action === 'reel-approve') {
+        await approveStoryReel(projectId, selectedReelId, reviewComment || null);
+      }
+      const [versions, preview] = await Promise.all([
+        listStorySceneVersions(projectId, selectedReelId, selectedSceneId),
+        getStoryScenePreview(projectId, selectedReelId, selectedSceneId),
+      ]);
+      setSceneVersions(versions);
+      setScenePreview(preview);
+      setReviewComment('');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Unable to update scene review.');
+      const versions = await listStorySceneVersions(projectId, selectedReelId, selectedSceneId).catch(() => []);
+      setSceneVersions(versions);
     }
   }
 
@@ -495,6 +566,49 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
                     <p className="small text-secondary mb-0">
                       Previous scene: {continuity.previous_scene?.title || 'None'}
                     </p>
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedSceneId && selectedReelId ? (
+                <div className="card border-0 glass-card mb-3">
+                  <div className="card-body">
+                    <h3 className="h5 mb-2">Scene review</h3>
+                    <p className="small text-secondary mb-2">
+                      Preview: {scenePreview?.has_file ? 'Private file stored' : 'No stored video'}
+                      {sceneVersions[sceneVersions.length - 1]?.status
+                        ? ` · ${sceneVersions[sceneVersions.length - 1].status}`
+                        : ''}
+                    </p>
+                    <label className="form-label" htmlFor="scene-review-comment">Comment</label>
+                    <textarea
+                      id="scene-review-comment"
+                      className="form-control mb-2"
+                      rows={2}
+                      value={reviewComment}
+                      onChange={(event) => setReviewComment(event.target.value)}
+                    />
+                    <div className="d-flex flex-wrap gap-2 mb-3">
+                      <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('comment')}>Save comment</button>
+                      <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('submit')}>Submit review</button>
+                      <button type="button" className="btn btn-primary btn-sm" onClick={() => runReview('approve')}>Approve</button>
+                      <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => runReview('rework')}>Request rework</button>
+                      <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('regenerate')}>Regenerate this scene</button>
+                      <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('reel-submit')}>Submit reel</button>
+                      <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('reel-approve')}>Approve reel</button>
+                    </div>
+                    {sceneVersions.length === 0 ? (
+                      <p className="small text-secondary mb-0">No versions yet.</p>
+                    ) : (
+                      <ul className="small mb-0">
+                        {sceneVersions.map((version) => (
+                          <li key={version.id}>
+                            Version {version.version} · {version.status}
+                            {version.comments?.length ? ` · ${version.comments.length} comment(s)` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               ) : null}
