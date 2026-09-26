@@ -8,6 +8,7 @@ import ProjectsPage from '../pages/projects/ProjectsPage';
 import ProjectWorkspacePage from '../pages/projects/ProjectWorkspacePage';
 import ProvidersPage from '../pages/ProvidersPage';
 import SettingsPage from '../pages/SettingsPage';
+import ProjectStoryPage from '../pages/story/ProjectStoryPage';
 import GuestRoute from './GuestRoute';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -23,6 +24,8 @@ export default function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<CreateProjectPage />} />
+          <Route path="/story" element={<ProjectStoryPage />} />
+          <Route path="/story/:projectId" element={<ProjectStoryPage />} />
           <Route path="/projects/:projectId" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/scripts/generate" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/scripts/new" element={<ProjectWorkspacePage />} />
