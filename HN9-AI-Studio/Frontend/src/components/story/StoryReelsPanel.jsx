@@ -15,6 +15,8 @@ import {
   approveStoryReel,
   approveStoryScene,
   commentOnStoryScene,
+  editStorySceneVersion,
+  extendStorySceneVersion,
   getStorySceneContinuity,
   getStoryScenePreview,
   listStorySceneVersions,
@@ -207,6 +209,21 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
         await submitStoryReelReview(projectId, selectedReelId, reviewComment || null);
       } else if (action === 'reel-approve') {
         await approveStoryReel(projectId, selectedReelId, reviewComment || null);
+      } else if (action === 'edit' || action === 'extend') {
+        const versionId = scenePreview?.version_id;
+        if (!versionId) {
+          setError('A stored scene video is required.');
+          return;
+        }
+        if (!reviewComment.trim()) {
+          setError('An edit instruction is required.');
+          return;
+        }
+        if (action === 'edit') {
+          await editStorySceneVersion(projectId, selectedReelId, selectedSceneId, versionId, reviewComment);
+        } else {
+          await extendStorySceneVersion(projectId, selectedReelId, selectedSceneId, versionId, reviewComment);
+        }
       }
       const [versions, preview] = await Promise.all([
         listStorySceneVersions(projectId, selectedReelId, selectedSceneId),
@@ -594,6 +611,12 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
                       <button type="button" className="btn btn-primary btn-sm" onClick={() => runReview('approve')}>Approve</button>
                       <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => runReview('rework')}>Request rework</button>
                       <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('regenerate')}>Regenerate this scene</button>
+                      {scenePreview?.has_file ? (
+                        <>
+                          <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('edit')}>Edit</button>
+                          <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('extend')}>Extend</button>
+                        </>
+                      ) : null}
                       <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('reel-submit')}>Submit reel</button>
                       <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => runReview('reel-approve')}>Approve reel</button>
                     </div>

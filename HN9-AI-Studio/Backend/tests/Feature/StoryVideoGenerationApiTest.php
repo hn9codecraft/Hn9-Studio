@@ -260,11 +260,28 @@ final class StoryVideoGenerationApiTest extends TestCase
 
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/v1/story/projects/{$project->uuid}/video/generate", [
+                'capability' => 'audio',
+                'duration_seconds' => 8,
+                'prompt' => 'not this sprint',
+            ])
+            ->assertStatus(501);
+
+        Http::assertNothingSent();
+        $this->assertSame(0, StoryVideoGenerationJob::query()->count());
+    }
+
+    public function test_video_edit_without_a_stored_source_does_not_call_a_provider(): void
+    {
+        Http::fake();
+        [$user, $project] = $this->ownerProject();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/story/projects/{$project->uuid}/video/generate", [
                 'capability' => 'video_edit',
                 'duration_seconds' => 8,
                 'prompt' => 'edit later',
             ])
-            ->assertStatus(501);
+            ->assertStatus(422);
 
         Http::assertNothingSent();
         $this->assertSame(0, StoryVideoGenerationJob::query()->count());

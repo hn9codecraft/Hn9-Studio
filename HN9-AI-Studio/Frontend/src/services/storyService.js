@@ -386,6 +386,26 @@ export function regenerateStoryScene(projectId, reelId, sceneId, comment = null)
   });
 }
 
+export function editStorySceneVersion(projectId, reelId, sceneId, versionId, instruction) {
+  return apiRequest(
+    `/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/versions/${versionId}/edit`,
+    {
+      method: 'POST',
+      body: { instruction },
+    },
+  );
+}
+
+export function extendStorySceneVersion(projectId, reelId, sceneId, versionId, instruction) {
+  return apiRequest(
+    `/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/versions/${versionId}/extend`,
+    {
+      method: 'POST',
+      body: { instruction },
+    },
+  );
+}
+
 export function getStoryScenePreview(projectId, reelId, sceneId) {
   return apiRequest(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/preview`);
 }

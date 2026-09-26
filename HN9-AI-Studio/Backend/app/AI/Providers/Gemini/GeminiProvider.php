@@ -310,6 +310,7 @@ final class GeminiProvider extends AbstractProvider
         $instance = array_filter([
             'prompt' => $request->prompt,
             'image' => $this->videoImage($request),
+            'video' => $this->sourceVideo($request),
         ], static fn (mixed $value): bool => $value !== null && $value !== '');
 
         $parameters = array_filter([
@@ -337,6 +338,30 @@ final class GeminiProvider extends AbstractProvider
 
         $mime = $image['mimeType'] ?? $image['mime_type'] ?? null;
         $bytes = $image['bytesBase64Encoded'] ?? $image['bytes'] ?? null;
+
+        if (! is_string($mime) || $mime === '' || ! is_string($bytes) || $bytes === '') {
+            return null;
+        }
+
+        return [
+            'mimeType' => $mime,
+            'bytesBase64Encoded' => $bytes,
+        ];
+    }
+
+    /**
+     * @return array{mimeType: string, bytesBase64Encoded: string}|null
+     */
+    private function sourceVideo(VideoRequest $request): ?array
+    {
+        $video = $request->options['video'] ?? null;
+
+        if (! is_array($video)) {
+            return null;
+        }
+
+        $mime = $video['mimeType'] ?? $video['mime_type'] ?? null;
+        $bytes = $video['bytesBase64Encoded'] ?? $video['bytes'] ?? null;
 
         if (! is_string($mime) || $mime === '' || ! is_string($bytes) || $bytes === '') {
             return null;

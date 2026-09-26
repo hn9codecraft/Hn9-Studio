@@ -134,6 +134,10 @@ final readonly class GeminiStoryVideoAdapter implements StoryVideoProviderAdapte
                 throw StoryVideoEngineException::invalidInput('An owned image reference is required for this capability.');
             }
         }
+        if (in_array($request->capability, [StoryVideoCapability::VideoEdit, StoryVideoCapability::VideoExtend], true)
+            && $this->videoPayload($request) === null) {
+            throw StoryVideoEngineException::invalidInput('A stored scene video is required for this capability.');
+        }
     }
 
     public function submit(StoryVideoGenerationRequest $request): StoryVideoSubmission
@@ -312,6 +316,10 @@ final readonly class GeminiStoryVideoAdapter implements StoryVideoProviderAdapte
         if ($image !== null) {
             $options['image'] = $image;
         }
+        $video = $this->videoPayload($request);
+        if ($video !== null) {
+            $options['video'] = $video;
+        }
 
         $seconds = $request->durationSeconds;
         $supported = $this->supportedDurations($request->capability);
@@ -328,6 +336,38 @@ final readonly class GeminiStoryVideoAdapter implements StoryVideoProviderAdapte
             format: 'mp4',
             options: $options,
         );
+    }
+
+    /**
+     * @return array{mimeType: string, bytesBase64Encoded: string}|null
+     */
+    private function videoPayload(StoryVideoGenerationRequest $request): ?array
+    {
+        foreach ($request->inputs as $input) {
+            if ($input->type !== StoryVideoInputType::Video) {
+                continue;
+            }
+            $disk = $input->metadata['disk'] ?? null;
+            $path = $input->metadata['path'] ?? null;
+            $mime = $input->metadata['mime'] ?? null;
+            if ($disk !== 'videos' || ! is_string($path) || $path === '' || str_contains($path, '..') || str_contains($path, '://')) {
+                continue;
+            }
+            if (! Storage::disk($disk)->exists($path)) {
+                continue;
+            }
+            $bytes = Storage::disk($disk)->get($path);
+            if (! is_string($bytes) || $bytes === '') {
+                continue;
+            }
+
+            return [
+                'mimeType' => is_string($mime) && $mime !== '' ? $mime : 'video/mp4',
+                'bytesBase64Encoded' => base64_encode($bytes),
+            ];
+        }
+
+        return null;
     }
 
     /**
