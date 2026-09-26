@@ -124,7 +124,7 @@ final class VideoGenerationApiTest extends TestCase
             'https://generativelanguage.googleapis.com/v1beta/operations/job-1' => Http::sequence()
                 ->push(['name' => self::OPERATION, 'done' => false])
                 ->push($this->completedPayload()),
-            self::DOWNLOAD => Http::response($this->videoBytes(), 200, ['Content-Type' => 'video/mp4']),
+            self::DOWNLOAD.'*' => Http::response($this->videoBytes(), 200, ['Content-Type' => 'video/mp4']),
         ]);
 
         $user = User::factory()->create();
@@ -276,7 +276,7 @@ final class VideoGenerationApiTest extends TestCase
                 'name' => self::OPERATION,
             ]),
             'https://generativelanguage.googleapis.com/v1beta/operations/job-1' => Http::response($this->completedPayload()),
-            self::DOWNLOAD => Http::response($this->videoBytes(), 200, ['Content-Type' => 'video/mp4']),
+            self::DOWNLOAD.'*' => Http::response($this->videoBytes(), 200, ['Content-Type' => 'video/mp4']),
         ]);
 
         $this->mock(StorageInterface::class, function ($mock): void {
@@ -348,7 +348,7 @@ final class VideoGenerationApiTest extends TestCase
                 'name' => self::OPERATION,
             ]),
             'https://generativelanguage.googleapis.com/v1beta/operations/job-1' => Http::response($this->completedPayload()),
-            self::DOWNLOAD => Http::response($this->videoBytes(), 200, ['Content-Type' => 'video/mp4']),
+            self::DOWNLOAD.'*' => Http::response($this->videoBytes(), 200, ['Content-Type' => 'video/mp4']),
         ]);
 
         $owner = User::factory()->create();
@@ -479,7 +479,7 @@ final class VideoGenerationApiTest extends TestCase
                 'name' => self::OPERATION,
             ]),
             'https://generativelanguage.googleapis.com/v1beta/operations/*' => Http::response($this->completedPayload()),
-            self::DOWNLOAD => Http::response($this->videoBytes(), 200, ['Content-Type' => 'video/mp4']),
+            self::DOWNLOAD.'*' => Http::response($this->videoBytes(), 200, ['Content-Type' => 'video/mp4']),
         ]);
 
         $owner = User::factory()->reviewer()->create();

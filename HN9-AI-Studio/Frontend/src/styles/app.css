@@ -1598,6 +1598,105 @@ code {
   border-radius: var(--radius-sm);
 }
 
+.story-meta {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.story-meta dt {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--hn9-muted);
+}
+
+.story-meta dd {
+  margin: 0;
+  color: var(--hn9-text);
+  word-break: break-all;
+}
+
+.story-section-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.story-character-list .list-group-item.active {
+  background: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+}
+
+.story-reference-preview {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--hn9-surface-muted);
+  display: block;
+}
+
+.story-reference-preview.loading,
+.story-reference-preview.missing {
+  display: grid;
+  place-items: center;
+  font-size: var(--text-xs);
+  color: var(--hn9-muted);
+}
+
+.story-reference-versions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.story-reference-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.story-approved-reference .story-reference-preview {
+  width: 180px;
+  height: 180px;
+}
+
+.story-reel-list {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.story-scene-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.story-scene-card {
+  padding: var(--space-3);
+  border: 1px solid var(--hn9-border, rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius-sm);
+  background: var(--hn9-surface-muted, rgba(0, 0, 0, 0.02));
+}
+
+.story-scene-card.is-selected {
+  border-color: var(--brand-secondary);
+}
+
+.story-video-capability-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.story-video-capability-card,
+.story-video-provider-card {
+  padding: var(--space-3);
+  border: 1px solid var(--hn9-border, rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius-sm);
+  background: var(--hn9-surface-muted, rgba(0, 0, 0, 0.02));
+}
+
 .filter-bar {
   display: flex;
   flex-wrap: wrap;

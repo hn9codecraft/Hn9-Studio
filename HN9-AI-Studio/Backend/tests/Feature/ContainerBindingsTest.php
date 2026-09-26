@@ -32,6 +32,23 @@ use App\Contracts\Services\ProviderRegistryServiceInterface;
 use App\Contracts\Services\UserServiceInterface;
 use App\Contracts\Services\WorkflowServiceInterface;
 use App\Contracts\Storage\StorageInterface;
+use App\Story\Contracts\StoryBibleRepositoryInterface;
+use App\Story\Contracts\StoryBibleServiceInterface;
+use App\Story\Contracts\StoryCapabilityRouterInterface;
+use App\Story\Contracts\StoryCharacterReferenceRepositoryInterface;
+use App\Story\Contracts\StoryCharacterReferenceServiceInterface;
+use App\Story\Contracts\StoryCharacterRepositoryInterface;
+use App\Story\Contracts\StoryCharacterServiceInterface;
+use App\Story\Contracts\StoryPlanRepositoryInterface;
+use App\Story\Contracts\StoryPlanVersionRepositoryInterface;
+use App\Story\Contracts\StoryPlannerServiceInterface;
+use App\Story\Contracts\StoryStyleBibleRepositoryInterface;
+use App\Story\Contracts\StoryStyleBibleServiceInterface;
+use App\Story\Contracts\StoryStyleReferenceRepositoryInterface;
+use App\Story\Contracts\StoryStyleReferenceServiceInterface;
+use App\Story\Contracts\StoryVideoEngineInterface;
+use App\Story\Contracts\StoryWorkspaceRepositoryInterface;
+use App\Story\Contracts\StoryWorkspaceServiceInterface;
 use App\Repositories\Contracts\ActivityLogRepositoryInterface;
 use App\Repositories\Contracts\DashboardRepositoryInterface;
 use App\Repositories\Contracts\ExecutionUsageRepositoryInterface;
@@ -108,6 +125,23 @@ class ContainerBindingsTest extends TestCase
             PromptServiceInterface::class,
             HistoryServiceInterface::class,
             HealthServiceInterface::class,
+            StoryWorkspaceRepositoryInterface::class,
+            StoryWorkspaceServiceInterface::class,
+            StoryBibleRepositoryInterface::class,
+            StoryBibleServiceInterface::class,
+            StoryCharacterRepositoryInterface::class,
+            StoryCharacterServiceInterface::class,
+            StoryCharacterReferenceRepositoryInterface::class,
+            StoryCharacterReferenceServiceInterface::class,
+            StoryStyleBibleRepositoryInterface::class,
+            StoryStyleBibleServiceInterface::class,
+            StoryStyleReferenceRepositoryInterface::class,
+            StoryStyleReferenceServiceInterface::class,
+            StoryPlanRepositoryInterface::class,
+            StoryPlanVersionRepositoryInterface::class,
+            StoryPlannerServiceInterface::class,
+            StoryCapabilityRouterInterface::class,
+            StoryVideoEngineInterface::class,
         ];
     }
 

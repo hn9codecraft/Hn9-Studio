@@ -18,6 +18,7 @@ final class ProviderErrorSanitizer
         '/AIza[0-9A-Za-z_\-]+/',
         '/Bearer\s+\S+/i',
         '/(?:api[_-]?key|access[_-]?token|secret)["\']?\s*[:=]\s*\S+/i',
+        '/[?&](?:key|api_key)=[^&\s#]+/i',
         '/-----BEGIN [A-Z ]+-----[\s\S]*?-----END [A-Z ]+-----/',
     ];
 

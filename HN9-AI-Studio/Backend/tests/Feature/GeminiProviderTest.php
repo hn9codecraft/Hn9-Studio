@@ -34,6 +34,8 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger;
 use Tests\TestCase;
 
 class GeminiProviderTest extends TestCase
@@ -510,5 +512,117 @@ class GeminiProviderTest extends TestCase
 
         // Priority ordering is configuration-driven: OpenAI 100, Claude 90, Gemini 80.
         $this->assertSame(['openai', 'claude', 'gemini'], $manager->forCapability(Capability::Text));
+    }
+
+    public function test_video_download_adds_the_api_key_query_parameter_and_keeps_the_header(): void
+    {
+        $logs = $this->captureLogs();
+        Http::fake([
+            'https://generativelanguage.googleapis.com/v1beta/files/vid:download*' => Http::response('video-bytes', 200, ['Content-Type' => 'video/mp4']),
+        ]);
+
+        $bytes = $this->client()->download('https://generativelanguage.googleapis.com/v1beta/files/vid:download?alt=media');
+
+        $this->assertSame('video-bytes', $bytes);
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return $request->hasHeader('x-goog-api-key', 'test-key')
+                && ($query['alt'] ?? null) === 'media'
+                && ($query['key'] ?? null) === 'test-key'
+                && substr_count($request->url(), 'key=') === 1;
+        });
+        $this->assertLogsDoNotContain($logs, 'test-key');
+    }
+
+    public function test_video_download_does_not_duplicate_an_existing_key_query_parameter(): void
+    {
+        $logs = $this->captureLogs();
+        Http::fake([
+            'https://generativelanguage.googleapis.com/v1beta/files/vid:download*' => Http::response('video-bytes', 200, ['Content-Type' => 'video/mp4']),
+        ]);
+
+        $this->client()->download('https://generativelanguage.googleapis.com/v1beta/files/vid:download?alt=media&key=vendor-key');
+
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return $request->hasHeader('x-goog-api-key', 'test-key')
+                && ($query['alt'] ?? null) === 'media'
+                && ($query['key'] ?? null) === 'vendor-key'
+                && substr_count($request->url(), 'key=') === 1;
+        });
+        $this->assertLogsDoNotContain($logs, 'test-key');
+        $this->assertLogsDoNotContain($logs, 'vendor-key');
+    }
+
+    public function test_video_download_403_keeps_the_sanitized_provider_error_without_secrets(): void
+    {
+        $this->assertDownloadAuthFailure(403, 'PERMISSION_DENIED', 'Download denied for test-key at https://generativelanguage.googleapis.com/v1beta/files/vid:download?key=test-key');
+    }
+
+    public function test_video_download_401_keeps_the_sanitized_provider_error_without_secrets(): void
+    {
+        $this->assertDownloadAuthFailure(401, 'UNAUTHENTICATED', 'Request had an invalid credential test-key');
+    }
+
+    private function assertDownloadAuthFailure(int $status, string $providerStatus, string $vendorMessage): void
+    {
+        $logs = $this->captureLogs();
+        Http::fake([
+            'https://generativelanguage.googleapis.com/v1beta/files/vid:download*' => Http::response([
+                'error' => ['status' => $providerStatus, 'message' => $vendorMessage],
+            ], $status),
+        ]);
+
+        try {
+            $this->client()->download('https://generativelanguage.googleapis.com/v1beta/files/vid:download?alt=media');
+            $this->fail('The download failure was not reported.');
+        } catch (ProviderApiException $exception) {
+            $message = $exception->getMessage();
+            $this->assertStringContainsString('HTTP '.$status, $message);
+            $this->assertStringContainsString($providerStatus, $message);
+            $this->assertStringContainsString($status === 403 ? 'Download denied for [redacted]' : 'invalid credential [redacted]', $message);
+            $this->assertStringNotContainsString('test-key', $message);
+            $this->assertStringNotContainsString('generativelanguage.googleapis.com', $message);
+            $this->assertStringNotContainsString('key=', $message);
+            $this->assertSame($status, $exception->statusCode());
+            $this->assertSame($status, $exception->context()['http_status'] ?? null);
+            $this->assertSame($providerStatus, $exception->context()['provider_status'] ?? null);
+            $encoded = json_encode($exception->context());
+            $this->assertIsString($encoded);
+            $this->assertStringNotContainsString('test-key', $encoded);
+        }
+
+        $this->assertLogsDoNotContain($logs, 'test-key');
+    }
+
+    private function captureLogs(): TestHandler
+    {
+        $handler = new TestHandler();
+        $channel = $this->app->make('log')->channel();
+        $logger = $channel instanceof Logger
+            ? $channel
+            : (is_object($channel) && method_exists($channel, 'getLogger') ? $channel->getLogger() : null);
+
+        if ($logger instanceof Logger) {
+            $logger->pushHandler($handler);
+        }
+
+        return $handler;
+    }
+
+    private function assertLogsDoNotContain(TestHandler $logs, string $secret): void
+    {
+        foreach ($logs->getRecords() as $record) {
+            $encoded = json_encode($record);
+            $this->assertIsString($encoded);
+            $this->assertStringNotContainsString($secret, $encoded);
+        }
+    }
+
+    private function client(): GeminiClient
+    {
+        return new GeminiClient($this->app->make(Factory::class), $this->config());
     }
 }
