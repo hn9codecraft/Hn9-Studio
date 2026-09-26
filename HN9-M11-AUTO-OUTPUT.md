@@ -1,7 +1,8 @@
 # HN9 M11 AUTO EXECUTION
 
-CURRENT_SPRINT: M11.8
-STATUS: READY
+CURRENT_SPRINT: M11.9
+STATUS: BLOCKED
+ACTION: USER REVIEW REQUIRED
 
 ## LIVE EXECUTION DASHBOARD
 
@@ -16,7 +17,7 @@ M11.7 — PASS — MERGED
 Live Validation: PENDING
 M11.8 — PASS — IMPLEMENTATION COMPLETE
 Live Validation: NOT REQUIRED
-M11.9 — PENDING
+M11.9 — USER REVIEW REQUIRED
 M11.10 — PENDING
 M11.11 — PENDING
 M11.12 — PENDING
@@ -30,11 +31,11 @@ Dashboard note: after an accepted M11.6–M11.17 sprint completes AUTOMATIC GIT 
 ## HUMAN STATUS SUMMARY
 
 Current Sprint:
-M11.8
+M11.9
 
 Current Status:
-PASS — IMPLEMENTATION COMPLETE
-Live Validation: NOT REQUIRED
+BLOCKED
+ACTION: USER REVIEW REQUIRED
 
 Completed:
 M11.0
@@ -49,10 +50,10 @@ M11.3
 M11.4
 
 Next:
-M11.8
+Stopped at M11.9
 
 Blocker:
-None. M11.7 Live Validation: PENDING. Missing credentials are not a blocker.
+M11.9 does not name one approver. The prompt reuses the M10 submit-then-approve shape, and it also says the owner may approve. M10 approval is an admin action. No role was chosen.
 
 ## Approved History
 
@@ -352,12 +353,19 @@ Next Sprint:
 
 ### M11.9
 
-STATUS: PENDING
+STATUS: BLOCKED
 STARTED:
 COMPLETED:
 VERDICT:
+ACTION: USER REVIEW REQUIRED
 
 #### HUMAN SUMMARY
+
+M11.9 was not implemented.
+The approver is not defined.
+The prompt says to reuse the M10 submit-then-approve shape, and it also says the owner may approve.
+M10 approval is an admin action.
+No role was chosen.
 
 Not started yet.
 
