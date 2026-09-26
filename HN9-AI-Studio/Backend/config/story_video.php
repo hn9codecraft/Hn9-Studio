@@ -23,6 +23,16 @@ return [
     | Catalog adapters demonstrate multi-provider registration without vendor
     | coupling. They never open network sockets. Real providers arrive in M11.7.
     */
+    /*
+    | Null means: enable outside the test suite when a video credential is already configured.
+    | Tests opt in explicitly. Do not put secrets in this file.
+    */
+    'real_provider' => [
+        'enabled' => env('STORY_VIDEO_REAL_PROVIDER'),
+        'key' => 'video.live',
+        'durations' => [8],
+    ],
+
     'providers' => [
         [
             'key' => 'catalog.alpha',

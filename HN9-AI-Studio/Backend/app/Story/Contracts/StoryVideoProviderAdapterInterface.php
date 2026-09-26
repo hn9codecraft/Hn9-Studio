@@ -11,6 +11,7 @@ use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Video\StoryVideoGenerationOutput;
 use App\Story\Video\StoryVideoGenerationRequest;
 use App\Story\Video\StoryVideoModelSpec;
+use App\Story\Video\StoryVideoSubmission;
 
 /**
  * Story video provider adapter boundary. Vendor specifics stay inside adapters.
@@ -73,8 +74,9 @@ interface StoryVideoProviderAdapterInterface
 
     /**
      * Provider submission. Catalog adapters must not perform network I/O.
+     * Real adapters return a normalized operation. Vendor payloads stay inside the adapter.
      */
-    public function submit(StoryVideoGenerationRequest $request): never;
+    public function submit(StoryVideoGenerationRequest $request): StoryVideoSubmission;
 
     public function status(StoryVideoGenerationJob $job): StoryVideoJobStatus;
 

@@ -10,6 +10,8 @@ use App\Http\Requests\PrepareStoryVideoJobRequest;
 use App\Http\Requests\ValidateStoryVideoCompatibilityRequest;
 use App\Http\Resources\StoryVideoGenerationJobResource;
 use App\Story\Contracts\StoryVideoEngineInterface;
+use App\Story\Models\StoryVideoGenerationJob;
+use App\Story\Services\StoryVideoDispatchService;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryVideoInputType;
 use App\Story\Models\StoryWorkspace;
@@ -24,6 +26,7 @@ class StoryVideoEngineController extends Controller
     public function __construct(
         private StoryVideoEngineInterface $engine,
         private ProjectServiceInterface $projects,
+        private StoryVideoDispatchService $dispatch,
     ) {}
 
     public function capabilities(): JsonResponse
@@ -72,6 +75,58 @@ class StoryVideoEngineController extends Controller
             'created' => $result['created'],
             'job' => (new StoryVideoGenerationJobResource($result['job']))->resolve(),
         ], $result['created'] ? 201 : 200);
+    }
+
+    public function generate(PrepareStoryVideoJobRequest $request, string $uuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+
+        $result = $this->dispatch->start($project, $this->toGenerationRequest($request->validated()));
+
+        return ApiResponse::success([
+            'created' => $result['created'],
+            'units' => $result['units'],
+            'job' => (new StoryVideoGenerationJobResource($result['job']))->resolve(),
+            'output_url' => null,
+        ], $result['created'] ? 201 : 200);
+    }
+
+    public function showJob(string $uuid, string $jobUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $job = $this->findJob($project->id, $jobUuid);
+        $job = $this->dispatch->refresh($project, $job);
+
+        return ApiResponse::success([
+            'job' => (new StoryVideoGenerationJobResource($job))->resolve(),
+            'output_url' => null,
+        ]);
+    }
+
+    public function file(string $uuid, string $jobUuid): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+
+        return $this->dispatch->file($project, $this->findJob($project->id, $jobUuid));
+    }
+
+    private function findJob(int $projectId, string $jobUuid): StoryVideoGenerationJob
+    {
+        $job = StoryVideoGenerationJob::query()
+            ->where('uuid', $jobUuid)
+            ->whereHas('workspace', static function ($query) use ($projectId): void {
+                $query->where('project_id', $projectId);
+            })
+            ->first();
+
+        if ($job === null) {
+            abort(404);
+        }
+
+        return $job;
     }
 
     /**

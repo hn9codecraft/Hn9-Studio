@@ -376,3 +376,35 @@ export function prepareStoryVideoJob(projectId, payload) {
     body: payload,
   });
 }
+
+export function generateStoryVideo(projectId, payload) {
+  return apiRequest(`/story/projects/${projectId}/video/generate`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function getStoryVideoJob(projectId, jobId) {
+  return apiRequest(`/story/projects/${projectId}/video/jobs/${jobId}`);
+}
+
+export async function getStoryVideoFileUrl(projectId, jobId) {
+  const token = getToken();
+  const base = getApiBaseUrl();
+  const response = await fetch(
+    `${base}/story/projects/${projectId}/video/jobs/${jobId}/file`,
+    {
+      headers: {
+        Accept: 'video/mp4',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error('Unable to load the stored video.');
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}

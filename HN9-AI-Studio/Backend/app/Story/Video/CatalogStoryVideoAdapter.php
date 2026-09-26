@@ -10,6 +10,7 @@ use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Exceptions\StoryVideoEngineException;
 use App\Story\Models\StoryVideoGenerationJob;
+use App\Story\Video\StoryVideoSubmission;
 
 /**
  * Generic catalog adapter. Keys are configuration-supplied (catalog.alpha, etc.)
@@ -170,7 +171,7 @@ final readonly class CatalogStoryVideoAdapter implements StoryVideoProviderAdapt
         }
     }
 
-    public function submit(StoryVideoGenerationRequest $request): never
+    public function submit(StoryVideoGenerationRequest $request): StoryVideoSubmission
     {
         throw StoryVideoEngineException::generationNotEnabled();
     }

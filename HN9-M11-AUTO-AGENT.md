@@ -297,9 +297,9 @@ A sprint may be committed only when:
 - security passes
 - sprint acceptance gate passes
 
-If the sprint is `IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING`, then commit ONLY if that sprint's own prompt explicitly allows continuation with live validation pending.
+`PASS — IMPLEMENTATION COMPLETE` with `Live Validation: PENDING` is commit-ready. Record the pending live line in the output. Do not claim a live provider success in the commit message.
 
-Do NOT treat BLOCKED as commit-ready.
+Do NOT treat BLOCKED as commit-ready. A missing API credential is not BLOCKED.
 
 ### Blocked Sprint Git Rule
 
@@ -536,7 +536,6 @@ Stop immediately when any of these is true:
 - Data integrity fails.
 - A required implementation condition fails.
 - The sprint verdict is BLOCKED.
-- The sprint requires live validation and the required provider credentials are intentionally unavailable.
 - The sprint prompt says STOP.
 - The sprint prompt is ambiguous about who is authorized to approve, or about any other permission or security rule.
 
@@ -546,27 +545,23 @@ When stopped, follow the Blocked State section. Do not start the next sprint. Do
 
 Advance only when the current sprint prompt's acceptance criteria are satisfied and its stated verdict is allowed.
 
-Allowed continuation verdicts are only those the sprint prompt names as sufficient to continue. `PASS` continues. A prompt that explicitly allows `IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING` to continue may continue only when it says so. If the prompt says live validation is `REQUIRED` and it did not happen, the verdict is not PASS and the Blocked State section applies.
+For M11.7 through M11.17, `PASS — IMPLEMENTATION COMPLETE` continues even when `Live Validation: PENDING`. Missing provider credentials are not a failed gate. Do not invent a live provider result. The separate M11 LIVE VALIDATION PHASE runs only after M11.17, when the user has configured credentials.
 
 Write the Human Summary and the Full Technical Result before reading the next sprint prompt. After an accepted gate, complete AUTOMATIC GIT INTEGRATION, then update the Git Integration Result and dashboard to `PASS — MERGED`. Follow the Pass / Continue State section. Never continue before Git integration succeeds when the sprint was accepted.
 
 ## I. Live Validation Policy
 
-These statuses are different. Do not substitute one for another. Never change a pending live-validation status into `PASS`.
+Implementation acceptance and live-provider validation are separate phases. Missing live credentials must not block implementation progress.
 
-- `PASS` — every acceptance criterion in the sprint prompt is met, including live validation when that prompt marks it `REQUIRED`.
-- `IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING` — implementation and required non-live checks passed, and live provider validation did not run because credentials are intentionally unavailable or the prompt forbids the live call.
-- `BLOCKED` — a required check failed, or a required live gate could not be completed and the sprint prompt says to stop.
+For M11.7 through M11.17, a sprint may be marked `PASS — IMPLEMENTATION COMPLETE` when the code, schema, API, UI, tests, security, build, and regressions pass, including fake or mock adapter paths where credentials are unavailable, and no critical implementation defect remains.
 
-If live validation is `NOT_REQUIRED`, do not call a provider to manufacture a live result.
+Record `Live Validation: PENDING` on that same sprint when a real third-party call did not happen. That pending line does not block the next sprint, and it is not a claim that a provider succeeded.
 
-If live validation is `PENDING_BY_INTENTIONAL_CONFIGURATION`, do not call that provider, do not restore keys, and do not invent a live result. Continue only if that sprint prompt says this pending state is allowed to continue.
+`BLOCKED` is for a failed test, build, migration, security check, or unfinished required implementation. It is not for a missing API key.
 
-If live validation is `REQUIRED` and it did not happen, follow that sprint's exact prompt. When the prompt says stop, stop. Record the prompt's exact verdict in that sprint's `VERDICT` field. On the live dashboard, show `IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING` for that kind of stop. Do not relabel it `PASS`.
+Do not ask for API keys during these sprints. Do not restore keys. Do not invent live provider results.
 
-A sprint prompt may name a more specific verdict, such as `IMPLEMENTATION VERIFIED / LIVE VIDEO VALIDATION PENDING` or `IMPLEMENTATION VERIFIED / LIVE AUDIO VALIDATION PENDING`. Keep that exact string in `VERDICT`. The dashboard uses the allowed dashboard label above. The specific verdict is not a PASS.
-
-Never invent live provider results. Never restore the removed OpenAI or image API keys.
+After M11.17 is implementation-complete, the M11 LIVE VALIDATION PHASE in `HN9-M11-SPRINT-PROMPTS.md` is the only place real provider execution is required. Do not run that phase until the user configures credentials.
 
 ## J. Output File
 
@@ -655,6 +650,7 @@ Each line is one sprint and one status. Dashboard statuses are only:
 - `READY` — the sprint may start, and no earlier gate is open
 - `RUNNING` — the sprint has started and its result is not final
 - `PASS`
+- `PASS — IMPLEMENTATION COMPLETE` — M11.7–M11.17 implementation gate passed. Live validation may still be pending in the sprint result and does not block the next sprint.
 - `PASS — MERGED` — acceptance gate passed and Git Integration Gate completed
 - `IMPLEMENTATION VERIFIED / LIVE VALIDATION PENDING`
 - `BLOCKED`
@@ -743,7 +739,7 @@ Never continue before both the Human Summary and the Full Technical Result are w
 
 Set the passed sprint's `STATUS` to `PASS — MERGED` (or keep `STATUS: PASS` with Git Integration Status `MERGED` and dashboard `PASS — MERGED`), set `COMPLETED`, and set `VERDICT` to the prompt's exact pass verdict. Set `Next Sprint` to the following sprint id. Top-level `STATUS` becomes `READY` for that next sprint. Do not set top-level `STATUS` to `PASS`. `PASS` / `PASS — MERGED` belongs to the completed sprint.
 
-If the sprint prompt's accepted verdict is a pending live-validation verdict and the prompt says to stop, use the Blocked State section for continuation (no next sprint). If that same prompt explicitly allows Git integration for the verified implementation while live validation remains pending, Git Integration may proceed and must clearly record live validation as pending without claiming live success. If the prompt does not allow continuation and does not allow Git while pending, do not commit.
+`PASS — IMPLEMENTATION COMPLETE` with `Live Validation: PENDING` uses this continue path. Git integration is required. The dashboard may read `PASS — MERGED` for the implementation, and the sprint result must still say `Live Validation: PENDING`. Do not claim live provider success.
 
 ### Execution History
 
