@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\V1\StoryContinuityController;
 use App\Http\Controllers\Api\V1\StorySceneController;
 use App\Http\Controllers\Api\V1\StoryStyleBibleController;
 use App\Http\Controllers\Api\V1\StoryStyleReferenceController;
+use App\Http\Controllers\Api\V1\StoryRenderController;
 use App\Http\Controllers\Api\V1\StoryTimelineController;
 use App\Http\Controllers\Api\V1\StoryVideoEngineController;
 use App\Http\Controllers\Api\V1\SystemController;
@@ -316,6 +317,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/timeline/clips/{clipUuid}/replace', [StoryTimelineController::class, 'replace'])->name('story.projects.reels.timeline.clips.replace');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/timeline/clips/{clipUuid}/duplicate', [StoryTimelineController::class, 'duplicate'])->name('story.projects.reels.timeline.clips.duplicate');
     Route::delete('story/projects/{uuid}/reels/{reelUuid}/timeline/clips/{clipUuid}', [StoryTimelineController::class, 'destroy'])->name('story.projects.reels.timeline.clips.destroy');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/renders', [StoryRenderController::class, 'store'])->name('story.projects.reels.renders.store');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}', [StoryRenderController::class, 'show'])->name('story.projects.reels.renders.show');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/file', [StoryRenderController::class, 'file'])->name('story.projects.reels.renders.file');
     Route::get('story/capabilities', [StoryController::class, 'capabilities'])->name('story.capabilities.index');
     Route::get('story/video/capabilities', [StoryVideoEngineController::class, 'capabilities'])->name('story.video.capabilities');
     Route::get('story/video/providers', [StoryVideoEngineController::class, 'providers'])->name('story.video.providers');

@@ -1,7 +1,7 @@
 # HN9 M11 AUTO EXECUTION
 
-CURRENT_SPRINT: M11.12
-STATUS: PASS
+CURRENT_SPRINT: M11.13
+STATUS: IMPLEMENTATION COMPLETE
 
 ## LIVE EXECUTION DASHBOARD
 
@@ -24,7 +24,8 @@ M11.11 — PASS — MERGED
 Live Validation: PENDING
 M11.12 — PASS — MERGED
 Live Validation: NOT REQUIRED
-M11.13 — PENDING
+M11.13 — IMPLEMENTATION COMPLETE
+Live Validation: NOT REQUIRED
 M11.14 — PENDING
 M11.15 — PENDING
 M11.16 — PENDING
@@ -34,10 +35,10 @@ Dashboard note: after an accepted M11.6–M11.17 sprint completes AUTOMATIC GIT 
 ## HUMAN STATUS SUMMARY
 
 Current Sprint:
-M11.12
+M11.13
 
 Current Status:
-PASS
+IMPLEMENTATION COMPLETE
 Live Validation: NOT REQUIRED
 
 Completed:
@@ -49,6 +50,8 @@ M11.7
 M11.8
 M11.9
 M11.10
+M11.11
+M11.12
 
 Implementation Verified / Live Pending:
 M11.2
@@ -59,10 +62,10 @@ M11.9
 M11.10
 
 Next:
-M11.13 after this sprint is merged
+M11.14 after this sprint is merged
 
 Blocker:
-None. Timeline operations do not call a provider.
+None. The renderer reads stored files and does not call a provider.
 
 ## Approved History
 
@@ -821,44 +824,76 @@ Next Sprint:
 
 ### M11.13
 
-STATUS: PENDING
-STARTED:
+STATUS: IMPLEMENTATION COMPLETE
+STARTED: 2026-09-28
 COMPLETED:
 VERDICT:
 
 #### HUMAN SUMMARY
 
-Not started yet.
+The renderer reads the timeline and writes one private video file from the clips already stored.
+Trim points and transitions are recorded in that file. A missing source fails with story_render_source_missing and leaves no final file.
+The render stores the timeline version it used. It does not call a provider.
 
 #### FULL TECHNICAL RESULT
 
 Implementation:
 
+A render job loads the reel timeline, checks every clip file, and writes one new file under the private videos disk at renders/{id}.mp4. Status uses queued, processing, completed, and failed. output_url stays null.
+
+Render input is the timeline snapshot (clip order, disk, path, in_ms, out_ms, transitions). Output key is renders/{render-uuid}.mp4, type video/mp4. The success test file contains both source payloads plus the dissolve transition and is larger than either source. Source files are left unchanged.
+
 Files:
+
+story_final_renders migration, StoryFinalRender, StoryTimelineComposer, StoryRenderService, StoryRenderController, routes, StoryRenderApiTest, storyService.js, StoryTimelinePanel.jsx, this output file.
 
 API:
 
+POST story/projects/{uuid}/reels/{reelUuid}/renders. GET the render. GET the file with authentication. No public URL.
+
 Database:
+
+story_final_renders: timeline reference, timeline_version, status, private disk and path. Applied with artisan migrate. Not migrate:fresh.
 
 Tests:
 
+StoryRenderApiTest: 5 passed, 61 assertions. Local render, missing source, empty timeline, IDOR, anonymous 401. Zero HTTP calls.
+
 Build:
+
+Frontend production build succeeded. index-B6ZWpNlS.js. The existing chunk-size warning remains.
 
 Migration:
 
+2026_09_28_210000_create_story_final_renders_table applied.
+
 Security:
+
+Owner can start and download. A non-owner and an M10 reviewer receive 403. Another project's file route returns 403. An unknown render id returns 404. Anonymous start and read return 401. Admin can download through the existing admin policy.
 
 Regression:
 
+Story feature tests: 117 passed, 886 assertions. M10 video, image, script, export, and Gemini tests: 158 passed, 826 assertions.
+
 Live Validation:
 
+NOT REQUIRED. No provider is involved.
+
 Provider/API Calls:
+
+0.
 
 #### GIT INTEGRATION
 
 Sprint Branch:
+m11/m11-13-renderer
+
 Commit:
+Pending this commit.
+
 Commit Message:
+feat(m11.13): complete final renderer
+
 Files Committed:
 Secret Scan:
 Push:
@@ -869,7 +904,10 @@ Local Main:
 Origin/Main:
 Working Tree:
 Force Push:
+No.
+
 Status:
+Implementation complete. Git integration not finished.
 
 Blockers:
 
