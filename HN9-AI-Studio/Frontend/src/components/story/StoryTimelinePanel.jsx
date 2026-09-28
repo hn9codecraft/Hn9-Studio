@@ -4,12 +4,14 @@ import { ApiError } from '../../services/apiClient';
 import {
   deleteStoryTimelineClip,
   duplicateStoryTimelineClip,
+  getStoryRenderFileUrl,
   getStoryTimeline,
   replaceStoryTimelineClip,
   listStoryReels,
   reorderStoryTimeline,
   setStoryTimelineTransition,
   splitStoryTimelineClip,
+  startStoryRender,
   trimStoryTimelineClip,
 } from '../../services/storyService';
 
@@ -24,6 +26,7 @@ export default function StoryTimelinePanel({ projectId }) {
   const [splitAt, setSplitAt] = useState('4000');
   const [transitionType, setTransitionType] = useState('dissolve');
   const [replaceSourceId, setReplaceSourceId] = useState('');
+  const [render, setRender] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -147,6 +150,47 @@ export default function StoryTimelinePanel({ projectId }) {
             <option key={type} value={type}>{type}</option>
           ))}
         </select>
+        <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={!reelId}
+            onClick={() => {
+              setError('');
+              startStoryRender(projectId, reelId)
+                .then((row) => setRender(row))
+                .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to render the timeline.'));
+            }}
+          >
+            Render timeline
+          </button>
+          {render ? (
+            <span className="text-secondary">
+              Render {render.status}
+              {render.size_bytes ? ` · ${render.size_bytes} bytes` : ''}
+              {render.error_code ? ` · ${render.error_code}` : ''}
+            </span>
+          ) : null}
+          {render?.has_file ? (
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-sm"
+              onClick={() => {
+                getStoryRenderFileUrl(projectId, reelId, render.id)
+                  .then((url) => {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'final-render.mp4';
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  })
+                  .catch((err) => setError(err instanceof Error ? err.message : 'Unable to download the render.'));
+              }}
+            >
+              Download final file
+            </button>
+          ) : null}
+        </div>
         {clips.length === 0 ? <p className="text-secondary mb-0">No clips on this timeline.</p> : null}
         <ul className="list-group">
           {clips.map((clip, index) => (

@@ -485,6 +485,35 @@ export function deleteStoryTimelineClip(projectId, reelId, clipId) {
   });
 }
 
+export function startStoryRender(projectId, reelId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/renders`, { method: 'POST' });
+}
+
+export function getStoryRender(projectId, reelId, renderId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/renders/${renderId}`);
+}
+
+export async function getStoryRenderFileUrl(projectId, reelId, renderId) {
+  const token = getToken();
+  const base = getApiBaseUrl();
+  const response = await fetch(
+    `${base}/story/projects/${projectId}/reels/${reelId}/renders/${renderId}/file`,
+    {
+      headers: {
+        Accept: 'video/mp4',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error('The final render file is not available.');
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
 export function setStoryTimelineTransition(projectId, reelId, fromClipId, toClipId, type, durationMs = 0) {
   return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/transitions`, {
     method: 'POST',
