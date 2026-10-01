@@ -15,6 +15,7 @@ import StoryStylePanel from '../../components/story/StoryStylePanel';
 import StoryVideoEnginePanel from '../../components/story/StoryVideoEnginePanel';
 import StoryAudioStudioPanel from '../../components/story/StoryAudioStudioPanel';
 import StoryTimelinePanel from '../../components/story/StoryTimelinePanel';
+import StoryHistoryPanel from '../../components/story/StoryHistoryPanel';
 import { getStoryEntry, getStoryWorkspace } from '../../services/storyService';
 
 export default function ProjectStoryPage() {
@@ -273,6 +274,15 @@ export default function ProjectStoryPage() {
           >
             Timeline
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={section === 'history'}
+            className={`btn ${section === 'history' ? 'btn-primary' : 'btn-outline-primary'}`}
+            onClick={() => setSection('history')}
+          >
+            History
+          </button>
         </div>
       ) : null}
 
@@ -303,6 +313,9 @@ export default function ProjectStoryPage() {
       ) : null}
       {!workspaceLoading && workspace && section === 'timeline' ? (
         <StoryTimelinePanel projectId={projectId} />
+      ) : null}
+      {!workspaceLoading && workspace && section === 'history' ? (
+        <StoryHistoryPanel projectId={projectId} />
       ) : null}
 
       {!loading && capabilities.length > 0 ? (

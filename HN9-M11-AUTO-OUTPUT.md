@@ -1,6 +1,6 @@
 # HN9 M11 AUTO EXECUTION
 
-CURRENT_SPRINT: M11.15
+CURRENT_SPRINT: M11.16
 STATUS: PASS
 
 ## LIVE EXECUTION DASHBOARD
@@ -30,14 +30,15 @@ M11.14 — PASS — MERGED
 Live Validation: NOT REQUIRED
 M11.15 — PASS — MERGED
 Live Validation: NOT REQUIRED
-M11.16 — PENDING
+M11.16 — PASS — MERGED
+Live Validation: NOT REQUIRED
 M11.17 — PENDING
 
 Dashboard note: after an accepted M11.6–M11.17 sprint completes AUTOMATIC GIT INTEGRATION, its line becomes `PASS — MERGED`. Never show final `PASS` for those sprints before Git verification. BLOCKED sprints never auto-merge.
 ## HUMAN STATUS SUMMARY
 
 Current Sprint:
-M11.15
+M11.16
 
 Current Status:
 PASS
@@ -57,6 +58,7 @@ M11.12
 M11.13
 M11.14
 M11.15
+M11.16
 
 Implementation Verified / Live Pending:
 M11.2
@@ -67,10 +69,10 @@ M11.9
 M11.10
 
 Next:
-M11.16 after this sprint is merged
+M11.17 after this sprint is merged
 
 Blocker:
-None. The Story export ZIP is built from stored files and does not call a provider.
+None. Generation history reads stored jobs and never calls a provider to obtain a cost.
 
 ## Approved History
 
@@ -1177,55 +1179,114 @@ Next Sprint:
 
 ### M11.16
 
-STATUS: PENDING
-STARTED:
-COMPLETED:
-VERDICT:
+STATUS: PASS
+STARTED: 2026-10-01
+COMPLETED: 2026-10-01
+VERDICT: PASS
 
 #### HUMAN SUMMARY
 
-Not started yet.
+Project Story has a History tab listing every Story generation job for the project in created order.
+Each finished job gets exactly one usage-ledger row. Cost is recorded only when the provider reported it; otherwise it stays null and the screen shows "Not reported".
+No prices are hard-coded and no costs were backfilled onto older jobs.
 
 #### FULL TECHNICAL RESULT
 
 Implementation:
 
+A saved hook on StoryVideoGenerationJob writes one story_usage_ledger_entries row when a job first reaches completed, failed, or cancelled. The row is unique per job, so later saves do not add another. Cost follows the existing CostSource rule: it is copied only from provider_metadata.reported_cost when the amount is numeric, with cost_source provider_reported. A reported zero is kept as zero. No current Story adapter writes reported_cost, so live costs stay null until a provider actually returns one.
+
+Fields recorded:
+
+Ledger: job, workspace, capability, provider key, model, operation id, terminal status, cost, currency, cost source, recorded time. History row: job id, reel and scene ids, capability, provider key, model, operation id, status, error code, sanitized error message, created, submitted, started, completed, and failed times, cost, currency, cost source, cost_reported, ledger time.
+
+Null-cost behavior:
+
+Missing or non-numeric reported cost stores null cost, null currency, and null cost source. The API returns cost null and cost_reported false. The History view shows "Not reported", not zero.
+
 Files:
+
+story_usage_ledger_entries migration, StoryUsageLedgerEntry, StoryUsageService, StoryVideoGenerationJob (saved hook), StoryHistoryController, routes, StoryHistoryApiTest, storyService.js, StoryHistoryPanel.jsx, ProjectStoryPage.jsx (History tab), StoryTimelinePanel.jsx (error alert now shows its text), this output file.
 
 API:
 
+GET story/projects/{uuid}/history. Read only. No endpoint starts generation. No provider metadata, request payload, storage path, or download URL in the payload.
+
 Database:
+
+story_usage_ledger_entries. Applied with artisan migrate. Not migrate:fresh. Existing jobs were not given ledger rows or costs.
 
 Tests:
 
+StoryHistoryApiTest: 4 passed, 54 assertions. Terminal job recorded once. Missing cost stays null. Reported zero kept. Malformed cost ignored. Key in an error message removed. Zero HTTP calls.
+
 Build:
+
+Frontend production build succeeded. index-CMd4fgcd.js. The existing chunk-size warning remains.
 
 Migration:
 
+2026_10_01_220000_create_story_usage_ledger_entries_table applied.
+
 Security:
+
+History uses the Story workspace owner rule (owner or admin). Another project owner, and an M10 reviewer, receive 403. Another project's history does not include these jobs. Anonymous request returns 401.
 
 Regression:
 
+Story feature tests: 130 passed, 1127 assertions. M10 video, image, script, project export, Gemini, and dashboard usage/cost tests: 209 passed, 1216 assertions.
+
 Live Validation:
 
+NOT REQUIRED. No provider is involved.
+
 Provider/API Calls:
+
+0.
 
 #### GIT INTEGRATION
 
 Sprint Branch:
+m11/m11-16-usage
+
 Commit:
+See git log: feat(m11.16): complete usage and cost tracking
+
 Commit Message:
+feat(m11.16): complete usage and cost tracking
+
 Files Committed:
+See commit stat. No .env. No Frontend/dist.
+
 Secret Scan:
+No API keys.
+
 Push:
+origin/m11/m11-16-usage
+
 Main Sync:
+Fast-forward only from c03ecc9.
+
 Merge:
+Merge branch 'm11/m11-16-usage' (no fast-forward).
+
 Main Push:
+origin/main.
+
 Local Main:
+Matches origin/main after push.
+
 Origin/Main:
+Matches local main after push.
+
 Working Tree:
+Clean.
+
 Force Push:
+No.
+
 Status:
+Merged. Local main matches origin/main.
 
 Blockers:
 
