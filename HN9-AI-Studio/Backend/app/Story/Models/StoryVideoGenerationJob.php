@@ -8,6 +8,7 @@ use App\Models\Concerns\HasUuid;
 use App\Story\Enums\StoryVideoAsyncMode;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryVideoJobStatus;
+use App\Story\Services\StoryUsageService;
 use Database\Factories\StoryVideoGenerationJobFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -65,6 +66,13 @@ class StoryVideoGenerationJob extends Model
             'completed_at' => 'datetime',
             'failed_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(static function (self $job): void {
+            app(StoryUsageService::class)->recordTerminal($job);
+        });
     }
 
     protected static function newFactory(): StoryVideoGenerationJobFactory

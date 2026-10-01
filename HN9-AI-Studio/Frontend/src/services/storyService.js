@@ -535,6 +535,12 @@ export function reworkStoryRender(projectId, reelId, renderId, comment, targetKi
   });
 }
 
+export function getStoryHistory(projectId) {
+  return apiRequest(`/story/projects/${projectId}/history`).then((payload) =>
+    Array.isArray(payload) ? payload : [],
+  );
+}
+
 export function createStoryExport(projectId, reelId, renderId) {
   return apiRequest(`/story/projects/${projectId}/reels/${reelId}/renders/${renderId}/exports`, { method: 'POST' });
 }

@@ -115,7 +115,7 @@ export default function StoryTimelinePanel({ projectId }) {
     <section className="card border-0 glass-card">
       <div className="card-body">
         <h2 className="h5 mb-3">Timeline</h2>
-        {error ? <AlertMessage variant="danger" message={error} /> : null}
+        {error ? <AlertMessage>{error}</AlertMessage> : null}
         <label className="form-label" htmlFor="timeline-reel">Reel</label>
         <select
           id="timeline-reel"
