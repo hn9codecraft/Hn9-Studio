@@ -39,6 +39,7 @@ final class StoryRenderService
         }
 
         $clips = StoryTimelineClip::query()
+            ->with('sceneVersion')
             ->where('story_timeline_id', $timeline->id)
             ->orderBy('position')
             ->get()
@@ -196,6 +197,7 @@ final class StoryRenderService
                     'media_kind' => $clip->media_kind,
                     'disk' => $clip->disk,
                     'path' => $clip->path,
+                    'source_version_id' => $clip->sceneVersion?->uuid,
                     'in_ms' => $clip->in_ms,
                     'out_ms' => $clip->out_ms,
                 ];
@@ -231,6 +233,7 @@ final class StoryRenderService
             'timeline_id' => $render->timeline?->uuid ?? ($render->timeline_snapshot['timeline_id'] ?? null),
             'timeline_version' => $render->timeline_version,
             'status' => $render->status,
+            'review_status' => $render->review_status ?: 'draft',
             'disk' => $ready ? $render->disk : null,
             'path' => $ready ? $render->path : null,
             'mime' => $ready ? $render->mime : null,

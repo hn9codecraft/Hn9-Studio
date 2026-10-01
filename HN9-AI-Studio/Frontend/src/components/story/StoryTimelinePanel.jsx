@@ -4,14 +4,17 @@ import { ApiError } from '../../services/apiClient';
 import {
   deleteStoryTimelineClip,
   duplicateStoryTimelineClip,
+  approveStoryRenderReview,
   getStoryRenderFileUrl,
   getStoryTimeline,
   replaceStoryTimelineClip,
   listStoryReels,
   reorderStoryTimeline,
+  reworkStoryRender,
   setStoryTimelineTransition,
   splitStoryTimelineClip,
   startStoryRender,
+  submitStoryRenderReview,
   trimStoryTimelineClip,
 } from '../../services/storyService';
 
@@ -27,6 +30,10 @@ export default function StoryTimelinePanel({ projectId }) {
   const [transitionType, setTransitionType] = useState('dissolve');
   const [replaceSourceId, setReplaceSourceId] = useState('');
   const [render, setRender] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [reworkTargetKind, setReworkTargetKind] = useState('timeline');
+  const [reworkTargetId, setReworkTargetId] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -158,7 +165,10 @@ export default function StoryTimelinePanel({ projectId }) {
             onClick={() => {
               setError('');
               startStoryRender(projectId, reelId)
-                .then((row) => setRender(row))
+                .then((row) => {
+                  setRender(row);
+                  if (row?.timeline_id) setReworkTargetId(row.timeline_id);
+                })
                 .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to render the timeline.'));
             }}
           >
@@ -167,6 +177,7 @@ export default function StoryTimelinePanel({ projectId }) {
           {render ? (
             <span className="text-secondary">
               Render {render.status}
+              {render.review_status ? ` · review ${render.review_status}` : ''}
               {render.size_bytes ? ` · ${render.size_bytes} bytes` : ''}
               {render.error_code ? ` · ${render.error_code}` : ''}
             </span>
@@ -190,7 +201,101 @@ export default function StoryTimelinePanel({ projectId }) {
               Download final file
             </button>
           ) : null}
+          {render?.has_file ? (
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-sm"
+              onClick={() => {
+                getStoryRenderFileUrl(projectId, reelId, render.id)
+                  .then((url) => {
+                    setPreviewUrl((current) => {
+                      if (current) URL.revokeObjectURL(current);
+                      return url;
+                    });
+                  })
+                  .catch((err) => setError(err instanceof Error ? err.message : 'Unable to preview the render.'));
+              }}
+            >
+              Preview final file
+            </button>
+          ) : null}
         </div>
+        {previewUrl ? <video className="w-100 mb-3" controls src={previewUrl} /> : null}
+        {render?.has_file ? (
+          <div className="mb-3">
+            <div className="d-flex flex-wrap gap-2 mb-2">
+              {render.review_status === 'draft' || render.review_status === 'needs_rework' ? (
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm"
+                  onClick={() => {
+                    setError('');
+                    submitStoryRenderReview(projectId, reelId, render.id)
+                      .then((row) => setRender((current) => ({ ...current, ...row })))
+                      .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to submit the render.'));
+                  }}
+                >
+                  Submit for review
+                </button>
+              ) : null}
+              {render.review_status === 'pending_review' ? (
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm"
+                  onClick={() => {
+                    setError('');
+                    approveStoryRenderReview(projectId, reelId, render.id)
+                      .then((row) => setRender((current) => ({ ...current, ...row })))
+                      .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to approve the render.'));
+                  }}
+                >
+                  Approve
+                </button>
+              ) : null}
+            </div>
+            {render.review_status === 'pending_review' ? (
+              <div>
+                <label className="form-label" htmlFor="render-rework-comment">Rework comment</label>
+                <textarea
+                  id="render-rework-comment"
+                  className="form-control mb-2"
+                  value={reviewComment}
+                  onChange={(event) => setReviewComment(event.target.value)}
+                />
+                <label className="form-label" htmlFor="render-rework-kind">Rework target type</label>
+                <select
+                  id="render-rework-kind"
+                  className="form-select mb-2"
+                  value={reworkTargetKind}
+                  onChange={(event) => setReworkTargetKind(event.target.value)}
+                >
+                  <option value="timeline">timeline</option>
+                  <option value="scene_version">scene version</option>
+                </select>
+                <label className="form-label" htmlFor="render-rework-target">Rework target id</label>
+                <input
+                  id="render-rework-target"
+                  className="form-control mb-2"
+                  value={reworkTargetId}
+                  onChange={(event) => setReworkTargetId(event.target.value)}
+                  placeholder={reworkTargetKind === 'timeline' ? 'Timeline id' : 'Scene version id'}
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => {
+                    setError('');
+                    reworkStoryRender(projectId, reelId, render.id, reviewComment, reworkTargetKind, reworkTargetId)
+                      .then((row) => setRender((current) => ({ ...current, ...row })))
+                      .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to request rework.'));
+                  }}
+                >
+                  Request rework
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {clips.length === 0 ? <p className="text-secondary mb-0">No clips on this timeline.</p> : null}
         <ul className="list-group">
           {clips.map((clip, index) => (

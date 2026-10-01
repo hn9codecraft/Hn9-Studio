@@ -1,6 +1,6 @@
 # HN9 M11 AUTO EXECUTION
 
-CURRENT_SPRINT: M11.13
+CURRENT_SPRINT: M11.14
 STATUS: PASS
 
 ## LIVE EXECUTION DASHBOARD
@@ -26,7 +26,8 @@ M11.12 — PASS — MERGED
 Live Validation: NOT REQUIRED
 M11.13 — PASS — MERGED
 Live Validation: NOT REQUIRED
-M11.14 — PENDING
+M11.14 — PASS — MERGED
+Live Validation: NOT REQUIRED
 M11.15 — PENDING
 M11.16 — PENDING
 M11.17 — PENDING
@@ -35,7 +36,7 @@ Dashboard note: after an accepted M11.6–M11.17 sprint completes AUTOMATIC GIT 
 ## HUMAN STATUS SUMMARY
 
 Current Sprint:
-M11.13
+M11.14
 
 Current Status:
 PASS
@@ -53,6 +54,7 @@ M11.10
 M11.11
 M11.12
 M11.13
+M11.14
 
 Implementation Verified / Live Pending:
 M11.2
@@ -63,10 +65,10 @@ M11.9
 M11.10
 
 Next:
-M11.14 after this sprint is merged
+M11.15 after this sprint is merged
 
 Blocker:
-None. The renderer reads stored files and does not call a provider.
+None. Final review changes status only. It does not call a provider or create video.
 
 ## Approved History
 
@@ -935,55 +937,114 @@ Next Sprint:
 
 ### M11.14
 
-STATUS: PENDING
-STARTED:
-COMPLETED:
-VERDICT:
+STATUS: PASS
+STARTED: 2026-09-29
+COMPLETED: 2026-10-01
+VERDICT: PASS
 
 #### HUMAN SUMMARY
 
-Not started yet.
+A completed final render can be submitted for review, approved, or sent back for rework.
+Rework needs a comment and a target: this render's timeline or one of its scene versions.
+Approval keeps the render file readable and does not export. No video is generated during rework.
 
 #### FULL TECHNICAL RESULT
 
 Implementation:
 
+Review transitions reuse the Story review statuses: draft or needs_rework to pending_review on submit, then pending_review to approved or needs_rework. Approve from draft returns 422 story_review_invalid_transition. Only a completed render with a stored file can be submitted; otherwise 422 story_render_not_ready. Every transition writes a review event. Status changes only go through the review API.
+
+Events:
+
+story_final_render_reviews stores submitted, approved, and needs_rework with the actor, comment, target_kind (timeline or scene_version), and target_id. A target outside this render returns 422 story_review_invalid_target.
+
+File check:
+
+After approval the render path is unchanged and the authenticated file route still returns the rendered bytes. Source files and video job counts are unchanged after rework.
+
 Files:
+
+final render review migration, StoryFinalRenderReview, StoryFinalReviewService, StoryFinalReviewController, StoryFinalRender, StoryRenderService (review_status and scene version ids in the snapshot), routes, StoryFinalReviewApiTest, storyService.js, StoryTimelinePanel.jsx, this output file.
 
 API:
 
+GET renders/{id}/reviews. POST renders/{id}/submit-review, approve, needs-rework. output_url stays null.
+
 Database:
+
+review_status column on story_final_renders, default draft. New story_final_render_reviews table. Applied with artisan migrate. Not migrate:fresh.
 
 Tests:
 
+StoryFinalReviewApiTest: 5 passed. With StoryRenderApiTest: 10 passed, 133 assertions. Zero HTTP calls.
+
 Build:
+
+Frontend production build succeeded. index-Jm3Dr0eS.js. The existing chunk-size warning remains.
 
 Migration:
 
+2026_09_29_220000_create_story_final_render_reviews_table applied.
+
 Security:
+
+Approval follows the Story review rule: project owner or admin. A non-owner and an M10 reviewer receive 403. Another project's route returns 403. An unknown render returns 404. Anonymous submit, approve, and rework return 401.
 
 Regression:
 
+Story feature tests: 122 passed, 958 assertions. M10 video, image, script, export, and Gemini tests: 158 passed, 826 assertions.
+
 Live Validation:
 
+NOT REQUIRED. No provider is involved.
+
 Provider/API Calls:
+
+0.
 
 #### GIT INTEGRATION
 
 Sprint Branch:
+m11/m11-14-final-review
+
 Commit:
+See git log: feat(m11.14): complete final review and rework
+
 Commit Message:
+feat(m11.14): complete final review and rework
+
 Files Committed:
+11 files. No .env. No Frontend/dist.
+
 Secret Scan:
+No API keys.
+
 Push:
+origin/m11/m11-14-final-review
+
 Main Sync:
+Fast-forward only from b8b0d2b.
+
 Merge:
+Merge branch 'm11/m11-14-final-review' (no fast-forward).
+
 Main Push:
+origin/main.
+
 Local Main:
+Matches origin/main after push.
+
 Origin/Main:
+Matches local main after push.
+
 Working Tree:
+Clean.
+
 Force Push:
+No.
+
 Status:
+Merged. Local main matches origin/main.
 
 Blockers:
 

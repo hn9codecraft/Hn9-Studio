@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property string $uuid
  * @property string $status
+ * @property string $review_status
  * @property string $timeline_version
  * @property array<string, mixed> $timeline_snapshot
  * @property string|null $disk
@@ -32,6 +33,7 @@ class StoryFinalRender extends Model
         'story_timeline_id',
         'story_reel_id',
         'status',
+        'review_status',
         'timeline_version',
         'timeline_snapshot',
         'disk',
