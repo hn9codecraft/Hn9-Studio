@@ -1,6 +1,6 @@
 # HN9 M11 AUTO EXECUTION
 
-CURRENT_SPRINT: M11.14
+CURRENT_SPRINT: M11.15
 STATUS: PASS
 
 ## LIVE EXECUTION DASHBOARD
@@ -28,7 +28,8 @@ M11.13 — PASS — MERGED
 Live Validation: NOT REQUIRED
 M11.14 — PASS — MERGED
 Live Validation: NOT REQUIRED
-M11.15 — PENDING
+M11.15 — PASS — MERGED
+Live Validation: NOT REQUIRED
 M11.16 — PENDING
 M11.17 — PENDING
 
@@ -36,7 +37,7 @@ Dashboard note: after an accepted M11.6–M11.17 sprint completes AUTOMATIC GIT 
 ## HUMAN STATUS SUMMARY
 
 Current Sprint:
-M11.14
+M11.15
 
 Current Status:
 PASS
@@ -55,6 +56,7 @@ M11.11
 M11.12
 M11.13
 M11.14
+M11.15
 
 Implementation Verified / Live Pending:
 M11.2
@@ -65,10 +67,10 @@ M11.9
 M11.10
 
 Next:
-M11.15 after this sprint is merged
+M11.16 after this sprint is merged
 
 Blocker:
-None. Final review changes status only. It does not call a provider or create video.
+None. The Story export ZIP is built from stored files and does not call a provider.
 
 ## Approved History
 
@@ -1052,55 +1054,122 @@ Next Sprint:
 
 ### M11.15
 
-STATUS: PENDING
-STARTED:
-COMPLETED:
-VERDICT:
+STATUS: PASS
+STARTED: 2026-10-01
+COMPLETED: 2026-10-01
+VERDICT: PASS
 
 #### HUMAN SUMMARY
 
-Not started yet.
+An approved final Story render can be exported as a real ZIP and downloaded only by the project owner (or an admin).
+The ZIP holds the final video, each scene's script text and video, audio clips, a README, and metadata JSON.
+Export is refused until the final render is approved. The M10 project export is unchanged.
 
 #### FULL TECHNICAL RESULT
 
 Implementation:
 
+The application builds the ZIP with ZipArchive on the private exports disk, the same way the M10 export builder does. The export row moves queued, processing, completed. It is marked completed only after the ZIP is closed and its size is greater than zero. A failed build deletes the partial ZIP and marks the row failed. A second export of the same approved render returns the existing completed package.
+
+Export id and status:
+
+UUID per export; status completed in the tests.
+
+Relative storage key:
+
+story/{export-uuid}/{project-slug}-story-export.zip on the exports disk. The disk, key, size, and completed_at are stored on story_exports.
+
+ZIP entries:
+
+{root}/final/final-render.mp4, {root}/scenes/scene-NN/script.txt, {root}/scenes/scene-NN/video-vN.mp4, {root}/audio/audio-NN.mp3, {root}/metadata/story.json, {root}/README.txt. All entries are package paths under one root folder.
+
+File check:
+
+The final video in the ZIP is byte-for-byte equal to the stored final render. Scene video and audio entries equal their stored files. The downloaded ZIP equals the stored ZIP. The metadata JSON contains no server paths, keys, or passwords.
+
 Files:
+
+story_exports migration, StoryExport, StoryExportService, StoryExportController, StoryExportResource, ExportPolicy (accepts StoryExport), AuthServiceProvider (StoryExport maps to ExportPolicy), routes, StoryExportApiTest, storyService.js, StoryTimelinePanel.jsx, this output file.
 
 API:
 
+POST reels/{reel}/renders/{render}/exports. GET reels/{reel}/exports/{export}. GET reels/{reel}/exports/{export}/download. The JSON omits disk and path. output_url stays null.
+
 Database:
+
+story_exports. Applied with artisan migrate. Not migrate:fresh.
 
 Tests:
 
+StoryExportApiTest: 4 passed, 115 assertions. Export refused before approval and while pending. ZIP opens with the expected entries. Bytes match stored media. Owner download succeeds. Zero HTTP calls.
+
 Build:
+
+Frontend production build succeeded. index-Ew1rULJa.js. The existing chunk-size warning remains.
 
 Migration:
 
+2026_10_01_210000_create_story_exports_table applied.
+
 Security:
+
+Download authorization reuses the M10 ExportPolicy (export creator, project owner, or admin). Owner download returns 200. A non-owner and an M10 reviewer receive 403. Another project's owner gets 404 for this export under their project. The owner gets 403 under another project. Anonymous create, read, and download return 401. Admin download returns 200.
 
 Regression:
 
+Story feature tests: 126 passed, 1073 assertions. M10 video, image, script, project export, and Gemini tests: 158 passed, 826 assertions.
+
 Live Validation:
 
+NOT REQUIRED. No provider is involved.
+
 Provider/API Calls:
+
+0.
 
 #### GIT INTEGRATION
 
 Sprint Branch:
+m11/m11-15-export
+
 Commit:
+See git log: feat(m11.15): complete export and secure delivery
+
 Commit Message:
+feat(m11.15): complete export and secure delivery
+
 Files Committed:
+12 files. No .env. No Frontend/dist.
+
 Secret Scan:
+No API keys.
+
 Push:
+origin/m11/m11-15-export
+
 Main Sync:
+Fast-forward only from 22aa471.
+
 Merge:
+Merge branch 'm11/m11-15-export' (no fast-forward).
+
 Main Push:
+origin/main.
+
 Local Main:
+Matches origin/main after push.
+
 Origin/Main:
+Matches local main after push.
+
 Working Tree:
+Clean.
+
 Force Push:
+No.
+
 Status:
+Merged. Local main matches origin/main.
 
 Blockers:
 

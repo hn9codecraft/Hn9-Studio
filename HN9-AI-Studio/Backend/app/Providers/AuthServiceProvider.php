@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Models\AiProvider;
 use App\Models\User;
 use App\Policies\AiProviderPolicy;
+use App\Policies\ExportPolicy;
 use App\Policies\StoryBiblePolicy;
 use App\Policies\StoryCharacterPolicy;
 use App\Policies\StoryCharacterReferencePolicy;
@@ -20,6 +21,7 @@ use App\Policies\UserPolicy;
 use App\Story\Models\StoryBible;
 use App\Story\Models\StoryCharacter;
 use App\Story\Models\StoryCharacterReference;
+use App\Story\Models\StoryExport;
 use App\Story\Models\StoryPlan;
 use App\Story\Models\StoryReel;
 use App\Story\Models\StoryScene;
@@ -47,6 +49,7 @@ class AuthServiceProvider extends ServiceProvider
         StoryPlan::class => StoryPlanPolicy::class,
         StoryReel::class => StoryReelPolicy::class,
         StoryScene::class => StoryScenePolicy::class,
+        StoryExport::class => ExportPolicy::class,
     ];
 
     public function boot(): void
