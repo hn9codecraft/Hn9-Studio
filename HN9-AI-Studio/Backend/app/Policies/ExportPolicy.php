@@ -7,10 +7,12 @@ namespace App\Policies;
 use App\Models\Export;
 use App\Models\Project;
 use App\Models\User;
+use App\Story\Models\StoryExport;
 
 /**
  * Export access follows project ownership. A user may only see or download
  * packages they created or that belong to a project they own.
+ * Project exports and Story final packages share this rule.
  */
 class ExportPolicy
 {
@@ -28,7 +30,7 @@ class ExportPolicy
         return $this->ownsProject($user, $project);
     }
 
-    public function view(User $user, Export $export): bool
+    public function view(User $user, Export|StoryExport $export): bool
     {
         return $this->owns($user, $export);
     }
@@ -42,12 +44,12 @@ class ExportPolicy
         return $this->ownsProject($user, $project);
     }
 
-    public function download(User $user, Export $export): bool
+    public function download(User $user, Export|StoryExport $export): bool
     {
         return $this->owns($user, $export);
     }
 
-    private function owns(User $user, Export $export): bool
+    private function owns(User $user, Export|StoryExport $export): bool
     {
         if ($export->user_id === $user->getKey()) {
             return true;

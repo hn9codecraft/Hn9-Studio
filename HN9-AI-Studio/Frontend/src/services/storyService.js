@@ -535,6 +535,40 @@ export function reworkStoryRender(projectId, reelId, renderId, comment, targetKi
   });
 }
 
+export function createStoryExport(projectId, reelId, renderId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/renders/${renderId}/exports`, { method: 'POST' });
+}
+
+export function getStoryExport(projectId, reelId, exportId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/exports/${exportId}`);
+}
+
+export async function downloadStoryExport(projectId, reelId, exportId, filename = 'story-export.zip') {
+  const token = getToken();
+  const base = getApiBaseUrl();
+  const response = await fetch(
+    `${base}/story/projects/${projectId}/reels/${reelId}/exports/${exportId}/download`,
+    {
+      headers: {
+        Accept: 'application/zip',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error('The story export is not available.');
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function setStoryTimelineTransition(projectId, reelId, fromClipId, toClipId, type, durationMs = 0) {
   return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/transitions`, {
     method: 'POST',

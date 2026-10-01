@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\V1\StoryContinuityController;
 use App\Http\Controllers\Api\V1\StorySceneController;
 use App\Http\Controllers\Api\V1\StoryStyleBibleController;
 use App\Http\Controllers\Api\V1\StoryStyleReferenceController;
+use App\Http\Controllers\Api\V1\StoryExportController;
 use App\Http\Controllers\Api\V1\StoryFinalReviewController;
 use App\Http\Controllers\Api\V1\StoryRenderController;
 use App\Http\Controllers\Api\V1\StoryTimelineController;
@@ -325,6 +326,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/submit-review', [StoryFinalReviewController::class, 'submit'])->name('story.projects.reels.renders.submit-review');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/approve', [StoryFinalReviewController::class, 'approve'])->name('story.projects.reels.renders.approve');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/needs-rework', [StoryFinalReviewController::class, 'rework'])->name('story.projects.reels.renders.needs-rework');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/exports', [StoryExportController::class, 'store'])->name('story.projects.reels.renders.exports.store');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/exports/{exportUuid}', [StoryExportController::class, 'show'])->name('story.projects.reels.exports.show');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/exports/{exportUuid}/download', [StoryExportController::class, 'download'])->name('story.projects.reels.exports.download');
     Route::get('story/capabilities', [StoryController::class, 'capabilities'])->name('story.capabilities.index');
     Route::get('story/video/capabilities', [StoryVideoEngineController::class, 'capabilities'])->name('story.video.capabilities');
     Route::get('story/video/providers', [StoryVideoEngineController::class, 'providers'])->name('story.video.providers');

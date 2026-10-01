@@ -5,6 +5,8 @@ import {
   deleteStoryTimelineClip,
   duplicateStoryTimelineClip,
   approveStoryRenderReview,
+  createStoryExport,
+  downloadStoryExport,
   getStoryRenderFileUrl,
   getStoryTimeline,
   replaceStoryTimelineClip,
@@ -34,6 +36,7 @@ export default function StoryTimelinePanel({ projectId }) {
   const [reviewComment, setReviewComment] = useState('');
   const [reworkTargetKind, setReworkTargetKind] = useState('timeline');
   const [reworkTargetId, setReworkTargetId] = useState('');
+  const [storyExport, setStoryExport] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -167,6 +170,7 @@ export default function StoryTimelinePanel({ projectId }) {
               startStoryRender(projectId, reelId)
                 .then((row) => {
                   setRender(row);
+                  setStoryExport(null);
                   if (row?.timeline_id) setReworkTargetId(row.timeline_id);
                 })
                 .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to render the timeline.'));
@@ -251,6 +255,39 @@ export default function StoryTimelinePanel({ projectId }) {
                 >
                   Approve
                 </button>
+              ) : null}
+              {render.review_status === 'approved' ? (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    setError('');
+                    createStoryExport(projectId, reelId, render.id)
+                      .then((row) => setStoryExport(row))
+                      .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to export the story.'));
+                  }}
+                >
+                  Export package
+                </button>
+              ) : null}
+              {storyExport?.status === 'completed' ? (
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm"
+                  onClick={() => {
+                    setError('');
+                    downloadStoryExport(projectId, reelId, storyExport.id, storyExport.filename || 'story-export.zip')
+                      .catch((err) => setError(err instanceof Error ? err.message : 'Unable to download the export.'));
+                  }}
+                >
+                  Download package
+                </button>
+              ) : null}
+              {storyExport ? (
+                <span className="text-secondary align-self-center">
+                  Export {storyExport.status}
+                  {storyExport.size ? ` · ${storyExport.size} bytes` : ''}
+                </span>
               ) : null}
             </div>
             {render.review_status === 'pending_review' ? (
