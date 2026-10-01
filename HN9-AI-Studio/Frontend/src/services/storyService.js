@@ -514,6 +514,27 @@ export async function getStoryRenderFileUrl(projectId, reelId, renderId) {
   return URL.createObjectURL(blob);
 }
 
+export function submitStoryRenderReview(projectId, reelId, renderId, comment = null) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/renders/${renderId}/submit-review`, {
+    method: 'POST',
+    body: { comment },
+  });
+}
+
+export function approveStoryRenderReview(projectId, reelId, renderId, comment = null) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/renders/${renderId}/approve`, {
+    method: 'POST',
+    body: { comment },
+  });
+}
+
+export function reworkStoryRender(projectId, reelId, renderId, comment, targetKind, targetId) {
+  return apiRequest(`/story/projects/${projectId}/reels/${reelId}/renders/${renderId}/needs-rework`, {
+    method: 'POST',
+    body: { comment, target_kind: targetKind, target_id: targetId },
+  });
+}
+
 export function setStoryTimelineTransition(projectId, reelId, fromClipId, toClipId, type, durationMs = 0) {
   return apiRequest(`/story/projects/${projectId}/reels/${reelId}/timeline/transitions`, {
     method: 'POST',
