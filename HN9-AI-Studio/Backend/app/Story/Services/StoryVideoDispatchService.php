@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Story\Services;
 
+use App\Jobs\ProcessStoryVideoJob;
 use App\Models\Project;
 use App\Story\Contracts\StoryCapabilityRouterInterface;
 use App\Story\Contracts\StoryVideoEngineInterface;
 use App\Story\Contracts\StoryVideoProviderAdapterInterface;
 use App\Story\Enums\StoryVideoCapability;
-use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Exceptions\StoryVideoEngineException;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Video\StoryVideoAssetResolver;
@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Submits Story video jobs through the capability router.
- * Vendor names are not used here.
+ * Submits Story video jobs through the capability router, inline or on the
+ * queue. Vendor names are not used here.
  */
 final readonly class StoryVideoDispatchService
 {
@@ -31,6 +31,7 @@ final readonly class StoryVideoDispatchService
         private StoryCapabilityRouterInterface $router,
         private StoryVideoUnitPlanner $units,
         private StoryVideoAssetResolver $assets,
+        private StoryVideoJobRunner $runner,
     ) {}
 
     public function liveSupports(StoryVideoCapability $capability): bool
@@ -125,25 +126,13 @@ final readonly class StoryVideoDispatchService
                 continue;
             }
 
-            try {
-                $submission = $adapter->submit($unitRequest);
-            } catch (StoryVideoEngineException $exception) {
-                $job->forceFill([
-                    'status' => StoryVideoJobStatus::Failed->value,
-                    'error_code' => $exception->errorCode(),
-                    'error_message' => $exception->getMessage(),
-                    'failed_at' => now(),
-                ])->save();
-                throw $exception;
+            if ($this->runner->queued()) {
+                ProcessStoryVideoJob::dispatch($job->id);
+
+                continue;
             }
 
-            $job->forceFill([
-                'operation_id' => $submission->operationId,
-                'model_key' => $submission->modelKey ?? $job->model_key,
-                'status' => $submission->status->value,
-                'request_payload' => $unitRequest->toArray(),
-                'submitted_at' => now(),
-            ])->save();
+            $this->runner->submit($job, $unitRequest);
         }
 
         if (! $first instanceof StoryVideoGenerationJob) {
@@ -156,19 +145,8 @@ final readonly class StoryVideoDispatchService
     public function refresh(Project $project, StoryVideoGenerationJob $job): StoryVideoGenerationJob
     {
         $this->assertOwns($project, $job);
-        $adapter = $this->liveAdapter();
-        if ($adapter === null || $job->provider_key !== self::LIVE_PROVIDER_KEY) {
-            return $job;
-        }
 
-        $status = $adapter->status($job);
-        $job->refresh();
-        if ($status === StoryVideoJobStatus::Processing && ($job->provider_metadata['download_pending'] ?? false) === true) {
-            $adapter->result($job);
-            $job->refresh();
-        }
-
-        return $job;
+        return $this->runner->advance($job);
     }
 
     public function file(Project $project, StoryVideoGenerationJob $job): StreamedResponse
@@ -188,17 +166,6 @@ final readonly class StoryVideoDispatchService
         return Storage::disk($disk)->response($path, basename($path), [
             'Content-Type' => (string) ($storage['mime'] ?? 'video/mp4'),
         ]);
-    }
-
-    private function liveAdapter(): ?StoryVideoProviderAdapterInterface
-    {
-        foreach ($this->router->adapters() as $candidate) {
-            if ($candidate->key() === self::LIVE_PROVIDER_KEY) {
-                return $candidate;
-            }
-        }
-
-        return null;
     }
 
     private function assertOwns(Project $project, StoryVideoGenerationJob $job): void

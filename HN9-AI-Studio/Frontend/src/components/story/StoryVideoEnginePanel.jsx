@@ -376,10 +376,21 @@ export default function StoryVideoEnginePanel({ projectId }) {
               {job ? (
                 <div className="mt-3 small">
                   <p className="mb-1">
-                    Status: {job.status || 'unknown'}
+                    Status: {job.recovering ? 'recovering' : job.status || 'unknown'}
                     {job.capability ? ` · ${storyCapabilityLabel(job.capability)}` : ''}
                   </p>
-                  {job.error_message ? <p className="mb-1 text-danger">{job.error_message}</p> : null}
+                  {job.recovering ? (
+                    <p className="mb-1 text-warning">
+                      The last status check failed. Checking the same job again
+                      {job.max_attempts ? ` (failed check ${job.failed_checks} of ${job.max_attempts}).` : '.'}
+                    </p>
+                  ) : null}
+                  {job.error_message && job.status === 'failed' ? (
+                    <p className="mb-1 text-danger">{job.error_message}</p>
+                  ) : null}
+                  {job.error_message && job.recovering ? (
+                    <p className="mb-1 text-secondary">{job.error_message}</p>
+                  ) : null}
                   <div className="d-flex flex-wrap gap-2">
                     <button type="button" className="btn btn-outline-primary btn-sm" onClick={handleRefreshStatus}>
                       Refresh status
