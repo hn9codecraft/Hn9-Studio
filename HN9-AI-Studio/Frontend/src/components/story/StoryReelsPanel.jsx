@@ -572,13 +572,13 @@ export default function StoryReelsPanel({ projectId, focusReelId = null }) {
                       Ready to generate: {continuity.ready ? 'Yes' : 'No'}
                     </p>
                     <p className="small text-secondary mb-1">
-                      Story bible: {continuity.story_bible?.concept || 'Missing'}
+                      Story context: {continuity.story_bible?.concept || 'Missing'}
                     </p>
                     <p className="small text-secondary mb-1">
                       Characters: {(continuity.characters || []).map((item) => item.name).join(', ') || 'Missing'}
                     </p>
                     <p className="small text-secondary mb-1">
-                      Style: {continuity.style_bible?.visual_style || 'Missing'}
+                      Visual style: {continuity.style_bible?.visual_style || 'Missing'}
                     </p>
                     <p className="small text-secondary mb-0">
                       Previous scene: {continuity.previous_scene?.title || 'None'}

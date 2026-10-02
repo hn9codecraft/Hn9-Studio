@@ -1,125 +1,72 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import StudioWorkflowPicker from '../../components/projects/StudioWorkflowPicker';
 import AlertMessage from '../../components/ui/AlertMessage';
 import EmptyState from '../../components/ui/EmptyState';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { ApiError } from '../../services/apiClient';
-import { listProjects } from '../../services/projectService';
+import { getProject, listProjects, updateProject } from '../../services/projectService';
 import { statusLabel } from '../../services/projectConstants';
-import { storyCapabilityLabel } from '../../services/storyConstants';
-import StoryBibleForm from '../../components/story/StoryBibleForm';
-import StoryCharactersPanel from '../../components/story/StoryCharactersPanel';
-import StoryPlannerPanel from '../../components/story/StoryPlannerPanel';
-import StoryReelsPanel from '../../components/story/StoryReelsPanel';
-import StoryStylePanel from '../../components/story/StoryStylePanel';
-import StoryVideoEnginePanel from '../../components/story/StoryVideoEnginePanel';
-import StoryAudioStudioPanel from '../../components/story/StoryAudioStudioPanel';
-import StoryTimelinePanel from '../../components/story/StoryTimelinePanel';
-import StoryHistoryPanel from '../../components/story/StoryHistoryPanel';
-import { getStoryEntry, getStoryWorkspace } from '../../services/storyService';
+import {
+  normalizeStudioWorkflows,
+  STUDIO_GROUPS,
+  STUDIO_PROJECT_TOOLS,
+  studioWorkflowLabel,
+  visibleStudioSections,
+} from '../../services/storyConstants';
+import { getStoryProjectRevision, getStoryWorkspace } from '../../services/storyService';
+
+const StoryBibleForm = lazy(() => import('../../components/story/StoryBibleForm'));
+const StoryCharactersPanel = lazy(() => import('../../components/story/StoryCharactersPanel'));
+const StoryPlannerPanel = lazy(() => import('../../components/story/StoryPlannerPanel'));
+const StoryReelsPanel = lazy(() => import('../../components/story/StoryReelsPanel'));
+const StoryStylePanel = lazy(() => import('../../components/story/StoryStylePanel'));
+const StoryVideoEnginePanel = lazy(() => import('../../components/story/StoryVideoEnginePanel'));
+const StoryAudioStudioPanel = lazy(() => import('../../components/story/StoryAudioStudioPanel'));
+const StoryTimelinePanel = lazy(() => import('../../components/story/StoryTimelinePanel'));
+const StoryHistoryPanel = lazy(() => import('../../components/story/StoryHistoryPanel'));
 
 export default function ProjectStoryPage() {
   const { projectId } = useParams();
-  const navigate = useNavigate();
-  const [entry, setEntry] = useState(null);
+
+  return projectId ? <StudioWorkspace key={projectId} projectId={projectId} /> : <StudioProjectPicker />;
+}
+
+function StudioProjectPicker() {
   const [projects, setProjects] = useState([]);
-  const [workspace, setWorkspace] = useState(null);
-  const [section, setSection] = useState('bible');
-  const [focusReelId, setFocusReelId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [workspaceLoading, setWorkspaceLoading] = useState(Boolean(projectId));
   const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
-      setLoading(true);
-      setError('');
-
-      try {
-        const [module, projectResult] = await Promise.all([getStoryEntry(), listProjects({ perPage: 50 })]);
-        if (!cancelled) {
-          setEntry(module);
-          setProjects(Array.isArray(projectResult.data) ? projectResult.data : []);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Unable to load Project Story.');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    load();
+    listProjects({ perPage: 50, cache: true })
+      .then((result) => {
+        if (!cancelled) setProjects(Array.isArray(result.data) ? result.data : []);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Unable to load your projects.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  useEffect(() => {
-    if (!projectId) {
-      setWorkspace(null);
-      setWorkspaceLoading(false);
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    async function loadWorkspace() {
-      setWorkspaceLoading(true);
-      setError('');
-
-      try {
-        const result = await getStoryWorkspace(projectId);
-        if (!cancelled) {
-          setWorkspace(result);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setWorkspace(null);
-          setError(err instanceof ApiError ? err.message : 'Unable to open that Project Story workspace.');
-        }
-      } finally {
-        if (!cancelled) {
-          setWorkspaceLoading(false);
-        }
-      }
-    }
-
-    loadWorkspace();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId]);
-
-  const selectedProject = useMemo(
-    () => projects.find((project) => project.id === projectId) || workspace?.project || null,
-    [projectId, projects, workspace],
-  );
-
-  function handleSelect(event) {
-    const nextId = event.target.value;
-    navigate(nextId ? `/story/${nextId}` : '/story');
-  }
-
-  const capabilities = Array.isArray(entry?.capabilities) ? entry.capabilities : [];
-
   return (
     <div className="story-page">
       <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <h1 className="h3 mb-2">Project Story</h1>
+          <h1 className="h3 mb-2">Creative Production Studio</h1>
           <p className="page-lede mb-0">
-            {entry?.description ||
-              'A dedicated workspace for long-form story production. Select an existing project to continue.'}
+            Every project has a studio for planning, producing and finishing its content. Choose a project to open it.
           </p>
         </div>
+        <Link className="btn btn-primary" to="/projects/new">
+          New Project
+        </Link>
       </div>
 
       {error ? (
@@ -128,13 +75,13 @@ export default function ProjectStoryPage() {
         </div>
       ) : null}
 
-      {loading ? <LoadingSpinner label="Loading Project Story…" /> : null}
+      {loading ? <StudioSkeleton rows={3} /> : null}
 
-      {!loading && projects.length === 0 ? (
+      {!loading && !error && projects.length === 0 ? (
         <EmptyState
-          icon="bi-journal-richtext"
-          title="No projects available"
-          description="Project Story uses your existing projects. Create a project first, then return here to open its story workspace."
+          icon="bi-camera-reels"
+          title="No projects yet"
+          description="Create a project to get its Creative Studio."
         >
           <Link className="btn btn-primary" to="/projects/new">
             New Project
@@ -143,200 +90,395 @@ export default function ProjectStoryPage() {
       ) : null}
 
       {!loading && projects.length > 0 ? (
-        <div className="card border-0 glass-card mb-4">
-          <div className="card-body">
-            <label className="form-label" htmlFor="story-project">
-              Project
-            </label>
-            <select
-              id="story-project"
-              className="form-select"
-              value={projectId || ''}
-              onChange={handleSelect}
-            >
-              <option value="">Select a project</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      ) : null}
+        <div className="row g-3">
+          {projects.map((project) => {
+            const workflows = normalizeStudioWorkflows(project.settings?.studio_modules);
 
-      {!loading && projects.length > 0 && !projectId ? (
-        <EmptyState
-          icon="bi-journal-richtext"
-          title="Select a project"
-          description="Choose an existing project to open its Project Story workspace. Later story modules will live here."
-        />
-      ) : null}
-
-      {workspaceLoading ? <LoadingSpinner label="Opening story workspace…" /> : null}
-
-      {!workspaceLoading && workspace ? (
-        <div className="card border-0 glass-card story-workspace-card">
-          <div className="card-body">
-            <p className="text-uppercase small text-secondary mb-2">Selected project</p>
-            <h2 className="h4 mb-2">{selectedProject?.name || workspace.project?.name}</h2>
-            <p className="text-secondary mb-3">
-              Status: {statusLabel(selectedProject?.status || workspace.project?.status)}
-            </p>
-            <p className="mb-4">
-              This project has a Project Story workspace. Configure Story Bible, Characters, Style Bible, Story Planner, Reels / Scenes, Video Engine, and Audio Studio below.
-            </p>
-            <dl className="story-meta mb-0">
-              <div>
-                <dt>Workspace</dt>
-                <dd>{workspace.id}</dd>
-              </div>
-              <div>
-                <dt>Workspace status</dt>
-                <dd>{workspace.status}</dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-      ) : null}
-
-      {!workspaceLoading && workspace ? (
-        <div className="story-section-tabs mb-3" role="tablist" aria-label="Project Story sections">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'bible'}
-            className={`btn ${section === 'bible' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSection('bible')}
-          >
-            Story Bible
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'characters'}
-            className={`btn ${section === 'characters' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSection('characters')}
-          >
-            Characters
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'style'}
-            className={`btn ${section === 'style' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSection('style')}
-          >
-            Style Bible
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'planner'}
-            className={`btn ${section === 'planner' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSection('planner')}
-          >
-            Story Planner
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'reels'}
-            className={`btn ${section === 'reels' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSection('reels')}
-          >
-            Reels / Scenes
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'video'}
-            className={`btn ${section === 'video' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSection('video')}
-          >
-            Video Engine
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'audio'}
-            className={`btn ${section === 'audio' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSection('audio')}
-          >
-            Audio Studio
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'timeline'}
-            className={`btn ${section === 'timeline' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSection('timeline')}
-          >
-            Timeline
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'history'}
-            className={`btn ${section === 'history' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSection('history')}
-          >
-            History
-          </button>
-        </div>
-      ) : null}
-
-      {!workspaceLoading && workspace && section === 'bible' ? <StoryBibleForm projectId={projectId} /> : null}
-      {!workspaceLoading && workspace && section === 'characters' ? (
-        <StoryCharactersPanel projectId={projectId} />
-      ) : null}
-      {!workspaceLoading && workspace && section === 'style' ? (
-        <StoryStylePanel projectId={projectId} />
-      ) : null}
-      {!workspaceLoading && workspace && section === 'planner' ? (
-        <StoryPlannerPanel
-          projectId={projectId}
-          onMaterialized={(reelId) => {
-            setFocusReelId(reelId || null);
-            setSection('reels');
-          }}
-        />
-      ) : null}
-      {!workspaceLoading && workspace && section === 'reels' ? (
-        <StoryReelsPanel projectId={projectId} focusReelId={focusReelId} />
-      ) : null}
-      {!workspaceLoading && workspace && section === 'video' ? (
-        <StoryVideoEnginePanel projectId={projectId} />
-      ) : null}
-      {!workspaceLoading && workspace && section === 'audio' ? (
-        <StoryAudioStudioPanel projectId={projectId} />
-      ) : null}
-      {!workspaceLoading && workspace && section === 'timeline' ? (
-        <StoryTimelinePanel projectId={projectId} />
-      ) : null}
-      {!workspaceLoading && workspace && section === 'history' ? (
-        <StoryHistoryPanel projectId={projectId} />
-      ) : null}
-
-      {!loading && capabilities.length > 0 ? (
-        <section className="story-capability-list mt-4" aria-label="Story capabilities">
-          <h2 className="h5 mb-3">Capability foundation</h2>
-          <div className="row g-3">
-            {capabilities.map((item) => (
-              <div className="col-12 col-md-6 col-xl-4" key={item.capability}>
-                <div className="card border-0 glass-card h-100">
-                  <div className="card-body">
-                    <h3 className="h6 mb-2">{item.label || storyCapabilityLabel(item.capability)}</h3>
-                    <p className="small text-secondary mb-0">
-                      {item.available ? 'Available' : 'Reserved for a later Project Story sprint.'}
-                    </p>
+            return (
+              <div className="col-12 col-md-6 col-xl-4" key={project.id}>
+                <Link
+                  to={`/studio/${project.id}`}
+                  className="project-card glass-card card border-0 h-100 text-decoration-none"
+                >
+                  <div className="card-body d-flex flex-column">
+                    <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
+                      <h2 className="card-heading h6 mb-0">{project.name}</h2>
+                      <span className={`status-pill status-${project.status || 'draft'}`}>
+                        {statusLabel(project.status)}
+                      </span>
+                    </div>
+                    <WorkflowChips workflows={workflows} />
+                    <span className="small text-secondary mt-auto pt-3">
+                      Open studio <i className="bi bi-arrow-right" aria-hidden="true" />
+                    </span>
                   </div>
-                </div>
+                </Link>
               </div>
-            ))}
-          </div>
-        </section>
+            );
+          })}
+        </div>
       ) : null}
+    </div>
+  );
+}
+
+function StudioWorkspace({ projectId }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [workspace, setWorkspace] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [focusReelId, setFocusReelId] = useState(null);
+  const [panelKeys, setPanelKeys] = useState({});
+  const seenRevisions = useRef({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getStoryWorkspace(projectId)
+      .then((result) => {
+        if (!cancelled) setWorkspace(result);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : 'Unable to open this studio.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  const workflows = normalizeStudioWorkflows(workspace?.project?.studio_modules);
+  const sections = visibleStudioSections(workflows);
+  const requested = searchParams.get('section') || 'overview';
+  const section = sections.some((item) => item.key === requested) ? requested : 'overview';
+  const [visited, setVisited] = useState(() => [section]);
+  const mounted = visited.includes(section) ? visited : [...visited, section];
+
+  function selectSection(next) {
+    if (next === section) return;
+
+    // Sections stay mounted after their first visit. One is rebuilt only when
+    // this client changed the project's story data since it was last shown.
+    const revision = getStoryProjectRevision(projectId);
+    seenRevisions.current[section] = revision;
+    const seen = seenRevisions.current[next];
+    if (seen !== undefined && seen < revision) {
+      setPanelKeys((keys) => ({ ...keys, [next]: (keys[next] || 0) + 1 }));
+    }
+    seenRevisions.current[next] = revision;
+
+    setVisited((current) => (current.includes(next) ? current : [...current, next]));
+    setSearchParams(next === 'overview' ? {} : { section: next }, { replace: true });
+  }
+
+  if (loading) {
+    return (
+      <div className="story-page">
+        <StudioSkeleton rows={2} hero />
+      </div>
+    );
+  }
+
+  if (error || !workspace) {
+    return (
+      <div className="story-page">
+        <h1 className="visually-hidden">Creative Production Studio</h1>
+        <Link to="/studio" className="activity-link small text-decoration-none">
+          <i className="bi bi-arrow-left me-1" aria-hidden="true" />
+          All studios
+        </Link>
+        <div className="mt-4">
+          <AlertMessage>{error || 'Studio not found.'}</AlertMessage>
+        </div>
+      </div>
+    );
+  }
+
+  const project = workspace.project || {};
+
+  function renderPanel(key) {
+    switch (key) {
+      case 'overview':
+        return (
+          <StudioOverview
+            projectId={projectId}
+            sections={sections}
+            workflows={workflows}
+            onOpen={selectSection}
+            onWorkflowsSaved={(next) =>
+              setWorkspace((current) => ({
+                ...current,
+                project: { ...current.project, studio_modules: next.length > 0 ? next : null },
+              }))
+            }
+          />
+        );
+      case 'story':
+        return <StoryBibleForm projectId={projectId} />;
+      case 'characters':
+        return <StoryCharactersPanel projectId={projectId} />;
+      case 'style':
+        return <StoryStylePanel projectId={projectId} />;
+      case 'planner':
+        return (
+          <StoryPlannerPanel
+            projectId={projectId}
+            onMaterialized={(reelId) => {
+              setFocusReelId(reelId || null);
+              selectSection('reels');
+            }}
+          />
+        );
+      case 'reels':
+        return <StoryReelsPanel projectId={projectId} focusReelId={focusReelId} />;
+      case 'video':
+        return <StoryVideoEnginePanel projectId={projectId} />;
+      case 'audio':
+        return <StoryAudioStudioPanel projectId={projectId} />;
+      case 'timeline':
+        return <StoryTimelinePanel projectId={projectId} />;
+      case 'history':
+        return <StoryHistoryPanel projectId={projectId} />;
+      default:
+        return null;
+    }
+  }
+
+  return (
+    <div className="story-page">
+      <section className="page-section page-section--flush workspace-hero glass-card card border-0">
+        <div className="card-body">
+          <div className="d-flex flex-wrap justify-content-between gap-3 mb-3">
+            <Link to="/studio" className="activity-link small text-decoration-none">
+              <i className="bi bi-arrow-left me-1" aria-hidden="true" />
+              All studios
+            </Link>
+            <span className={`status-pill status-${project.status || 'draft'}`}>{statusLabel(project.status)}</span>
+          </div>
+          <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+              <p className="section-kicker mb-1">Creative Production Studio</p>
+              <h1 className="section-title mb-2">{project.name}</h1>
+              <WorkflowChips workflows={workflows} />
+            </div>
+            <Link className="btn btn-outline-primary" to={`/projects/${projectId}`}>
+              Project details
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <nav className="studio-nav mb-4" aria-label="Studio sections">
+        {STUDIO_GROUPS.map((group) => {
+          const items = sections.filter((item) => item.group === group.key);
+          if (items.length === 0) return null;
+
+          return (
+            <div className="studio-nav-group" key={group.key} role="tablist" aria-label={group.label || 'Start'}>
+              {group.label ? <span className="studio-nav-label">{group.label}</span> : null}
+              <div className="studio-nav-items">
+                {items.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    role="tab"
+                    id={`studio-tab-${item.key}`}
+                    aria-selected={section === item.key}
+                    aria-controls={`studio-panel-${item.key}`}
+                    className={`workspace-tab ${section === item.key ? 'active' : ''}`}
+                    onClick={() => selectSection(item.key)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </nav>
+
+      {sections
+        .filter((item) => mounted.includes(item.key))
+        .map((item) => (
+          <div
+            key={`${item.key}-${panelKeys[item.key] || 0}`}
+            role="tabpanel"
+            id={`studio-panel-${item.key}`}
+            aria-labelledby={`studio-tab-${item.key}`}
+            hidden={item.key !== section}
+          >
+            <Suspense fallback={<StudioSkeleton rows={1} />}>{renderPanel(item.key)}</Suspense>
+          </div>
+        ))}
+    </div>
+  );
+}
+
+function StudioOverview({ projectId, sections, workflows, onOpen, onWorkflowsSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(workflows);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const steps = sections.filter((item) => item.key !== 'overview' && item.key !== 'history');
+  const tools = STUDIO_PROJECT_TOOLS.filter(
+    (tool) => !tool.workflow || workflows.length === 0 || workflows.includes(tool.workflow),
+  );
+
+  async function saveWorkflows() {
+    setSaving(true);
+    setError('');
+
+    try {
+      // Project updates replace the whole settings object, so merge with what is stored.
+      const current = await getProject(projectId);
+      const stored = current?.settings && typeof current.settings === 'object' && !Array.isArray(current.settings)
+        ? current.settings
+        : {};
+      const { studio_modules: _previous, ...rest } = stored;
+      await updateProject(projectId, { settings: draft.length > 0 ? { ...rest, studio_modules: draft } : rest });
+      onWorkflowsSaved(draft);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Unable to save workflows.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="row g-4">
+      <div className="col-lg-7">
+        <div className="card border-0 glass-card h-100">
+          <div className="card-body">
+            <h2 className="card-heading h5 mb-1">Your production steps</h2>
+            <p className="text-secondary small mb-3">Work top to bottom. Every step saves on its own.</p>
+            <ol className="studio-steps list-unstyled mb-0">
+              {steps.map((item, index) => (
+                <li key={item.key}>
+                  <button type="button" className="studio-step" onClick={() => onOpen(item.key)}>
+                    <span className="studio-step-index">{index + 1}</span>
+                    <span className="studio-step-text">
+                      <span className="studio-step-title">{item.label}</span>
+                      <span className="studio-step-desc">{item.description}</span>
+                    </span>
+                    <i className="bi bi-chevron-right" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ol>
+            {steps.length === 0 ? (
+              <p className="text-secondary mb-0">Use the project tools for this workflow.</p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="col-lg-5 d-flex flex-column gap-4">
+        <div className="card border-0 glass-card">
+          <div className="card-body">
+            <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
+              <h2 className="card-heading h5 mb-0">Workflows</h2>
+              {!editing ? (
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm"
+                  onClick={() => {
+                    setDraft(workflows);
+                    setError('');
+                    setEditing(true);
+                  }}
+                >
+                  Change
+                </button>
+              ) : null}
+            </div>
+            {error ? (
+              <div className="mb-3">
+                <AlertMessage>{error}</AlertMessage>
+              </div>
+            ) : null}
+            {editing ? (
+              <>
+                <StudioWorkflowPicker value={draft} onChange={setDraft} idPrefix="studio-workflow" disabled={saving} />
+                <div className="d-flex gap-2 mt-3">
+                  <button type="button" className="btn btn-primary btn-sm" onClick={saveWorkflows} disabled={saving}>
+                    {saving ? 'Saving…' : 'Save workflows'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={() => setEditing(false)}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <WorkflowChips workflows={workflows} />
+                <p className="small text-secondary mt-2 mb-0">
+                  {workflows.length === 0
+                    ? 'No workflow chosen, so every studio step is shown.'
+                    : 'Only the steps for these workflows are shown.'}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="card border-0 glass-card">
+          <div className="card-body">
+            <h2 className="card-heading h5 mb-3">Project tools</h2>
+            <div className="studio-tool-list">
+              {tools.map((tool) => (
+                <Link key={tool.key} className="studio-tool" to={`/projects/${projectId}/${tool.path}`}>
+                  <i className={`bi ${tool.icon}`} aria-hidden="true" />
+                  <span>{tool.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowChips({ workflows }) {
+  if (workflows.length === 0) {
+    return <span className="studio-chip studio-chip--muted">All workflows</span>;
+  }
+
+  return (
+    <div className="studio-chip-list">
+      {workflows.map((item) => (
+        <span className="studio-chip" key={item}>
+          {studioWorkflowLabel(item)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function StudioSkeleton({ rows = 2, hero = false }) {
+  return (
+    <div className="studio-skeleton" aria-busy="true" aria-live="polite">
+      <span className="visually-hidden">Loading studio…</span>
+      {hero ? <div className="studio-skeleton-block studio-skeleton-hero" /> : null}
+      {hero ? <div className="studio-skeleton-block studio-skeleton-nav" /> : null}
+      <div className="row g-3">
+        {Array.from({ length: rows * 3 }, (_, index) => (
+          <div className="col-12 col-md-6 col-xl-4" key={index}>
+            <div className="studio-skeleton-block studio-skeleton-card" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

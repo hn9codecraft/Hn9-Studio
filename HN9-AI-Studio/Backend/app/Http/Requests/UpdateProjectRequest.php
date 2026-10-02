@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Enums\ProjectStatus;
 use App\Rules\EnumValue;
+use App\Support\StudioWorkflows;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -30,7 +31,7 @@ class UpdateProjectRequest extends FormRequest
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'type' => ['sometimes', 'nullable', 'string', 'max:100'],
             'status' => ['sometimes', 'string', new EnumValue(ProjectStatus::class)],
-            'settings' => ['sometimes', 'array'],
+            'settings' => ['sometimes', 'array', StudioWorkflows::settingsRule()],
             'metadata' => ['sometimes', 'array'],
         ];
     }

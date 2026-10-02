@@ -7,7 +7,7 @@ const TITLES = {
   '/dashboard': 'Dashboard',
   '/projects': 'Projects',
   '/projects/new': 'New Project',
-  '/story': 'Project Story',
+  '/studio': 'Creative Production Studio',
   '/generations': 'Generations',
   '/providers': 'Providers',
   '/settings': 'Settings',
@@ -38,8 +38,8 @@ function pageTitle(pathname) {
     return 'Activity Studio';
   }
 
-  if (pathname.startsWith('/story')) {
-    return 'Project Story';
+  if (pathname.startsWith('/studio')) {
+    return 'Creative Production Studio';
   }
 
   if (pathname.startsWith('/projects/')) {

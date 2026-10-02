@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Story\Models\StoryWorkspace;
+use App\Support\StudioWorkflows;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -28,6 +29,7 @@ class StoryWorkspaceResource extends JsonResource
                 'name' => $project->name,
                 'slug' => $project->slug,
                 'status' => $project->status,
+                'studio_modules' => StudioWorkflows::fromSettings($project->settings),
             ],
             'abilities' => [
                 'view' => true,

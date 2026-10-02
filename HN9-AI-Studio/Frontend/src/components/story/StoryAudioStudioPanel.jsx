@@ -46,7 +46,7 @@ export default function StoryAudioStudioPanel({ projectId }) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Unable to load Audio Studio.');
+          setError(err instanceof ApiError ? err.message : 'Unable to load audio.');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -167,15 +167,15 @@ export default function StoryAudioStudioPanel({ projectId }) {
   }
 
   if (loading) {
-    return <LoadingSpinner label="Loading Audio Studio…" />;
+    return <LoadingSpinner label="Loading audio…" />;
   }
 
   return (
     <div className="story-audio-studio">
       <div className="mb-3">
-        <h2 className="h5 mb-1">Audio Studio</h2>
+        <h2 className="h5 mb-1">Audio</h2>
         <p className="text-secondary small mb-0">
-          Create scene audio by role. Actions use role names only — not provider brands.
+          Add voice, music or sound effects to a scene. Pick a reel and scene first.
         </p>
       </div>
 

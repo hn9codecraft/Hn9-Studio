@@ -82,7 +82,7 @@ export default function StoryBibleForm({ projectId }) {
         if (!cancelled) {
           setValues(formFromBible(null));
           setConfigured(false);
-          setError(err instanceof ApiError ? err : new ApiError('Unable to load the Story Bible.'));
+          setError(err instanceof ApiError ? err : new ApiError('Unable to load the story context.'));
         }
       } finally {
         if (!cancelled) {
@@ -131,29 +131,29 @@ export default function StoryBibleForm({ projectId }) {
       const bible = await updateStoryBible(projectId, payload);
       setValues(formFromBible(bible));
       setConfigured(Boolean(bible?.configured));
-      setNotice('Story Bible saved.');
+      setNotice('Story context saved.');
     } catch (err) {
-      setError(err instanceof ApiError ? err : new ApiError('Unable to save the Story Bible.'));
+      setError(err instanceof ApiError ? err : new ApiError('Unable to save the story context.'));
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
-    return <LoadingSpinner label="Loading Story Bible…" />;
+    return <LoadingSpinner label="Loading story context…" />;
   }
 
   return (
-    <section className="story-bible mt-4" aria-labelledby="story-bible-heading">
+    <section className="story-bible" aria-labelledby="story-bible-heading">
       <div className="card border-0 glass-card">
         <div className="card-body">
           <h2 id="story-bible-heading" className="h4 mb-2">
-            Story Bible
+            Story Context
           </h2>
           <p className="page-lede mb-4">
             {configured
-              ? 'Permanent story context for this project. Later planner and video modules will read these values.'
-              : 'This Story Bible is empty. Enter the project’s permanent story context and save it.'}
+              ? 'The core story details for this project. The planner, scenes and video steps all use these values.'
+              : 'No story context yet. Describe the concept, audience and tone once, and every later step will reuse it.'}
           </p>
 
           {notice ? (
@@ -404,7 +404,7 @@ export default function StoryBibleForm({ projectId }) {
 
             <div className="mt-4">
               <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? 'Saving…' : 'Save Story Bible'}
+                {saving ? 'Saving…' : 'Save story context'}
               </button>
             </div>
           </form>

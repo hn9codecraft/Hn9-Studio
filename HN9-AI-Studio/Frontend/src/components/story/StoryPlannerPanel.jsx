@@ -204,11 +204,11 @@ export default function StoryPlannerPanel({ projectId, onMaterialized = null }) 
   }
 
   return (
-    <section className="story-planner mt-4" aria-label="Story Planner">
+    <section className="story-planner" aria-label="Story Planner">
       <div className="mb-3">
         <h2 className="h4 mb-1">Story Planner</h2>
         <p className="text-secondary mb-0">
-          Convert a story idea and Project Story context into a structured timed plan. No video is generated here.
+          Turn a story idea and this project&apos;s story context into a timed scene plan. No video is generated here.
         </p>
       </div>
 
@@ -221,14 +221,14 @@ export default function StoryPlannerPanel({ projectId, onMaterialized = null }) 
             <div className="card-body">
               <h3 className="h6">Project context</h3>
               <p className="small text-secondary mb-2">
-                Story Bible: {bible?.configured ? 'configured' : 'empty'}
+                Story context: {bible?.configured ? 'configured' : 'empty'}
               </p>
               <p className="small text-secondary mb-2">
                 Characters: {characters.length}
                 {characters[0] ? ` (e.g. ${characters[0].name})` : ''}
               </p>
               <p className="small text-secondary mb-0">
-                Style: {style?.configured ? (style.visual_style || 'configured') : 'empty'}
+                Visual style: {style?.configured ? (style.visual_style || 'configured') : 'empty'}
               </p>
             </div>
           </div>

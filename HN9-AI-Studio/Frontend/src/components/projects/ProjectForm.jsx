@@ -9,6 +9,8 @@ export default function ProjectForm({
   submitLabel,
   creating = false,
   currentStatus,
+  children = null,
+  actions = null,
 }) {
   const statuses = allowedStatuses(currentStatus || values.status || 'draft', { creating });
   const types = PROJECT_TYPES.some((item) => item.value === values.type)
@@ -89,9 +91,13 @@ export default function ProjectForm({
         </div>
       </div>
 
-      <button className="btn btn-primary" type="submit" disabled={submitting}>
-        {submitting ? 'Saving…' : submitLabel}
-      </button>
+      {children}
+
+      {actions || (
+        <button className="btn btn-primary" type="submit" disabled={submitting}>
+          {submitting ? 'Saving…' : submitLabel}
+        </button>
+      )}
     </form>
   );
 }

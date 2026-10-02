@@ -303,12 +303,12 @@ export default function StoryCharactersPanel({ projectId }) {
   }
 
   return (
-    <section className="story-characters mt-4" aria-label="Characters">
+    <section className="story-characters" aria-label="Characters">
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <div>
           <h2 className="h4 mb-1">Characters</h2>
           <p className="text-secondary mb-0">
-            Character Bible and reference versions for later story continuity.
+            Character context and approved reference images keep people and subjects consistent across scenes.
           </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={handleCreate} disabled={saving}>
@@ -323,7 +323,7 @@ export default function StoryCharactersPanel({ projectId }) {
         <EmptyState
           icon="bi-people"
           title="No characters yet"
-          description="Create a character bible entry, then upload or generate a reference image."
+          description="Add a character, describe them, then upload or generate a reference image."
         />
       ) : (
         <div className="row g-4">
@@ -355,7 +355,7 @@ export default function StoryCharactersPanel({ projectId }) {
                 <form className="card border-0 glass-card mb-4" onSubmit={handleSave}>
                   <div className="card-body">
                     <div className="d-flex flex-wrap justify-content-between gap-2 mb-3">
-                      <h3 className="h5 mb-0">Character Bible</h3>
+                      <h3 className="h5 mb-0">Character Context</h3>
                       <button
                         type="button"
                         className="btn btn-outline-secondary btn-sm"

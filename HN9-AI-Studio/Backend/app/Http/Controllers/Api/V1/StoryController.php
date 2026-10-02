@@ -29,8 +29,8 @@ class StoryController extends Controller
 
         return ApiResponse::success([
             'module' => 'project_story',
-            'title' => 'Project Story',
-            'description' => 'A dedicated workspace for long-form story production, selected from an existing project.',
+            'title' => 'Creative Production Studio',
+            'description' => 'Plan, produce and finish story, image, video and audio content inside an existing project.',
             'capabilities' => array_map(
                 static fn (StoryCapabilityRoute $route): array => $route->toArray(),
                 $this->stories->capabilityCatalog(),

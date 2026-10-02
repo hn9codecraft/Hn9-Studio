@@ -1,6 +1,17 @@
 import { apiRequest } from './apiClient';
+import { cachedRequest, invalidateCachedRequests } from './requestCache';
+import { markStoryProjectChanged } from './storyService';
 
-export function listProjects({ perPage = 50, search = '', status = '', sort = 'created_at', order = 'desc' } = {}) {
+const PROJECT_LIST_TTL_MS = 60 * 1000;
+
+export function listProjects({
+  perPage = 50,
+  search = '',
+  status = '',
+  sort = 'created_at',
+  order = 'desc',
+  cache = false,
+} = {}) {
   const params = new URLSearchParams();
   params.set('perPage', String(perPage));
   params.set('sort', sort);
@@ -14,11 +25,15 @@ export function listProjects({ perPage = 50, search = '', status = '', sort = 'c
     params.set('status', status);
   }
 
-  return apiRequest(`/projects?${params.toString()}`, { withMeta: true }).then((result) => {
-    const raw = result?.data;
-    const data = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-    return { data, meta: result?.meta ?? null };
-  });
+  const path = `/projects?${params.toString()}`;
+  const load = () =>
+    apiRequest(path, { withMeta: true }).then((result) => {
+      const raw = result?.data;
+      const data = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+      return { data, meta: result?.meta ?? null };
+    });
+
+  return cache ? cachedRequest(`projects:${path}`, load, { ttlMs: PROJECT_LIST_TTL_MS }) : load();
 }
 
 export function getProject(projectId) {
@@ -26,15 +41,26 @@ export function getProject(projectId) {
 }
 
 export function createProject(payload) {
-  return unwrap(apiRequest('/projects', { method: 'POST', body: payload }));
+  return unwrap(apiRequest('/projects', { method: 'POST', body: payload }).finally(() => invalidateProjectLists()));
 }
 
 export function updateProject(projectId, payload) {
-  return unwrap(apiRequest(`/projects/${projectId}`, { method: 'PATCH', body: payload }));
+  return unwrap(
+    apiRequest(`/projects/${projectId}`, { method: 'PATCH', body: payload }).finally(() =>
+      invalidateProjectLists(projectId),
+    ),
+  );
 }
 
 export function deleteProject(projectId) {
-  return apiRequest(`/projects/${projectId}`, { method: 'DELETE' });
+  return apiRequest(`/projects/${projectId}`, { method: 'DELETE' }).finally(() => invalidateProjectLists(projectId));
+}
+
+function invalidateProjectLists(projectId = null) {
+  invalidateCachedRequests('projects:');
+  if (projectId) {
+    markStoryProjectChanged(projectId);
+  }
 }
 
 async function unwrap(promise) {

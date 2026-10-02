@@ -10,7 +10,6 @@ import {
   generateStoryStyleReference,
   getStoryStyle,
   getStoryStyleReferenceFileUrl,
-  initializeStoryStyle,
   listStoryStyleReferences,
   rejectStoryStyleReference,
   submitStoryStyleReferenceReview,
@@ -112,11 +111,10 @@ export default function StoryStylePanel({ projectId }) {
       setLoading(true);
       setError('');
       try {
-        await initializeStoryStyle(projectId);
-        if (!cancelled) await refresh();
+        await refresh();
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Unable to load Style Bible.');
+          setError(err instanceof ApiError ? err.message : 'Unable to load the visual style.');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -143,9 +141,9 @@ export default function StoryStylePanel({ projectId }) {
     try {
       const updated = await updateStoryStyle(projectId, form);
       setStyle(updated);
-      setMessage('Style Bible saved.');
+      setMessage('Visual style saved.');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Unable to save Style Bible.');
+      setError(err instanceof ApiError ? err.message : 'Unable to save the visual style.');
       setFieldError(err instanceof ApiError ? err : null);
     } finally {
       setSaving(false);
@@ -213,15 +211,15 @@ export default function StoryStylePanel({ projectId }) {
   }
 
   if (loading) {
-    return <LoadingSpinner label="Loading Style Bible…" />;
+    return <LoadingSpinner label="Loading visual style…" />;
   }
 
   return (
-    <section className="story-style mt-4" aria-label="Style Bible">
+    <section className="story-style" aria-label="Visual Style Context">
       <div className="mb-3">
-        <h2 className="h4 mb-1">Style Bible</h2>
+        <h2 className="h4 mb-1">Visual Style Context</h2>
         <p className="text-secondary mb-0">
-          Persistent visual direction for later story planner and video modules.
+          The look and feel every image, scene and video in this project should follow.
         </p>
       </div>
 
@@ -282,7 +280,7 @@ export default function StoryStylePanel({ projectId }) {
           </div>
           <div className="mt-3">
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : 'Save Style Bible'}
+              {saving ? 'Saving…' : 'Save visual style'}
             </button>
           </div>
         </div>

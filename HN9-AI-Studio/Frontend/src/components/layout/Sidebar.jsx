@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: 'bi-grid-1x2' },
   { to: '/projects', label: 'Projects', icon: 'bi-folder2-open' },
-  { to: '/story', label: 'Project Story', icon: 'bi-journal-richtext' },
+  { to: '/studio', label: 'Creative Studio', icon: 'bi-camera-reels' },
   { to: '/generations', label: 'Generations', icon: 'bi-stars' },
   { to: '/providers', label: 'Providers', icon: 'bi-hdd-network' },
   { to: '/settings', label: 'Settings', icon: 'bi-gear' },
@@ -25,7 +25,7 @@ export default function Sidebar() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to !== '/projects' && item.to !== '/story'}
+            end={item.to !== '/projects' && item.to !== '/studio'}
             className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
           >
             <span className="sidebar-link-icon" aria-hidden="true">

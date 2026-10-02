@@ -63,7 +63,7 @@ export default function StoryVideoEnginePanel({ projectId }) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Unable to load video engine catalog.');
+          setError(err instanceof ApiError ? err.message : 'Unable to load video options.');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -225,12 +225,11 @@ export default function StoryVideoEnginePanel({ projectId }) {
   }
 
   return (
-    <section className="story-video-engine mt-4" aria-label="Video Engine">
+    <section className="story-video-engine" aria-label="Video generation">
       <div className="mb-3">
-        <h2 className="h4 mb-1">Video Engine</h2>
+        <h2 className="h4 mb-1">Video generation</h2>
         <p className="text-secondary mb-0">
-          Start Text to Video, Image to Video, or Reference to Video for this project.
-          Job status stays on the private story record.
+          Create video from a text prompt, an image, or an approved character or style reference.
         </p>
       </div>
 
