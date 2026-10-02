@@ -20,4 +20,5 @@ enum StoryVideoErrorCode: string
     case InvalidProviderResponse = 'INVALID_PROVIDER_RESPONSE';
     case UnknownProviderError = 'UNKNOWN_PROVIDER_ERROR';
     case GenerationNotEnabled = 'GENERATION_NOT_ENABLED';
+    case SubmissionUnconfirmed = 'SUBMISSION_UNCONFIRMED';
 }

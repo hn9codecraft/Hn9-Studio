@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Story\Video\Adapters;
 
+use App\AI\Exceptions\AIException;
+use App\AI\Exceptions\ProviderAuthenticationException;
+use App\AI\Exceptions\ProviderNetworkException;
+use App\AI\Exceptions\ProviderRateLimitException;
+use App\AI\Exceptions\ProviderTimeoutException;
 use App\AI\Providers\Gemini\GeminiProvider;
 use App\AI\Support\ProviderErrorSanitizer;
 use App\AI\Requests\VideoRequest;
@@ -12,6 +17,7 @@ use App\Services\VideoBinaryStore;
 use App\Story\Contracts\StoryVideoProviderAdapterInterface;
 use App\Story\Enums\StoryVideoAsyncMode;
 use App\Story\Enums\StoryVideoCapability;
+use App\Story\Enums\StoryVideoErrorCode;
 use App\Story\Enums\StoryVideoInputType;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Exceptions\StoryVideoEngineException;
@@ -202,7 +208,7 @@ final readonly class GeminiStoryVideoAdapter implements StoryVideoProviderAdapte
             $response = $this->provider->generateVideo($this->toVideoRequest($request, $operation));
         } catch (Throwable $exception) {
             $job->forceFill([
-                'error_code' => 'upstream_error',
+                'error_code' => $this->pollErrorCode($exception)->value,
                 'error_message' => $this->safeMessage($exception),
             ])->save();
 
@@ -651,6 +657,22 @@ final readonly class GeminiStoryVideoAdapter implements StoryVideoProviderAdapte
         }
 
         return $uri;
+    }
+
+    /**
+     * A poll that could not reach a verdict leaves the job status unchanged;
+     * the normalized code decides whether the same operation is polled again.
+     */
+    private function pollErrorCode(Throwable $exception): StoryVideoErrorCode
+    {
+        return match (true) {
+            $exception instanceof ProviderTimeoutException => StoryVideoErrorCode::Timeout,
+            $exception instanceof ProviderNetworkException => StoryVideoErrorCode::ProviderUnavailable,
+            $exception instanceof ProviderRateLimitException => StoryVideoErrorCode::RateLimited,
+            $exception instanceof ProviderAuthenticationException => StoryVideoErrorCode::AuthenticationFailed,
+            $exception instanceof AIException && $exception->statusCode() < 500 => StoryVideoErrorCode::InvalidProviderResponse,
+            default => StoryVideoErrorCode::UpstreamError,
+        };
     }
 
     private function safeMessage(Throwable $exception): string

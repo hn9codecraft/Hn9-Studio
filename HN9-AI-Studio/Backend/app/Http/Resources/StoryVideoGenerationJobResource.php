@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Story\Models\StoryVideoGenerationJob;
+use App\Story\Services\StoryVideoJobRunner;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,6 +19,8 @@ class StoryVideoGenerationJobResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $runner = app(StoryVideoJobRunner::class);
+
         return [
             'id' => $this->uuid,
             'capability' => $this->capability,
@@ -29,6 +32,9 @@ class StoryVideoGenerationJobResource extends JsonResource
             'idempotency_key' => $this->idempotency_key,
             'routing' => $this->routing,
             'retry_count' => $this->retry_count,
+            'recovering' => $runner->recovering($this->resource),
+            'failed_checks' => $runner->pollFailures($this->resource),
+            'max_attempts' => $runner->maxAttempts(),
             'timed_out' => $this->timed_out,
             'error_code' => $this->error_code,
             'error_message' => $this->error_message,

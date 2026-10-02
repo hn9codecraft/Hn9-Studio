@@ -20,6 +20,16 @@ return [
     ],
 
     /*
+    | Queued mode runs submit, poll and download on the queue and requires a
+    | running worker. When disabled, submit runs in the request and the status
+    | endpoint advances accepted jobs.
+    */
+    'queue' => [
+        'enabled' => (bool) env('STORY_VIDEO_QUEUE_ENABLED', false),
+        'name' => env('STORY_VIDEO_QUEUE_NAME', 'default'),
+    ],
+
+    /*
     | Catalog adapters demonstrate multi-provider registration without vendor
     | coupling. They never open network sockets. Real providers arrive in M11.7.
     */
