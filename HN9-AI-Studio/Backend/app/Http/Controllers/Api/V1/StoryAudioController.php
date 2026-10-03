@@ -82,11 +82,79 @@ class StoryAudioController extends Controller
             $reelUuid,
             $sceneUuid,
             $role,
-            (string) $payload['prompt'],
+            isset($payload['prompt']) ? (string) $payload['prompt'] : null,
             isset($payload['version_id']) ? (string) $payload['version_id'] : null,
+            isset($payload['voice']) ? (string) $payload['voice'] : null,
+            $request->user(),
         );
 
         return ApiResponse::success($result, ($result['created'] ?? true) ? 201 : 200);
+    }
+
+    public function approve(Request $request, string $uuid, string $reelUuid, string $sceneUuid, string $audioUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('review', $this->scene($project->id, $reelUuid, $sceneUuid));
+        $payload = $request->validate(['comment' => ['nullable', 'string', 'max:2000']]);
+
+        return ApiResponse::success($this->audio->approve(
+            $project,
+            $reelUuid,
+            $sceneUuid,
+            $audioUuid,
+            $request->user(),
+            isset($payload['comment']) ? (string) $payload['comment'] : null,
+        ));
+    }
+
+    public function requestChanges(Request $request, string $uuid, string $reelUuid, string $sceneUuid, string $audioUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('review', $this->scene($project->id, $reelUuid, $sceneUuid));
+        $payload = $request->validate(['comment' => ['required', 'string', 'max:2000']]);
+
+        return ApiResponse::success($this->audio->requestChanges(
+            $project,
+            $reelUuid,
+            $sceneUuid,
+            $audioUuid,
+            $request->user(),
+            (string) $payload['comment'],
+        ));
+    }
+
+    public function rework(Request $request, string $uuid, string $reelUuid, string $sceneUuid, string $audioUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('review', $this->scene($project->id, $reelUuid, $sceneUuid));
+        $payload = $request->validate([
+            'prompt' => ['nullable', 'string', 'max:10000'],
+            'voice' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $result = $this->audio->rework(
+            $project,
+            $reelUuid,
+            $sceneUuid,
+            $audioUuid,
+            isset($payload['prompt']) ? (string) $payload['prompt'] : null,
+            isset($payload['voice']) ? (string) $payload['voice'] : null,
+            $request->user(),
+        );
+
+        return ApiResponse::success($result, ($result['created'] ?? true) ? 201 : 200);
+    }
+
+    public function select(Request $request, string $uuid, string $reelUuid, string $sceneUuid, string $audioUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('review', $this->scene($project->id, $reelUuid, $sceneUuid));
+
+        return ApiResponse::success($this->audio->select($project, $reelUuid, $sceneUuid, $audioUuid, $request->user()));
     }
 
     public function show(string $uuid, string $reelUuid, string $sceneUuid, string $audioUuid): JsonResponse

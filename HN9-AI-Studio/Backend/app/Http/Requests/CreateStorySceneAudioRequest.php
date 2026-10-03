@@ -22,8 +22,9 @@ class CreateStorySceneAudioRequest extends FormRequest
     {
         return [
             'role' => ['required', 'string', Rule::in(StoryAudioRole::values())],
-            'prompt' => ['required', 'string', 'max:10000'],
+            'prompt' => ['nullable', 'string', 'max:10000'],
             'version_id' => ['nullable', 'uuid'],
+            'voice' => ['nullable', 'string', 'max:100'],
         ];
     }
 }

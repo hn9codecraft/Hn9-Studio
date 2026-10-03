@@ -231,6 +231,7 @@ final class StoryTimelineApiTest extends TestCase
             'story_scene_id' => $scene->id,
             'role' => 'narration',
             'status' => 'completed',
+            'review_status' => 'approved',
             'disk' => 'voice',
             'path' => 'story/narration.mp3',
             'mime' => 'audio/mpeg',

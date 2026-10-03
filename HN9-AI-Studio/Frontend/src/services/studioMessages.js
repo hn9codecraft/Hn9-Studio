@@ -3,7 +3,7 @@
 
 export const NOT_CONNECTED = {
   video: 'Video creation is not connected yet. An administrator needs to connect a video service before videos can be made.',
-  sound: 'Sound creation is not connected yet. An administrator needs to connect a sound service before scene sound can be made.',
+  sound: 'Sound generation is not configured yet. An administrator needs to connect the sound service before scene sound can be made.',
   plan: 'Automatic scene planning is not connected yet. Add your scenes yourself, or ask an administrator to connect a writing service.',
   images: 'Picture creation is not connected yet. Upload a picture instead, or ask an administrator to connect a picture service.',
 };
@@ -72,7 +72,9 @@ export function failureReason(errorCode, status = 'failed') {
 
 function transitionMessage(raw) {
   const match = /cannot be (\w+) from status '(\w+)'/.exec(raw || '');
-  if (!match) return 'That step is not available right now. Refresh to see the latest status.';
+  if (!match) {
+    return looksTechnical(raw) ? 'That step is not available right now. Refresh to see the latest status.' : raw;
+  }
 
   const [, action, from] = match;
   if (from === 'missing' || from === 'draft') {
@@ -214,6 +216,32 @@ export const SOUND_ROLES = [
   { value: 'music', label: 'Music', icon: 'bi-music-note-beamed', field: 'audio_direction' },
   { value: 'sfx', label: 'Sound effects', icon: 'bi-soundwave', field: null },
 ];
+
+export const SOUND_MESSAGES = {
+  generating: 'Generating sound…',
+  ready: 'Sound ready for review.',
+  approved: 'Sound approved.',
+  changes: 'Changes requested.',
+  selected: 'This version is now used in the video.',
+  failed: 'Sound generation failed. Try again.',
+};
+
+/** Where one sound version stands, in words, with a badge tone. */
+export function soundState(item) {
+  if (!item) return { label: 'None yet', tone: 'neutral' };
+  if (isJobActive(item.status)) return { label: 'Generating sound…', tone: 'progress' };
+  if (item.status === 'failed') return { label: 'Generation failed', tone: 'danger' };
+  if (item.review_status === 'approved') return { label: item.selected ? 'Approved · used in video' : 'Approved', tone: 'success' };
+  if (item.review_status === 'needs_rework') return { label: 'Changes requested', tone: 'warning' };
+  if (item.review_status === 'pending_review') return { label: 'Ready for review', tone: 'progress' };
+  return { label: jobStatusLabel(item.status), tone: 'neutral' };
+}
+
+/** The saved failure sentence when it is plain, otherwise a general one. */
+export function soundFailure(item) {
+  const text = item?.error_message || '';
+  return text && !looksTechnical(text) ? text : SOUND_MESSAGES.failed;
+}
 
 export function sortedScenes(reel) {
   return [...(reel?.scenes || [])].sort((a, b) => (a.sequence || 0) - (b.sequence || 0));

@@ -59,6 +59,9 @@ use App\Story\Services\StoryWorkspaceService;
 use App\Story\Enums\StoryVideoAsyncMode;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryAudioRole;
+use App\AI\Contracts\ProviderDispatcherInterface;
+use App\AI\Contracts\ProviderRegistryInterface;
+use App\Story\Video\Adapters\ElevenLabsStoryAudioAdapter;
 use App\Story\Video\Adapters\GeminiStoryVideoAdapter;
 use App\Story\Video\Adapters\LiveStoryVideoAdapterFactory;
 use App\Story\Video\CatalogStoryVideoAdapter;
@@ -111,6 +114,17 @@ class StoryServiceProvider extends ServiceProvider
             );
             foreach ($live as $adapter) {
                 $router->register($adapter);
+            }
+
+            $sound = new ElevenLabsStoryAudioAdapter(
+                self::soundCatalogAdapter((array) config('story_video.audio_providers.elevenlabs', [])),
+                $app->make(ProviderDispatcherInterface::class),
+                $app->make(ProviderRegistryInterface::class),
+                $app->make(ProviderConfigResolver::class),
+                (array) config('story_video.audio_providers.elevenlabs', []),
+            );
+            if ($sound->enabled()) {
+                $router->register($sound);
             }
 
             return $router;
@@ -169,17 +183,68 @@ class StoryServiceProvider extends ServiceProvider
         return filter_var($flag, FILTER_VALIDATE_BOOLEAN) && $ready;
     }
 
+    /**
+     * Capability description for scene sound. Speech length follows the text, so a
+     * single nominal unit keeps the duration planner from splitting it.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private static function soundCatalogAdapter(array $config): CatalogStoryVideoAdapter
+    {
+        $key = (string) ($config['key'] ?? 'audio.elevenlabs');
+        $priority = (int) ($config['priority'] ?? 260);
+        $roles = array_values(array_intersect(
+            array_map('strval', (array) ($config['roles'] ?? [])),
+            StoryAudioRole::values(),
+        ));
+        $model = (string) (config('ai.providers.elevenlabs.default_model') ?: 'configured-voice-model');
+
+        return new CatalogStoryVideoAdapter(
+            adapterKey: $key,
+            label: (string) ($config['label'] ?? 'Sound service'),
+            capabilities: [StoryVideoCapability::Audio],
+            enabled: true,
+            available: true,
+            priority: $priority,
+            durations: [8],
+            minDuration: 8,
+            maxDuration: 8,
+            aspectRatios: [],
+            resolutions: [],
+            inputTypes: ['text'],
+            audio: true,
+            mode: StoryVideoAsyncMode::Sync,
+            polling: true,
+            webhook: false,
+            download: true,
+            models: [
+                new StoryVideoModelSpec(
+                    providerKey: $key,
+                    modelKey: $model,
+                    displayName: 'Default voice model',
+                    capabilities: [StoryVideoCapability::Audio],
+                    enabled: true,
+                    priority: $priority,
+                    durations: [8],
+                    aspectRatios: [],
+                    resolutions: [],
+                    inputTypes: ['text'],
+                    audioSupported: true,
+                ),
+            ],
+            audioRoles: $roles,
+        );
+    }
+
     private static function liveCatalogAdapter(): CatalogStoryVideoAdapter
     {
         $durations = array_map('intval', (array) config('story_video.real_provider.durations', [8]));
-        $audioRoles = array_map('strval', (array) config('story_video.real_provider.audio_roles', StoryAudioRole::values()));
         $capabilities = [
             StoryVideoCapability::TextToVideo,
             StoryVideoCapability::ImageToVideo,
             StoryVideoCapability::ReferenceToVideo,
             StoryVideoCapability::VideoEdit,
             StoryVideoCapability::VideoExtend,
-            StoryVideoCapability::Audio,
         ];
 
         return new CatalogStoryVideoAdapter(
@@ -194,7 +259,7 @@ class StoryServiceProvider extends ServiceProvider
             maxDuration: max($durations),
             aspectRatios: ['16:9', '9:16', '1:1'],
             resolutions: ['720p'],
-            inputTypes: ['text', 'image', 'reference_image', 'video', 'audio'],
+            inputTypes: ['text', 'image', 'reference_image', 'video'],
             audio: true,
             mode: StoryVideoAsyncMode::AsyncPoll,
             polling: true,
@@ -211,11 +276,10 @@ class StoryServiceProvider extends ServiceProvider
                     durations: $durations,
                     aspectRatios: ['16:9', '9:16', '1:1'],
                     resolutions: ['720p'],
-                    inputTypes: ['text', 'image', 'reference_image', 'video', 'audio'],
+                    inputTypes: ['text', 'image', 'reference_image', 'video'],
                     audioSupported: true,
                 ),
             ],
-            audioRoles: $audioRoles,
         );
     }
 }

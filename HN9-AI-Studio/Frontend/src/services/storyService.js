@@ -418,8 +418,9 @@ export function getStoryReelSceneStatus(projectId, reelId) {
   );
 }
 
+// Uncached: sound versions carry live generation and review state.
 export function listStoryReelAudio(projectId, reelId) {
-  return storyGet(`/story/projects/${projectId}/reels/${reelId}/audio`, CONTEXT_TTL_MS).then((payload) =>
+  return storyGet(`/story/projects/${projectId}/reels/${reelId}/audio`).then((payload) =>
     Array.isArray(payload) ? payload : [],
   );
 }
@@ -656,6 +657,29 @@ export function createStorySceneAudio(projectId, reelId, sceneId, payload) {
 
 export function getStorySceneAudio(projectId, reelId, sceneId, audioId) {
   return storyGet(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}`);
+}
+
+function sceneAudioAction(projectId, reelId, sceneId, audioId, action, body = {}) {
+  return storyWrite(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}/${action}`, {
+    method: 'POST',
+    body,
+  });
+}
+
+export function approveStorySceneAudio(projectId, reelId, sceneId, audioId, comment = '') {
+  return sceneAudioAction(projectId, reelId, sceneId, audioId, 'approve', comment ? { comment } : {});
+}
+
+export function requestStorySceneAudioChanges(projectId, reelId, sceneId, audioId, comment) {
+  return sceneAudioAction(projectId, reelId, sceneId, audioId, 'request-changes', { comment });
+}
+
+export function reworkStorySceneAudio(projectId, reelId, sceneId, audioId, payload = {}) {
+  return sceneAudioAction(projectId, reelId, sceneId, audioId, 'rework', payload);
+}
+
+export function selectStorySceneAudio(projectId, reelId, sceneId, audioId) {
+  return sceneAudioAction(projectId, reelId, sceneId, audioId, 'select');
 }
 
 export function getStorySceneAudioFileUrl(projectId, reelId, sceneId, audioId) {

@@ -6,11 +6,13 @@ namespace App\Story\Services;
 
 use App\AI\Support\ProviderErrorSanitizer;
 use App\Enums\CostSource;
+use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Models\StoryFinalRender;
 use App\Story\Models\StoryGenerationAttempt;
+use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StoryUsageLedgerEntry;
 use App\Story\Models\StoryVideoGenerationJob;
 use Illuminate\Support\Collection;
@@ -25,6 +27,14 @@ final class StoryUsageService
         StoryVideoJobStatus::Completed,
         StoryVideoJobStatus::Failed,
         StoryVideoJobStatus::Cancelled,
+    ];
+
+    private const SOUND_EVENTS = [
+        StoryAudioService::EVENT_VERSION_CREATED => 'version_created',
+        StoryAudioService::EVENT_REWORKED => 'reworked',
+        StoryAudioService::EVENT_APPROVED => 'approved',
+        StoryAudioService::EVENT_CHANGES_REQUESTED => 'changes_requested',
+        StoryAudioService::EVENT_SELECTED => 'selected',
     ];
 
     public function recordTerminal(StoryVideoGenerationJob $job): void
@@ -102,7 +112,9 @@ final class StoryUsageService
             ];
         });
 
-        return $items
+        // Sound events go first so a version is listed before its generation job when both share a second.
+        return $this->soundEvents($project)
+            ->concat($items)
             ->concat($this->attempts($project))
             ->concat($this->renders($project))
             ->sortBy(static fn (array $item): string => (string) $item['created_at'])
@@ -198,6 +210,68 @@ final class StoryUsageService
                 'cost_reported' => false,
                 'ledger_recorded_at' => null,
             ]);
+    }
+
+    /**
+     * Sound version and review steps from the activity log, shaped like job rows.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function soundEvents(Project $project): Collection
+    {
+        $audios = StorySceneAudio::query()
+            ->with('scene.reel')
+            ->whereHas('workspace', static function ($query) use ($project): void {
+                $query->where('project_id', $project->id);
+            })
+            ->get()
+            ->keyBy('id');
+        if ($audios->isEmpty()) {
+            return collect();
+        }
+
+        return ActivityLog::query()
+            ->where('subject_type', (new StorySceneAudio)->getMorphClass())
+            ->whereIn('subject_id', $audios->keys())
+            ->whereIn('action', array_keys(self::SOUND_EVENTS))
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(static function (ActivityLog $log) use ($audios): array {
+                $audio = $audios->get($log->subject_id);
+                $properties = is_array($log->properties) ? $log->properties : [];
+
+                return [
+                    'id' => $log->uuid,
+                    'kind' => 'sound_review',
+                    'event' => self::SOUND_EVENTS[$log->action],
+                    'version_label' => is_string($properties['version'] ?? null) ? $properties['version'] : null,
+                    'role' => $audio?->role,
+                    'comment' => is_string($properties['comment'] ?? null) ? $properties['comment'] : null,
+                    'reel_title' => $audio?->scene?->reel?->title,
+                    'scene_sequence' => $audio?->scene?->sequence,
+                    'scene_title' => $audio?->scene?->title,
+                    'reel_id' => $audio?->scene?->reel?->uuid,
+                    'scene_id' => $audio?->scene?->uuid,
+                    'capability' => StoryVideoCapability::Audio->value,
+                    'provider_key' => null,
+                    'model_key' => null,
+                    'operation_id' => null,
+                    'status' => self::SOUND_EVENTS[$log->action],
+                    'error_code' => null,
+                    'error_message' => null,
+                    'created_at' => $log->created_at?->toIso8601String(),
+                    'submitted_at' => null,
+                    'started_at' => null,
+                    'completed_at' => null,
+                    'failed_at' => null,
+                    'cost' => null,
+                    'currency' => null,
+                    'cost_source' => null,
+                    'cost_reported' => false,
+                    'ledger_recorded_at' => null,
+                ];
+            });
     }
 
     /**

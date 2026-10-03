@@ -71,7 +71,12 @@ final readonly class StoryVideoDispatchService
             $sceneUuid,
         );
 
-        throw StoryVideoEngineException::generationNotEnabled();
+        throw StoryVideoEngineException::generationNotEnabled(self::notEnabledMessage($capability));
+    }
+
+    public static function notEnabledMessage(StoryVideoCapability $capability): ?string
+    {
+        return $capability === StoryVideoCapability::Audio ? 'Sound generation is not configured yet.' : null;
     }
 
     public function liveSupports(StoryVideoCapability $capability): bool
@@ -135,7 +140,7 @@ final readonly class StoryVideoDispatchService
 
         $adapter = $this->liveAdapterFor($request->capability, $request->preferredProvider);
         if (! $adapter instanceof LiveStoryVideoProviderAdapterInterface) {
-            throw StoryVideoEngineException::generationNotEnabled();
+            throw StoryVideoEngineException::generationNotEnabled(self::notEnabledMessage($request->capability));
         }
 
         $request = $this->assets->resolve($project, $request);

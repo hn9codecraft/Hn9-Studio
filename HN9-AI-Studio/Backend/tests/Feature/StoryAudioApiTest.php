@@ -6,57 +6,34 @@ namespace Tests\Feature;
 
 use App\Models\Project;
 use App\Models\User;
-use App\Story\Contracts\StoryCapabilityRouterInterface;
-use App\Story\Contracts\StoryVideoEngineInterface;
 use App\Story\Models\StoryReel;
 use App\Story\Models\StoryScene;
 use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StoryWorkspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\ConfiguresElevenLabsSound;
 use Tests\TestCase;
 
 final class StoryAudioApiTest extends TestCase
 {
+    use ConfiguresElevenLabsSound;
     use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        config([
-            'story_video.real_provider.enabled' => true,
-            'story_video.real_provider.durations' => [8],
-            'story_video.real_provider.audio_roles' => [
-                'voice',
-                'narration',
-                'dialogue',
-                'music',
-                'sfx',
-                'ambient',
-                'generated',
-            ],
-            'ai.providers.gemini.enabled' => true,
-            'ai.providers.gemini.api_key' => 'test-audio-key',
-            'ai.providers.gemini.video_models' => ['configured-video-model'],
-            'ai.providers.gemini.video_default_model' => 'configured-video-model',
-        ]);
+        $this->enableElevenLabsSound();
     }
 
     public function test_role_routing_lists_and_creates_audio_without_vendor_names(): void
     {
         Storage::fake('voice');
         Http::fake([
-            'https://generativelanguage.googleapis.com/*' => Http::sequence()
-                ->push(['name' => 'models/configured-video-model/operations/story-audio-1'])
-                ->push([
-                    'done' => true,
-                    'inlineData' => [
-                        'mimeType' => 'audio/mpeg',
-                        'data' => base64_encode('voice-bytes'),
-                    ],
-                ]),
+            self::ELEVENLABS_SPEECH_URL => Http::response('voice-bytes', 200, ['Content-Type' => 'audio/mpeg']),
         ]);
 
         [$owner, $project, $reel, $scene] = $this->sceneFixture();
@@ -79,10 +56,14 @@ final class StoryAudioApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.role', 'voice')
             ->assertJsonPath('data.output_url', null)
-            ->assertJsonPath('data.has_file', true);
+            ->assertJsonPath('data.has_file', true)
+            ->assertJsonPath('data.version_label', 'Version A')
+            ->assertJsonPath('data.review_status', 'pending_review');
 
         $body = strtolower($created->getContent() ?: '');
-        $this->assertStringNotContainsString('test-audio-key', $body);
+        $this->assertStringNotContainsString(self::ELEVENLABS_TEST_KEY, $body);
+        $this->assertStringNotContainsString('elevenlabs', $body);
+        $this->assertStringNotContainsString('voice-id-one', $body);
         $this->assertStringNotContainsString('gemini', $body);
         $this->assertStringNotContainsString('seedance', $body);
 
@@ -90,6 +71,7 @@ final class StoryAudioApiTest extends TestCase
         $this->assertNotNull($audioId);
         $this->assertSame(1, StorySceneAudio::query()->where('role', 'voice')->count());
         $this->assertNotEmpty(Storage::disk('voice')->allFiles());
+        $this->assertSame('voice-bytes', Storage::disk('voice')->get((string) StorySceneAudio::query()->value('path')));
 
         $this->actingAs($owner, 'sanctum')
             ->getJson($this->audioUrl($project, $reel, $scene).'?role=voice')
@@ -115,17 +97,17 @@ final class StoryAudioApiTest extends TestCase
             ->assertJsonPath('data.created', false)
             ->assertJsonPath('data.id', $audioId);
 
-        Http::assertSent(fn ($request): bool => str_contains($request->body(), '[voice]')
-            && str_contains($request->body(), 'Calm narrator for the opening'));
+        Http::assertSentCount(1);
+        Http::assertSent(static fn (Request $request): bool => str_contains($request->url(), '/text-to-speech/voice-id-one')
+            && ($request->data()['text'] ?? null) === 'Calm narrator for the opening'
+            && $request->hasHeader('xi-api-key', self::ELEVENLABS_TEST_KEY));
     }
 
     public function test_unsupported_role_does_not_substitute_another_role(): void
     {
         Storage::fake('voice');
         Http::fake();
-        config(['story_video.real_provider.audio_roles' => ['voice', 'narration']]);
-        $this->app->forgetInstance(StoryCapabilityRouterInterface::class);
-        $this->app->forgetInstance(StoryVideoEngineInterface::class);
+        $this->enableElevenLabsSound(story: ['roles' => ['voice', 'narration']]);
 
         [$owner, $project, $reel, $scene] = $this->sceneFixture();
 
@@ -147,16 +129,15 @@ final class StoryAudioApiTest extends TestCase
         Http::fake();
         [$owner, $project, $reel, $scene] = $this->sceneFixture();
 
-        config(['story_video.real_provider.enabled' => false]);
-        $this->app->forgetInstance(StoryCapabilityRouterInterface::class);
-        $this->app->forgetInstance(StoryVideoEngineInterface::class);
+        $this->disableElevenLabsSound();
 
         $this->actingAs($owner, 'sanctum')
             ->postJson($this->audioUrl($project, $reel, $scene), [
                 'role' => 'dialogue',
                 'prompt' => 'Hello there',
             ])
-            ->assertStatus(501);
+            ->assertStatus(501)
+            ->assertJsonPath('message', 'Sound generation is not configured yet.');
 
         Http::assertNothingSent();
         $this->assertSame(0, StorySceneAudio::query()->count());
@@ -227,29 +208,21 @@ final class StoryAudioApiTest extends TestCase
     {
         Storage::fake('voice');
         Http::fake([
-            'https://generativelanguage.googleapis.com/*' => Http::sequence()
-                ->push(['name' => 'models/configured-video-model/operations/story-admin-audio'])
-                ->push([
-                    'done' => true,
-                    'inlineData' => [
-                        'mimeType' => 'audio/mpeg',
-                        'data' => base64_encode('admin-audio'),
-                    ],
-                ]),
+            self::ELEVENLABS_SPEECH_URL => Http::response('admin-audio', 200, ['Content-Type' => 'audio/mpeg']),
         ]);
         [, $project, $reel, $scene] = $this->sceneFixture();
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin, 'sanctum')
             ->postJson($this->audioUrl($project, $reel, $scene), [
-                'role' => 'generated',
+                'role' => 'narration',
                 'prompt' => 'Admin cue',
             ])
             ->assertCreated()
-            ->assertJsonPath('data.role', 'generated')
+            ->assertJsonPath('data.role', 'narration')
             ->assertJsonPath('data.output_url', null);
 
-        Http::assertSentCount(2);
+        Http::assertSentCount(1);
     }
 
     /**

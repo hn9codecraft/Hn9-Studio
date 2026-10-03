@@ -354,7 +354,17 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
           </div>
           <div>
             <dt>Sound</dt>
-            <dd>{sounds.length ? sounds.map((sound) => SOUND_ROLES.find((role) => role.value === sound.role)?.label || 'Sound').join(', ') : 'None yet'}</dd>
+            <dd>
+              {sounds.length
+                ? sounds
+                    .map((sound) => {
+                      const name = SOUND_ROLES.find((role) => role.value === sound.role)?.label || 'Sound';
+                      if (sound.approved_label) return `${name} (${sound.approved_label} approved)`;
+                      return sound.review_status === 'pending_review' ? `${name} (ready for review)` : name;
+                    })
+                    .join(', ')
+                : 'None yet'}
+            </dd>
           </div>
         </dl>
 

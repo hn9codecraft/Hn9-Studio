@@ -15,4 +15,13 @@ final class StoryReviewException extends StoryException
             context: ['from' => $from, 'action' => $action],
         );
     }
+
+    public static function sound(string $message): self
+    {
+        return new self(
+            message: $message,
+            errorCode: 'story_review_invalid_transition',
+            statusCode: 422,
+        );
+    }
 }

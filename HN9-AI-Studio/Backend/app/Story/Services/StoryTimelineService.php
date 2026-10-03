@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Story\Services;
 
 use App\Models\Project;
+use App\Story\Enums\StoryReviewStatus;
 use App\Story\Enums\StoryTimelineTransitionType;
 use App\Story\Exceptions\StoryException;
 use App\Story\Models\StoryReel;
@@ -97,6 +98,97 @@ final class StoryTimelineService
         }
 
         $this->place($project, $reel->uuid, 'video', $version->uuid);
+    }
+
+    /**
+     * Puts an approved scene sound on its reel's timeline: swaps the clip holding the same
+     * scene and role to the new version, or appends one. Unapproved or unstored sounds are skipped.
+     */
+    public function placeApprovedSceneAudio(Project $project, StorySceneAudio $audio): void
+    {
+        $audio->loadMissing('scene.reel');
+        $reel = $audio->scene?->reel;
+        if (! $reel instanceof StoryReel) {
+            return;
+        }
+
+        try {
+            $this->audioSource($project, $audio->uuid);
+        } catch (StoryException) {
+            return;
+        }
+
+        $timeline = StoryTimeline::query()->where('story_reel_id', $reel->id)->first();
+        $existing = $timeline === null ? null : StoryTimelineClip::query()
+            ->where('story_timeline_id', $timeline->id)
+            ->where('media_kind', 'audio')
+            ->whereHas('sceneAudio', static function ($query) use ($audio): void {
+                $query->where('story_scene_id', $audio->story_scene_id)
+                    ->where('role', $audio->role);
+            })
+            ->orderBy('position')
+            ->first();
+
+        if ($existing instanceof StoryTimelineClip) {
+            if ((int) $existing->story_scene_audio_id !== (int) $audio->id) {
+                $this->replace($project, $reel->uuid, $existing->uuid, $audio->uuid);
+            }
+
+            return;
+        }
+
+        $anchor = $timeline === null ? null : $this->sceneTail($timeline, (int) $audio->story_scene_id);
+        if (! $anchor instanceof StoryTimelineClip) {
+            $this->place($project, $reel->uuid, 'audio', $audio->uuid);
+
+            return;
+        }
+
+        $source = $this->audioSource($project, $audio->uuid);
+        DB::transaction(function () use ($timeline, $anchor, $source): void {
+            $this->shiftAfter($timeline, $anchor->position);
+            $clip = StoryTimelineClip::query()->create([
+                'story_timeline_id' => $timeline->id,
+                'position' => $anchor->position + 1,
+                'media_kind' => 'audio',
+                'story_scene_version_id' => null,
+                'story_scene_audio_id' => $source['audio_id'],
+                'disk' => $source['disk'],
+                'path' => $source['path'],
+                'in_ms' => 0,
+                'out_ms' => $source['duration_ms'],
+            ]);
+            // Render keys transitions by their target clip, so moving the start keeps the effect.
+            StoryTimelineTransition::query()
+                ->where('story_timeline_id', $timeline->id)
+                ->where('from_clip_id', $anchor->id)
+                ->update(['from_clip_id' => $clip->id]);
+        });
+    }
+
+    /**
+     * Last clip of a scene's run: its video clip followed by any sound clips laid over it.
+     */
+    private function sceneTail(StoryTimeline $timeline, int $sceneId): ?StoryTimelineClip
+    {
+        $clips = $this->clips($timeline);
+        $tail = null;
+        foreach ($clips as $clip) {
+            $clip->loadMissing('sceneVersion', 'sceneAudio');
+            if ($tail === null) {
+                if ($clip->media_kind === 'video' && (int) $clip->sceneVersion?->story_scene_id === $sceneId) {
+                    $tail = $clip;
+                }
+
+                continue;
+            }
+            if ($clip->media_kind !== 'audio') {
+                break;
+            }
+            $tail = $clip;
+        }
+
+        return $tail;
     }
 
     /**
@@ -402,6 +494,9 @@ final class StoryTimelineService
             || str_contains($audio->path, '://')
             || ! Storage::disk('voice')->exists($audio->path)) {
             throw $this->invalid('The scene audio does not belong to this project.');
+        }
+        if ($audio->reviewStatusEnum() !== StoryReviewStatus::Approved) {
+            throw $this->invalid('Approve this sound before adding it to the timeline.');
         }
 
         return [

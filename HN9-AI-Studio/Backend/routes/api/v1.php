@@ -318,6 +318,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio', [StoryAudioController::class, 'store'])->name('story.projects.reels.scenes.audio.store');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}', [StoryAudioController::class, 'show'])->name('story.projects.reels.scenes.audio.show');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/file', [StoryAudioController::class, 'file'])->name('story.projects.reels.scenes.audio.file');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/approve', [StoryAudioController::class, 'approve'])->name('story.projects.reels.scenes.audio.approve');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/request-changes', [StoryAudioController::class, 'requestChanges'])->name('story.projects.reels.scenes.audio.request-changes');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/rework', [StoryAudioController::class, 'rework'])->name('story.projects.reels.scenes.audio.rework');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/select', [StoryAudioController::class, 'select'])->name('story.projects.reels.scenes.audio.select');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/timeline', [StoryTimelineController::class, 'show'])->name('story.projects.reels.timeline.show');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/timeline/clips', [StoryTimelineController::class, 'place'])->name('story.projects.reels.timeline.clips.store');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/timeline/reorder', [StoryTimelineController::class, 'reorder'])->name('story.projects.reels.timeline.reorder');
