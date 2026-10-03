@@ -224,6 +224,67 @@ credential, storage path or internal database id.
 `version_label` such as `Version A`. Events are `version_created`, `ready_for_review`,
 `approved`, `changes_requested`, `selected` and `deselected`.
 
+## Scene Assembly
+
+Joins the selected unit videos for one production scene into one scene file with FFmpeg. The
+server reads `selected_version_id`. The client does not send paths, commands or version ids.
+See [Architecture](Architecture.md#scene-assembly-m11186).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `…/scenes/{scene}/assemble` | Build, or reuse, the scene video for the current selection. |
+| `GET` | `…/scenes/{scene}/assemblies` | Every assembly for that scene, oldest first, plus `current`. |
+| `GET` | `…/scenes/{scene}/assemblies/{assembly}` | One assembly. |
+| `GET` | `…/scenes/{scene}/assemblies/{assembly}/file` | The scene video, when it is ready. The download name is `scene.mp4`. |
+
+`{scene}` is the story scene id, the same id used by the production plan scene routes.
+
+- **Auth:** owner or admin, same as unit review. `401` unauthenticated, `403` another member or
+  another project, `404` when the plan, scene or assembly is not in this project.
+- **Body:** ignored. A repeated request for the same selection returns the existing row with
+  `created: false` and HTTP 200. The first request for a new selection returns HTTP 201.
+- **`current`:** the newest completed assembly, or `null`. Later timeline work can use this
+  without reading unit files again.
+
+```json
+{
+  "data": {
+    "created": true,
+    "assembly": {
+      "id": "…",
+      "scene_id": "…",
+      "version": "A",
+      "label": "Version A",
+      "status": "completed",
+      "status_label": "Scene video is ready",
+      "output_available": true,
+      "duration_seconds": 47,
+      "output_duration_seconds": 47,
+      "error_message": null,
+      "created_at": "…",
+      "updated_at": "…"
+    }
+  }
+}
+```
+
+`duration_seconds` is the scene length. `output_duration_seconds` is the measured file, and is
+`null` until the build succeeds. `version` is `null` until a version letter is assigned.
+`error_message` is present only when `status` is `failed`. The response has no storage path,
+FFmpeg command, stderr, provider name or internal database id.
+
+| Status | `error_code` | When |
+|--------|--------------|------|
+| `422` | `SCENE_NOT_READY` | A unit has no approved selected video. Message: “Some video parts are not ready yet.” |
+| `422` | `story_media_build_failed` | A part is damaged, the wrong length, or the wrong picture shape. FFmpeg did not keep an output. |
+| `422` | `SCENE_ASSEMBLY_DURATION` | The finished file does not match the scene length. Message: “The finished scene video does not match the planned length.” |
+| `422` | `SCENE_ASSEMBLY_FAILED` | The build failed for another reason. Message: “The scene video could not be built.” |
+| `422` | `SCENE_ASSEMBLY_NOT_READY` | The file was requested before the scene video is ready. |
+| `503` | `story_media_tools_unavailable` | FFmpeg is not installed. |
+
+`GET /story/projects/{project}/history` includes these steps as `kind: scene_assembly`. Events
+are `requested`, `started`, `completed`, `failed`, `retried` and `version_created`.
+
 ## Request / Response Schemas
 _To be defined. Reference the JSON templates under `/Brand` and `/Agents`._
 

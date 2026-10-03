@@ -93,6 +93,7 @@ class StoryMediaToolkit
             foreach ($segments as $index => $segment) {
                 $local = $this->copyLocal($segment->disk, $segment->path, $scratch, 'v'.$index);
                 $probe = $this->probe($local);
+                $this->assertSegment($segment, $probe);
                 $in = max(0.0, $segment->inSeconds);
                 $out = $segment->outSeconds === null ? $probe['duration'] : min($segment->outSeconds, $probe['duration']);
                 $length = $out - $in;
@@ -193,8 +194,9 @@ class StoryMediaToolkit
                 throw StoryMediaException::failed();
             }
 
-            $duration = $this->probe($output)['duration'];
-            if ($duration <= 0) {
+            $probed = $this->probe($output);
+            $duration = $probed['duration'];
+            if ($duration <= 0 || ! $probed['has_video']) {
                 throw StoryMediaException::failed();
             }
 
@@ -220,6 +222,10 @@ class StoryMediaToolkit
                 size: (int) filesize($output),
                 checksum: (string) hash_file('sha256', $output),
                 durationSeconds: $duration,
+                width: $probed['width'],
+                height: $probed['height'],
+                hasVideo: $probed['has_video'],
+                hasAudio: $probed['has_audio'],
             );
         } finally {
             File::deleteDirectory($scratch);
@@ -227,13 +233,13 @@ class StoryMediaToolkit
     }
 
     /**
-     * @return array{duration: float, has_audio: bool, has_video: bool}
+     * @return array{duration: float, has_audio: bool, has_video: bool, width: int, height: int}
      */
     public function probe(string $localPath): array
     {
         $result = Process::timeout(60)->run([
             $this->ffprobe(), '-v', 'error',
-            '-show_entries', 'format=duration:stream=codec_type',
+            '-show_entries', 'format=duration:stream=codec_type,width,height',
             '-of', 'json',
             $localPath,
         ]);
@@ -242,16 +248,61 @@ class StoryMediaToolkit
             throw StoryMediaException::failed('A clip could not be read. It may be damaged.');
         }
 
-        $types = array_map(
-            static fn ($stream): string => is_array($stream) ? (string) ($stream['codec_type'] ?? '') : '',
-            (array) ($json['streams'] ?? []),
-        );
+        $width = 0;
+        $height = 0;
+        $types = [];
+        foreach ((array) ($json['streams'] ?? []) as $stream) {
+            if (! is_array($stream)) {
+                continue;
+            }
+            $types[] = (string) ($stream['codec_type'] ?? '');
+            if (($stream['codec_type'] ?? '') === 'video') {
+                $width = (int) ($stream['width'] ?? 0);
+                $height = (int) ($stream['height'] ?? 0);
+            }
+        }
 
         return [
             'duration' => (float) ($json['format']['duration'] ?? 0),
             'has_audio' => in_array('audio', $types, true),
             'has_video' => in_array('video', $types, true),
+            'width' => $width,
+            'height' => $height,
         ];
+    }
+
+    /**
+     * @param  array{duration: float, has_audio: bool, has_video: bool, width: int, height: int}  $probe
+     */
+    private function assertSegment(StoryMediaSegment $segment, array $probe): void
+    {
+        if (! $probe['has_video'] || $probe['duration'] <= 0) {
+            throw StoryMediaException::failed('A video part could not be read. It may be damaged.');
+        }
+        if ($segment->expectedSeconds !== null) {
+            $tolerance = $segment->toleranceSeconds ?? 0.5;
+            if (abs($probe['duration'] - $segment->expectedSeconds) > $tolerance) {
+                throw StoryMediaException::failed('A video part does not match its planned length.');
+            }
+        }
+        if ($segment->expectedAspect !== null && ! $this->aspectMatches($probe['width'], $probe['height'], $segment->expectedAspect)) {
+            throw StoryMediaException::failed('A video part does not match the picture shape of this scene.');
+        }
+    }
+
+    private function aspectMatches(int $width, int $height, string $aspect): bool
+    {
+        $parts = explode(':', $aspect);
+        if ($width < 2 || $height < 2 || count($parts) !== 2) {
+            return false;
+        }
+        $across = (int) $parts[0];
+        $down = (int) $parts[1];
+        if ($across < 1 || $down < 1) {
+            return false;
+        }
+
+        return abs(($width / $height) - ($across / $down)) <= 0.04;
     }
 
     /**

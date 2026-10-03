@@ -302,10 +302,72 @@ approved file is ready for a later scene assembly: version, sequence, start, uni
 output duration and storage path. `continuityOutput` is what the next unit may use. Neither
 reads the latest job.
 
+`assemblySource` is the only input M11.18.6 may use. It does not read the latest job or the
+newest file.
+
 ### What this sprint does not do
 
-FFmpeg scene assembly is M11.18.6. The full production workspace is M11.18.7. End-to-end
-provider QA is M11.18.8. Creative Studio only lists a scene’s units and their versions so review
-and selection can be checked. Provider choice stays in M11.18.4.
+The full production workspace is M11.18.7. End-to-end provider QA is M11.18.8. Creative Studio
+lists a scene’s units and their versions, and can ask the server to build the scene video.
+Provider choice stays in M11.18.4.
+
+## Scene Assembly (M11.18.6)
+
+A scene video is the ordered join of that scene’s selected unit versions. It is not a generation
+job and it is not a story-script version (`StorySceneVersion`). The final movie
+(`StoryFinalRender`) still joins scenes on the timeline; this step only produces one scene file.
+
+```
+Scene
+    → Generation Units, in persisted sequence
+    → selected_version_id
+    → assemblySource()
+    → Scene Assembly job
+    → FFmpeg (StoryMediaToolkit)
+    → Validated Scene Assembly Version
+```
+
+Scene length stays the story length. Unit length stays the production slot (10 seconds, or a
+shorter remainder). A 47-second scene is 10 + 10 + 10 + 10 + 7. The provider file must already
+be within 0.5 seconds of its unit. The finished file must be within 0.5 seconds of the scene.
+FFmpeg does not rewrite either contract.
+
+### Inputs
+
+Every unit must have one selected, approved, readable video on the `videos` disk. If any unit
+is missing, unapproved, needs changes, empty, or stored outside that disk, assembly stops before
+FFmpeg with “Some video parts are not ready yet.” There is no partial scene video. Order is the
+unit sequence from the production plan.
+
+A clip whose measured length is outside the 0.5-second tolerance, or whose picture shape does
+not match the story bible aspect ratio, fails before the encode. The toolkit scales and pads
+without stretching, uses the project frame rate, and fills a missing audio track with silence so
+the scene file always has video and audio. Unit joins use a hard cut, so the durations add.
+Dissolves stay on the later timeline render. They are not invented here.
+
+### Versions and jobs
+
+`story_scene_assemblies` is the job and, once it succeeds, the historical scene-assembly
+version. The same scene, plan revision, selected versions, aspect ratio and cut produce one
+idempotency key. A repeat reuses the in-progress or completed row. A different selection is a
+new key and, on success, the next version letter. Older files stay. A failed build can be tried
+again on the same row.
+
+The row stores a snapshot of the scene, plan revision, and each unit’s version and storage
+reference. Later changes to `selected_version_id` do not rewrite a finished assembly. The public
+API and history do not return paths, commands or FFmpeg output.
+
+When `story_video.queue.enabled` is on, `ProcessStorySceneAssembly` runs the build. Otherwise
+the request runs it inline, the same way local renders do. `story:recover-video-jobs` marks a
+queued or processing assembly as failed after the FFmpeg timeout and deletes a partial file. It
+does not start a second encode.
+
+Output is stored on the `videos` disk at `assemblies/{uuid}.mp4` through the storage disk, after
+FFprobe accepts the file. Assembly does not change units, versions, generation jobs or routing.
+
+### What this sprint does not do
+
+The full production workspace is M11.18.7. End-to-end provider QA is M11.18.8. This step does
+not call a video provider and does not build the final movie.
 
 _Diagrams and component details are placeholders — expand as the system is built._

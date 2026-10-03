@@ -13,6 +13,10 @@ final readonly class StoryMediaFile
         public int $size,
         public string $checksum,
         public float $durationSeconds,
+        public int $width = 0,
+        public int $height = 0,
+        public bool $hasVideo = false,
+        public bool $hasAudio = false,
     ) {}
 
     /**
