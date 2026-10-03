@@ -7,6 +7,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Story\Contracts\StoryProductionPlanServiceInterface;
 use App\Story\Models\StoryProductionPlan;
+use App\Story\Models\StoryProductionUnit;
+use App\Story\Models\StoryProductionUnitVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -152,6 +154,63 @@ final class StoryProductionPlanApiTest extends TestCase
         $this->actingAs($f['user'], 'sanctum')->getJson("{$base}/{$plan->id}")->assertNotFound();
         $this->actingAs($f['user'], 'sanctum')->getJson("{$base}/{$plan->uuid}/scenes/".Str::uuid())->assertNotFound();
         $this->actingAs($f['user'], 'sanctum')->getJson('/api/v1/story/projects/'.Str::uuid().'/production-plans')->assertNotFound();
+    }
+
+    public function test_scene_production_workspace_lists_plan_clips_without_provider_details(): void
+    {
+        [$f, $plan] = $this->planned([47]);
+        $scene = $f['scenes'][0];
+        $url = "/api/v1/story/projects/{$f['project']->uuid}/production-plans/{$plan->uuid}/scenes/{$scene->uuid}/production";
+        $this->getJson($url)->assertUnauthorized();
+
+        $unit = StoryProductionUnit::query()->where('sequence', 5)->firstOrFail();
+        $version = new StoryProductionUnitVersion;
+        $version->forceFill([
+            'story_production_unit_id' => $unit->id,
+            'version_number' => 1,
+            'review_status' => 'pending_review',
+            'provider_key' => 'secret-provider-name',
+            'model_key' => 'secret-model-name',
+            'capability' => 'text_to_video',
+            'requested_duration_seconds' => 7,
+            'produced_duration_seconds' => 7,
+            'disk' => 'videos',
+            'path' => 'units/secret-storage-path.mp4',
+            'mime' => 'video/mp4',
+        ])->save();
+
+        Http::fake();
+        $response = $this->actingAs($f['user'], 'sanctum')->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('data.duration_seconds', 47)
+            ->assertJsonPath('data.plan_id', $plan->uuid)
+            ->assertJsonCount(5, 'data.clips')
+            ->assertJsonPath('data.clips.0.start_second', 0)
+            ->assertJsonPath('data.clips.0.end_second', 10)
+            ->assertJsonPath('data.clips.4.duration_seconds', 7)
+            ->assertJsonPath('data.clips.4.start_second', 40)
+            ->assertJsonPath('data.clips.4.end_second', 47)
+            ->assertJsonPath('data.clips.4.versions.0.label', 'Version A')
+            ->assertJsonPath('data.clips.4.versions.0.status', 'pending_review')
+            ->assertJsonMissingPath('data.clips.4.versions.0.provider')
+            ->assertJsonMissingPath('data.clips.4.versions.0.model')
+            ->assertJsonPath('data.assemblies', []);
+
+        $body = $response->getContent();
+        $this->assertStringNotContainsString('secret-provider-name', $body);
+        $this->assertStringNotContainsString('secret-model-name', $body);
+        $this->assertStringNotContainsString('secret-storage-path', $body);
+
+        $this->actingAs($f['user'], 'sanctum')
+            ->getJson("/api/v1/story/projects/{$f['project']->uuid}/production-plans/{$plan->uuid}")
+            ->assertOk()
+            ->assertJsonPath('data.scenes.0.production.clip_count', 5)
+            ->assertJsonPath('data.scenes.0.production.review_count', 1)
+            ->assertJsonPath('data.scenes.0.production.scene_video', 'none')
+            ->assertJsonPath('data.scenes.0.units.4.duration_seconds', 7);
+
+        $this->actingAs(User::factory()->create(), 'sanctum')->getJson($url)->assertForbidden();
+        Http::assertNothingSent();
     }
 
     public function test_plans_cannot_be_written_through_the_api(): void

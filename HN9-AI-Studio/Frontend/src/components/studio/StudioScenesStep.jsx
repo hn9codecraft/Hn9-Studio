@@ -8,22 +8,15 @@ import {
   duplicateStoryScene,
   editStorySceneVersion,
   extendStorySceneVersion,
-  approveProductionUnitVersion,
-  assembleProductionScene,
-  getProductionPlanScene,
-  getProductionSceneAssemblyFileUrl,
-  getProductionUnitVersionFileUrl,
+  getProductionPlan,
   getStorySceneVersionFileUrl,
   getStoryStyle,
   getStoryVideoFileUrl,
   getStoryVideoJob,
   listProductionPlans,
-  listProductionUnitVersions,
   listStorySceneVersions,
   markStoryProjectChanged,
   regenerateStoryScene,
-  requestProductionUnitVersionChanges,
-  selectProductionUnitVersion,
   reorderStoryScenes,
   reworkStoryScene,
   submitStorySceneReview,
@@ -42,6 +35,8 @@ import {
   SOUND_ROLES,
 } from '../../services/studioMessages';
 import { useFeedback, useStudio } from './StudioContext';
+import { boardStatus } from '../../services/productionClips';
+import SceneProduction from './SceneProduction';
 import StudioScenePlanner from './StudioScenePlanner';
 import {
   BusyButton,
@@ -61,9 +56,11 @@ const VIDEO_MODES = [
 ];
 
 export default function StudioScenesStep({ nav, focusSceneId = null, openPlanner = false }) {
-  const { reels, reel, reelId, sceneStatus, connections, selectReel, project, goTo } = useStudio();
+  const { reels, reel, reelId, sceneStatus, connections, selectReel, project, projectId, goTo } = useStudio();
   const [editing, setEditing] = useState(null);
   const [planning, setPlanning] = useState(openPlanner);
+  const [planBoard, setPlanBoard] = useState({ ready: false, id: null, scenes: {} });
+  const [boardTick, setBoardTick] = useState(0);
 
   useEffect(() => {
     if (openPlanner) setPlanning(true);
@@ -76,6 +73,30 @@ export default function StudioScenesStep({ nav, focusSceneId = null, openPlanner
     if (!focusSceneId) return;
     document.getElementById(`scene-${focusSceneId}`)?.scrollIntoView({ block: 'center' });
   }, [focusSceneId, reelId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listProductionPlans(projectId)
+      .then(async (plans) => {
+        const current = (plans || []).find((item) => item.is_current);
+        if (!current) {
+          if (!cancelled) setPlanBoard({ ready: true, id: null, scenes: {} });
+          return;
+        }
+        const detail = await getProductionPlan(projectId, current.id);
+        const scenesById = {};
+        (detail?.scenes || []).forEach((row) => {
+          if (row.scene_id) scenesById[row.scene_id] = row;
+        });
+        if (!cancelled) setPlanBoard({ ready: true, id: current.id, scenes: scenesById });
+      })
+      .catch(() => {
+        if (!cancelled) setPlanBoard({ ready: true, id: null, scenes: {} });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, boardTick]);
 
   if (editing) {
     const scene = editing === 'new' ? null : scenes.find((item) => item.id === editing);
@@ -168,11 +189,15 @@ export default function StudioScenesStep({ nav, focusSceneId = null, openPlanner
               key={scene.id}
               scene={scene}
               status={statusById[scene.id] || null}
+              planScene={planBoard.scenes[scene.id] || null}
+              planId={planBoard.id}
+              planReady={planBoard.ready}
               isFirst={index === 0}
               isLast={index === scenes.length - 1}
               scenes={scenes}
               highlighted={focusSceneId === scene.id}
               onEdit={() => setEditing(scene.id)}
+              onProductionChange={() => setBoardTick((value) => value + 1)}
             />
           ))}
         </ol>
@@ -183,7 +208,7 @@ export default function StudioScenesStep({ nav, focusSceneId = null, openPlanner
   );
 }
 
-function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit }) {
+function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLast, scenes, highlighted, onEdit, onProductionChange }) {
   const { projectId, reelId, connections, canApprove, refresh, goTo } = useStudio();
   const feedback = useFeedback();
   const [panel, setPanel] = useState(null);
@@ -197,6 +222,7 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
   const videoBusy = video && isJobActive(video.status);
   const videoConnected = Boolean(connections?.video && Object.values(connections.video).some(Boolean));
   const name = sceneName(scene);
+  const production = boardStatus(planScene);
 
   async function act(key, action, success) {
     setBusy(key);
@@ -310,15 +336,7 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
     );
   }
 
-  const canCreateVideo = videoConnected && !videoBusy && review !== 'pending_review';
-  if (canCreateVideo && (!videoReady || review === 'needs_rework')) {
-    actions.unshift(
-      <button key="video" type="button" className="btn btn-primary btn-sm" disabled={Boolean(busy)} onClick={() => setPanel('video')}>
-        <i className="bi bi-camera-reels me-1" aria-hidden="true" />
-        {video?.status === 'failed' ? 'Try again' : review === 'needs_rework' ? 'Create new version' : 'Create video'}
-      </button>,
-    );
-  }
+  const canCreateVideo = videoConnected && !videoBusy && review !== 'pending_review' && (!videoReady || review === 'needs_rework');
   const canChange = videoReady && version && !videoBusy && review !== 'pending_review';
   if (canChange && connections?.video?.edit) {
     actions.push(
@@ -371,6 +389,14 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
               <StatusBadge tone={video ? jobTone(video.status) : videoConnected ? 'neutral' : 'warning'}>{videoText}</StatusBadge>
             </dd>
           </div>
+          {production ? (
+            <div>
+              <dt>Production</dt>
+              <dd>
+                <StatusBadge tone={production.tone}>{production.label}</StatusBadge>
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt>Sound</dt>
             <dd>
@@ -401,12 +427,13 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
         ) : null}
 
         <div className="studio-scene-actions">
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => setPanel(panel === 'production' ? null : 'production')}>
+            <i className="bi bi-camera-reels me-1" aria-hidden="true" />
+            Video production
+          </button>
           {actions}
           <button type="button" className="btn btn-outline-secondary btn-sm" onClick={onEdit} disabled={Boolean(busy)}>
             Edit details
-          </button>
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setPanel(panel === 'units' ? null : 'units')}>
-            Generation units
           </button>
           <details className="studio-menu">
             <summary className="btn btn-link btn-sm">More</summary>
@@ -426,9 +453,11 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
                   Version history
                 </button>
               ) : null}
-              <button type="button" className="dropdown-item" onClick={() => setPanel('units')}>
-                Generation units
-              </button>
+              {canCreateVideo ? (
+                <button type="button" className="dropdown-item" onClick={() => setPanel('video')}>
+                  Earlier scene video
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="dropdown-item"
@@ -493,7 +522,16 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
         ) : null}
 
         {panel === 'history' ? <SceneVersionHistory scene={scene} onClose={() => setPanel(null)} /> : null}
-        {panel === 'units' ? <UnitVersionsPanel scene={scene} onClose={() => setPanel(null)} /> : null}
+        {panel === 'production' ? (
+          <SceneProduction
+            scene={scene}
+            status={status}
+            planId={planId}
+            planReady={planReady}
+            onClose={() => setPanel(null)}
+            onChanged={onProductionChange}
+          />
+        ) : null}
 
         {panel === 'rework' ? (
           <form
@@ -543,234 +581,6 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
         ) : null}
       </div>
     </li>
-  );
-}
-
-function UnitVersionsPanel({ scene, onClose }) {
-  const { projectId, canApprove } = useStudio();
-  const feedback = useFeedback();
-  const [state, setState] = useState(null);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState('');
-  const [noteFor, setNoteFor] = useState(null);
-  const [note, setNote] = useState('');
-  const [assembly, setAssembly] = useState(null);
-  const [building, setBuilding] = useState(false);
-
-  async function load() {
-    const plans = await listProductionPlans(projectId);
-    const current = plans.find((plan) => plan.is_current) || null;
-    if (!current) {
-      return { planId: null, units: [], versions: {} };
-    }
-    const planScene = await getProductionPlanScene(projectId, current.id, scene.id);
-    const units = Array.isArray(planScene?.units) ? planScene.units : [];
-    const versions = {};
-    await Promise.all(
-      units.map(async (unit) => {
-        versions[unit.id] = await listProductionUnitVersions(projectId, current.id, unit.id);
-      }),
-    );
-    return { planId: current.id, units, versions };
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    load()
-      .then((result) => {
-        if (!cancelled) setState(result);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        if (Number(err?.status) === 404) {
-          setState({ planId: null, units: [], versions: {} });
-          return;
-        }
-        setState({ planId: null, units: [], versions: {} });
-        setError(friendlyError(err, 'Unit videos could not be loaded.'));
-      });
-    return () => {
-      cancelled = true;
-    };
-    // Reload only when the scene changes. Actions call load() themselves.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, scene.id]);
-
-  async function run(key, action, success) {
-    setBusy(key);
-    setError('');
-    try {
-      await action();
-      setState(await load());
-      setNoteFor(null);
-      setNote('');
-      feedback.success(success);
-    } catch (err) {
-      setError(friendlyError(err, 'That could not be saved. Please try again.'));
-    } finally {
-      setBusy('');
-    }
-  }
-
-  return (
-    <section className="studio-inline-panel" aria-labelledby={`units-${scene.id}`}>
-      <div className="d-flex align-items-center justify-content-between mb-2">
-        <h4 className="h6 mb-0" id={`units-${scene.id}`}>
-          Generation units
-        </h4>
-        <button type="button" className="btn btn-link btn-sm" onClick={onClose}>
-          Close
-        </button>
-      </div>
-      <p className="small text-secondary">Each unit keeps every video. Choose one approved video, then build them into one scene video.</p>
-      {state?.planId && canApprove ? (
-        <div className="mb-3">
-          <BusyButton
-            className="btn btn-primary btn-sm"
-            busy={building}
-            busyLabel="Building…"
-            onClick={() => {
-              setBuilding(true);
-              setError('');
-              assembleProductionScene(projectId, state.planId, scene.id)
-                .then((result) => setAssembly(result?.assembly || null))
-                .catch((err) => setError(friendlyError(err, 'The scene video could not be built.')))
-                .finally(() => setBuilding(false));
-            }}
-          >
-            Build scene video
-          </BusyButton>
-          {assembly ? (
-            <div className="mt-2">
-              <StatusBadge tone={assembly.status === 'completed' ? 'success' : assembly.status === 'failed' ? 'danger' : 'progress'}>
-                {assembly.status_label}
-              </StatusBadge>
-              {assembly.label ? <span className="small ms-2">{assembly.label}</span> : null}
-              {assembly.error_message ? <p className="small text-danger mt-2 mb-0">{assembly.error_message}</p> : null}
-              {assembly.output_available ? (
-                <div className="mt-2">
-                  <MediaPreview
-                    load={() => getProductionSceneAssemblyFileUrl(projectId, state.planId, scene.id, assembly.id)}
-                    label={`${sceneName(scene)} scene video`}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      {error ? <p className="text-danger small">{error}</p> : null}
-      {state === null ? <p className="small text-secondary mb-0">Loading units…</p> : null}
-      {state && !state.planId ? <p className="small text-secondary mb-0">No video versions yet.</p> : null}
-      {state?.units?.map((unit) => {
-        const pack = state.versions[unit.id] || { versions: [], message: null };
-        const items = Array.isArray(pack.versions) ? pack.versions : [];
-        const unitName = `Unit ${String(unit.sequence).padStart(2, '0')}`;
-        return (
-          <div key={unit.id} className="mb-3">
-            <p className="fw-semibold mb-1">
-              {unitName}
-              <span className="fw-normal text-secondary"> · {formatSeconds(unit.duration_seconds)}</span>
-            </p>
-            {items.length === 0 ? <p className="small text-secondary mb-2">{pack.message || 'No video versions yet.'}</p> : null}
-            <div className="d-grid gap-2">
-              {items.map((item) => (
-                <article key={item.id} className={`border rounded p-2 ${item.selected ? 'border-primary' : ''}`}>
-                  <div className="d-flex flex-wrap align-items-center gap-2">
-                    <span className="fw-semibold">{item.label}</span>
-                    <StatusBadge tone={reviewTone(item.status)}>{item.status_label}</StatusBadge>
-                    {item.selected ? <StatusBadge tone="success">{item.selected_label}</StatusBadge> : null}
-                  </div>
-                  {item.preview_available ? (
-                    <div className="mt-2">
-                      <MediaPreview
-                        load={() => getProductionUnitVersionFileUrl(projectId, state.planId, unit.id, item.id)}
-                        label={`${unitName} ${item.label}`}
-                      />
-                    </div>
-                  ) : null}
-                  {item.comment ? <p className="small mt-2 mb-0">“{item.comment}”</p> : null}
-                  {canApprove ? (
-                    <div className="d-flex flex-wrap gap-2 mt-2">
-                      {item.status === 'pending_review' && item.preview_available ? (
-                        <BusyButton
-                          className="btn btn-success btn-sm"
-                          busy={busy === `approve-${item.id}`}
-                          busyLabel="Approving…"
-                          disabled={Boolean(busy)}
-                          onClick={() =>
-                            run(`approve-${item.id}`, () => approveProductionUnitVersion(projectId, state.planId, unit.id, item.id), `${item.label} approved.`)
-                          }
-                        >
-                          Approve
-                        </BusyButton>
-                      ) : null}
-                      {item.status === 'pending_review' && item.preview_available ? (
-                        <button type="button" className="btn btn-outline-secondary btn-sm" disabled={Boolean(busy)} onClick={() => setNoteFor(item.id)}>
-                          Request changes
-                        </button>
-                      ) : null}
-                      {item.approved && !item.selected ? (
-                        <BusyButton
-                          className="btn btn-primary btn-sm"
-                          busy={busy === `select-${item.id}`}
-                          busyLabel="Selecting…"
-                          disabled={Boolean(busy)}
-                          onClick={() =>
-                            run(
-                              `select-${item.id}`,
-                              () => selectProductionUnitVersion(projectId, state.planId, unit.id, item.id),
-                              `${item.label} selected for the final scene.`,
-                            )
-                          }
-                        >
-                          Select for the final scene
-                        </BusyButton>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {noteFor === item.id ? (
-                    <form
-                      className="mt-2"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        const comment = note.trim();
-                        if (!comment) return;
-                        run(
-                          `changes-${item.id}`,
-                          () => requestProductionUnitVersionChanges(projectId, state.planId, unit.id, item.id, comment),
-                          `Changes requested for ${item.label}.`,
-                        );
-                      }}
-                    >
-                      <label className="form-label" htmlFor={`unit-note-${item.id}`}>
-                        What should change?
-                      </label>
-                      <textarea
-                        id={`unit-note-${item.id}`}
-                        className="form-control"
-                        rows={2}
-                        value={note}
-                        onChange={(event) => setNote(event.target.value)}
-                        required
-                      />
-                      <div className="d-flex gap-2 mt-2">
-                        <BusyButton type="submit" className="btn btn-primary btn-sm" busy={busy === `changes-${item.id}`} busyLabel="Sending…" disabled={!note.trim()}>
-                          Request changes
-                        </BusyButton>
-                        <button type="button" className="btn btn-link btn-sm" onClick={() => setNoteFor(null)}>
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </section>
   );
 }
 

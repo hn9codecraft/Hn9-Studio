@@ -55,6 +55,12 @@ class StoryProductionUnit extends Model
         return $this->hasMany(StoryProductionUnitVersion::class, 'story_production_unit_id');
     }
 
+    /** @return HasMany<StoryVideoGenerationJob, $this> */
+    public function generations(): HasMany
+    {
+        return $this->hasMany(StoryVideoGenerationJob::class, 'story_production_unit_id');
+    }
+
     /** @return BelongsTo<StoryProductionUnitVersion, $this> */
     public function selectedVersion(): BelongsTo
     {

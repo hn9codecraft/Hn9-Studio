@@ -67,4 +67,10 @@ class StoryProductionPlanScene extends Model
     {
         return $this->hasMany(StoryProductionUnit::class, 'story_production_plan_scene_id');
     }
+
+    /** @return HasMany<StorySceneAssembly, $this> */
+    public function assemblies(): HasMany
+    {
+        return $this->hasMany(StorySceneAssembly::class, 'story_production_plan_scene_id');
+    }
 }

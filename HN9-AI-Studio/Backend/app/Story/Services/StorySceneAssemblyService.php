@@ -18,6 +18,7 @@ use App\Story\Media\StoryMediaToolkit;
 use App\Story\Models\StoryProductionPlanScene;
 use App\Story\Models\StoryProductionUnit;
 use App\Story\Models\StorySceneAssembly;
+use App\Story\Models\StoryVideoGenerationJob;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -89,6 +90,54 @@ final class StorySceneAssemblyService implements StorySceneAssemblyServiceInterf
         return [
             'current' => $this->presentCurrent($rows->last(static fn (StorySceneAssembly $row): bool => $row->isComplete())),
             'assemblies' => $rows->map(fn (StorySceneAssembly $row): array => $this->present($row))->values()->all(),
+        ];
+    }
+
+    public function workspace(Project $project, string $planUuid, string $sceneUuid): array
+    {
+        $scene = $this->scene($project, $planUuid, $sceneUuid);
+        $scene->loadMissing(['units' => static fn ($query) => $query->orderBy('sequence')]);
+        $clips = [];
+        foreach ($scene->units as $unit) {
+            if (! $unit instanceof StoryProductionUnit) {
+                continue;
+            }
+            $listed = $this->versions->listForUnit($project, $planUuid, $unit->uuid);
+            $active = StoryVideoGenerationJob::query()
+                ->where('story_production_unit_id', $unit->id)
+                ->whereIn('status', [
+                    StoryVideoJobStatus::Queued->value,
+                    StoryVideoJobStatus::Submitted->value,
+                    StoryVideoJobStatus::Processing->value,
+                ])
+                ->orderByDesc('id')
+                ->first();
+            $clips[] = [
+                'id' => $unit->uuid,
+                'sequence' => $unit->sequence,
+                'start_second' => $unit->start_second,
+                'duration_seconds' => $unit->duration_seconds,
+                'end_second' => $unit->endSecond(),
+                'message' => $listed['message'],
+                'versions' => array_map(static function (array $row): array {
+                    unset($row['provider'], $row['model']);
+
+                    return $row;
+                }, $listed['versions']),
+                'active_generation' => $active instanceof StoryVideoGenerationJob
+                    ? ['id' => $active->uuid, 'status' => $active->statusEnum()->value]
+                    : null,
+            ];
+        }
+
+        $listedAssemblies = $this->listForScene($project, $planUuid, $sceneUuid);
+
+        return [
+            'plan_id' => $scene->plan?->uuid,
+            'duration_seconds' => (int) $scene->duration_seconds,
+            'clips' => $clips,
+            'current' => $listedAssemblies['current'],
+            'assemblies' => $listedAssemblies['assemblies'],
         ];
     }
 
