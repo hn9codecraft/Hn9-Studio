@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Story\Contracts\StoryReelServiceInterface;
 use App\Story\Contracts\StorySceneServiceInterface;
 use App\Story\Enums\StoryReviewStatus;
+use App\Story\Enums\StorySceneStatus;
 use App\Story\Enums\StoryVideoInputType;
 use App\Story\Exceptions\StoryException;
 use App\Story\Exceptions\StoryReviewException;
@@ -17,6 +18,7 @@ use App\Story\Models\StoryReel;
 use App\Story\Models\StoryReelComment;
 use App\Story\Models\StoryReelVersion;
 use App\Story\Models\StoryScene;
+use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StorySceneComment;
 use App\Story\Models\StorySceneVersion;
 use App\Story\Enums\StoryVideoCapability;
@@ -31,11 +33,18 @@ use Illuminate\Support\Facades\Storage;
  */
 final readonly class StoryReviewService
 {
+    public const MODE_TEXT = 'text';
+
+    public const MODE_IMAGE = 'image';
+
+    public const MODE_REFERENCE = 'reference';
+
     public function __construct(
         private StorySceneServiceInterface $scenes,
         private StoryReelServiceInterface $reels,
         private StoryContinuityService $continuity,
         private StoryVideoDispatchService $dispatch,
+        private StoryTimelineService $timelines,
     ) {}
 
     /**
@@ -127,26 +136,60 @@ final readonly class StoryReviewService
         string $reelUuid,
         string $sceneUuid,
         ?string $comment,
+        string $mode = self::MODE_TEXT,
+        ?string $prompt = null,
+        ?string $referenceUuid = null,
     ): array {
         $scene = $this->scene($project, $reelUuid, $sceneUuid);
+        $capability = match ($mode) {
+            self::MODE_IMAGE => StoryVideoCapability::ImageToVideo,
+            self::MODE_REFERENCE => StoryVideoCapability::ReferenceToVideo,
+            default => StoryVideoCapability::TextToVideo,
+        };
+        $inputs = [];
+        if ($capability !== StoryVideoCapability::TextToVideo) {
+            if ($referenceUuid === null || $referenceUuid === '') {
+                throw StoryVideoEngineException::invalidInput('Choose a character or style picture for this video.');
+            }
+            $inputs[] = new StoryVideoInput(
+                type: $capability === StoryVideoCapability::ImageToVideo
+                    ? StoryVideoInputType::Image
+                    : StoryVideoInputType::ReferenceImage,
+                assetId: $referenceUuid,
+            );
+        }
+
+        // No version is opened unless a provider can actually take the request.
+        $this->dispatch->assertLive($project, $capability, $reelUuid, $sceneUuid);
+
         $parent = $this->latestSceneVersion($scene);
         $package = $this->continuity->packageForScene($project, $reelUuid, $sceneUuid);
         if ($comment !== null && $comment !== '') {
             $package['review_comment'] = $comment;
         }
+        $prompt = trim((string) $prompt);
+        $aspectRatio = $package['story_bible']['aspect_ratio'] ?? null;
 
         $version = $this->openSceneVersion($scene, $parent, $comment, $package);
 
-        $this->dispatch->start($project, new StoryVideoGenerationRequest(
-            capability: StoryVideoCapability::TextToVideo,
+        $started = $this->dispatch->start($project, new StoryVideoGenerationRequest(
+            capability: $capability,
             reelUuid: $reelUuid,
             sceneUuid: $sceneUuid,
-            prompt: (string) ($scene->visual_prompt ?: $scene->story ?: $scene->title),
+            prompt: $prompt !== '' ? $prompt : (string) ($scene->visual_prompt ?: $scene->story ?: $scene->title),
             durationSeconds: (int) $scene->duration_seconds,
+            aspectRatio: is_string($aspectRatio) && $aspectRatio !== '' ? $aspectRatio : null,
+            inputs: $inputs,
             idempotencyKey: 'scene-version-'.$version->uuid,
+            metadata: ['version_id' => $version->uuid],
         ));
 
-        return $this->sceneVersionPayload($version->fresh(['comments.author', 'parentVersion']));
+        $job = $started['job'];
+        $metadata = is_array($job->provider_metadata) ? $job->provider_metadata : [];
+        $metadata['version_id'] = $version->uuid;
+        $job->forceFill(['provider_metadata' => $metadata])->save();
+
+        return $this->revisionPayload($version->fresh(['comments.author', 'parentVersion']), $job->fresh() ?? $job, true);
     }
 
     /**
@@ -220,6 +263,75 @@ final readonly class StoryReviewService
             'output_url' => null,
             'has_file' => $this->jobHasFile($job),
         ];
+    }
+
+    /**
+     * Production state of every scene in a reel: current version, its video and the
+     * latest sound per role. Reads stored rows only; provider state is not refreshed.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function reelSceneStatus(Project $project, string $reelUuid): array
+    {
+        $reel = $this->reel($project, $reelUuid);
+        $scenes = StoryScene::query()
+            ->where('story_reel_id', $reel->id)
+            ->where('status', '!=', StorySceneStatus::Archived->value)
+            ->orderBy('sequence')
+            ->get();
+        $sceneIds = $scenes->pluck('id');
+        $versions = StorySceneVersion::query()
+            ->whereIn('story_scene_id', $sceneIds)
+            ->orderByDesc('version')
+            ->get()
+            ->groupBy('story_scene_id');
+        $jobs = StoryVideoGenerationJob::query()
+            ->whereIn('story_scene_id', $sceneIds)
+            ->where('capability', '!=', StoryVideoCapability::Audio->value)
+            ->orderByDesc('id')
+            ->get()
+            ->groupBy('story_scene_id');
+        $audio = StorySceneAudio::query()
+            ->whereIn('story_scene_id', $sceneIds)
+            ->orderByDesc('id')
+            ->get()
+            ->groupBy('story_scene_id');
+
+        return $scenes->map(function (StoryScene $scene) use ($versions, $jobs, $audio): array {
+            $version = $versions->get($scene->id)?->first();
+            $job = $version === null ? null : $jobs->get($scene->id)?->first(
+                static fn (StoryVideoGenerationJob $candidate): bool => ($candidate->provider_metadata['version_id'] ?? null) === $version->uuid,
+            );
+            $sounds = [];
+            foreach ($audio->get($scene->id) ?? [] as $item) {
+                if (! isset($sounds[$item->role])) {
+                    $sounds[$item->role] = [
+                        'id' => $item->uuid,
+                        'role' => $item->role,
+                        'status' => $item->status,
+                        'has_file' => $item->hasPrivateFile(),
+                        'error_code' => $item->error_code,
+                    ];
+                }
+            }
+
+            return [
+                'scene_id' => $scene->uuid,
+                'version' => $version === null ? null : [
+                    'id' => $version->uuid,
+                    'version' => $version->version,
+                    'status' => $version->status,
+                    'review_comment' => $version->review_comment,
+                ],
+                'video' => $job === null ? null : [
+                    'job_id' => $job->uuid,
+                    'status' => $job->status,
+                    'has_file' => $this->jobHasFile($job),
+                    'error_code' => $job->error_code,
+                ],
+                'sounds' => array_values($sounds),
+            ];
+        })->values()->all();
     }
 
     public function sceneFile(Project $project, string $reelUuid, string $sceneUuid): \Symfony\Component\HttpFoundation\StreamedResponse
@@ -337,9 +449,7 @@ final readonly class StoryReviewService
             throw StoryVideoEngineException::invalidInput('A stored scene video is required.');
         }
 
-        if (! $this->dispatch->liveSupports($capability)) {
-            throw StoryVideoEngineException::generationNotEnabled();
-        }
+        $this->dispatch->assertLive($project, $capability, $reelUuid, $sceneUuid);
 
         $scene->loadMissing('reel');
         $key = $capability->value.':'.$source->uuid.':'.hash('sha256', $instruction);
@@ -533,6 +643,10 @@ final readonly class StoryReviewService
             'reviewed_by' => $actor->id,
             'review_comment' => $comment ?? $version->review_comment,
         ])->save();
+
+        if ($status === StoryReviewStatus::Approved) {
+            $this->timelines->placeApprovedSceneVersion($project, $version);
+        }
 
         return $this->sceneVersionPayload($version->fresh('comments.author'));
     }

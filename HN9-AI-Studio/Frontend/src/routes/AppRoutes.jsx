@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import AppShell from '../components/layout/AppShell';
 import DashboardPage from '../pages/DashboardPage';
 import GenerationsPage from '../pages/GenerationsPage';
@@ -24,8 +24,15 @@ export default function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<CreateProjectPage />} />
-          <Route path="/story" element={<ProjectStoryPage />} />
-          <Route path="/story/:projectId" element={<ProjectStoryPage />} />
+          <Route path="/studio" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images/new" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images/generate" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images/:imageId/regenerate" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images/:imageId" element={<ProjectStoryPage />} />
+          <Route path="/story" element={<Navigate to="/studio" replace />} />
+          <Route path="/story/:projectId" element={<LegacyStoryRedirect />} />
           <Route path="/projects/:projectId" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/scripts/generate" element={<ProjectWorkspacePage />} />
           <Route path="/projects/:projectId/scripts/new" element={<ProjectWorkspacePage />} />
@@ -51,4 +58,10 @@ export default function AppRoutes() {
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
+}
+
+function LegacyStoryRedirect() {
+  const { projectId } = useParams();
+
+  return <Navigate to={`/studio/${projectId}`} replace />;
 }

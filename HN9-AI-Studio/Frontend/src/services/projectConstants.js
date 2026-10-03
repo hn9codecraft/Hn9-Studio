@@ -26,10 +26,10 @@ export const STATUS_TRANSITIONS = {
 export const WORKSPACE_SECTIONS = [
   { key: 'overview', label: 'Overview', path: '' },
   { key: 'scripts', label: 'Scripts', path: 'scripts' },
-  { key: 'images', label: 'Images', path: 'images' },
-  { key: 'videos', label: 'Videos', path: 'videos' },
+  { key: 'images', label: 'Images', path: 'images', studioPath: 'images' },
+  { key: 'videos', label: 'Videos', path: 'videos', studioPath: '?section=scenes' },
   { key: 'assets', label: 'Assets', path: 'assets' },
-  { key: 'final', label: 'Final', path: 'final' },
+  { key: 'final', label: 'Final', path: 'final', studioPath: '?section=final' },
   { key: 'activity', label: 'Activity', path: 'activity' },
 ];
 

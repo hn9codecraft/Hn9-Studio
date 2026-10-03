@@ -37,6 +37,7 @@ final readonly class StoryStyleReferenceService implements StoryStyleReferenceSe
         private StyleReferenceBinaryStore $store,
         private StyleReferencePromptBuilder $promptBuilder,
         private ProviderDispatcherInterface $dispatcher,
+        private StoryGenerationAttemptRecorder $attempts,
     ) {}
 
     public function listForProject(Project $project): Collection
@@ -108,8 +109,10 @@ final readonly class StoryStyleReferenceService implements StoryStyleReferenceSe
         try {
             $result = $this->dispatcher->dispatch($request, $dispatchOptions);
         } catch (ProviderException $exception) {
+            $this->attempts->recordFailure($project, StoryGenerationAttemptRecorder::KIND_STYLE_IMAGE, 'image', $exception);
             throw StoryStyleException::generationFailed($exception->getMessage());
         } catch (Throwable $exception) {
+            $this->attempts->recordFailure($project, StoryGenerationAttemptRecorder::KIND_STYLE_IMAGE, 'image', $exception);
             throw StoryStyleException::generationFailed(
                 $exception->getMessage() !== '' ? $exception->getMessage() : 'Image generation failed.',
             );

@@ -29,7 +29,7 @@ class StoryVideoEngineException extends StoryException
     public static function generationNotEnabled(): self
     {
         return new self(
-            message: 'Story video provider submission is reserved for a later sprint. The engine accepts routing and job contracts only.',
+            message: 'Video creation is not connected yet. Connect a video provider in Settings to create this video.',
             errorCode: StoryVideoErrorCode::GenerationNotEnabled->value,
             statusCode: 501,
         );

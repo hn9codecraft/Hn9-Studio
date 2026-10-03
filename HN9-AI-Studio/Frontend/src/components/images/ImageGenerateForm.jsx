@@ -16,7 +16,7 @@ const EMPTY = {
   script_id: '',
 };
 
-export default function ImageGenerateForm({ project, parentImage = null }) {
+export default function ImageGenerateForm({ project, parentImage = null, basePath = `/projects/${project.id}/images` }) {
   const navigate = useNavigate();
   const initial = useMemo(() => {
     if (!parentImage) {
@@ -90,7 +90,7 @@ export default function ImageGenerateForm({ project, parentImage = null }) {
         ? await regenerateImage(project.id, parentImage.id, payload)
         : await generateImage(project.id, payload);
       const created = result?.image || result;
-      navigate(`/projects/${project.id}/images/${created.id}`, {
+      navigate(`${basePath}/${created.id}`, {
         replace: true,
         state: {
           notice: parentImage
@@ -113,7 +113,7 @@ export default function ImageGenerateForm({ project, parentImage = null }) {
     <div className="image-generate">
       <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div>
-          <Link to={parentImage ? `/projects/${project.id}/images/${parentImage.id}` : `/projects/${project.id}/images`} className="small text-decoration-none">
+          <Link to={parentImage ? `${basePath}/${parentImage.id}` : `${basePath}`} className="small text-decoration-none">
             <i className="bi bi-arrow-left me-1" aria-hidden="true" />
             Back
           </Link>

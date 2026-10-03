@@ -29,6 +29,15 @@ class StoryRenderController extends Controller
         return ApiResponse::success($this->renders->start($project, $reelUuid), 201);
     }
 
+    public function index(string $uuid, string $reelUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('view', $this->reel($project->id, $reelUuid));
+
+        return ApiResponse::success($this->renders->index($project, $reelUuid));
+    }
+
     public function show(string $uuid, string $reelUuid, string $renderUuid): JsonResponse
     {
         $project = $this->projects->getByUuid($uuid);

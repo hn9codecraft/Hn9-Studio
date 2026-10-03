@@ -32,7 +32,7 @@ final class StoryWorkspaceApiTest extends TestCase
             ->getJson('/api/v1/story')
             ->assertOk()
             ->assertJsonPath('data.module', 'project_story')
-            ->assertJsonPath('data.title', 'Project Story');
+            ->assertJsonPath('data.title', 'Creative Production Studio');
 
         $capabilities = $response->json('data.capabilities');
         $this->assertIsArray($capabilities);

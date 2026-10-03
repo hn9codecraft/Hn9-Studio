@@ -42,6 +42,7 @@ final readonly class StoryPlannerService implements StoryPlannerServiceInterface
         private StoryPlannerPromptBuilder $prompts,
         private StoryPlanStructuredOutput $structured,
         private ProviderDispatcherInterface $dispatcher,
+        private StoryGenerationAttemptRecorder $attempts,
     ) {}
 
     public function listForProject(Project $project): Collection
@@ -195,14 +196,17 @@ final readonly class StoryPlannerService implements StoryPlannerServiceInterface
             });
         } catch (StoryPlannerException $exception) {
             $this->markFailed($plan, $version, $exception->getMessage());
+            $this->attempts->recordFailure($project, StoryGenerationAttemptRecorder::KIND_PLAN, 'text', $exception);
             throw $exception;
         } catch (ProviderException $exception) {
             $message = $exception->getMessage();
             $this->markFailed($plan, $version, $message);
+            $this->attempts->recordFailure($project, StoryGenerationAttemptRecorder::KIND_PLAN, 'text', $exception);
             throw StoryPlannerException::generationFailed($message);
         } catch (Throwable $exception) {
             $message = $exception->getMessage() !== '' ? $exception->getMessage() : 'Story planning failed.';
             $this->markFailed($plan, $version, $message);
+            $this->attempts->recordFailure($project, StoryGenerationAttemptRecorder::KIND_PLAN, 'text', $exception);
             throw StoryPlannerException::generationFailed($message);
         }
     }

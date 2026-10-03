@@ -11,6 +11,7 @@ use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Exceptions\StoryException;
 use App\Story\Exceptions\StoryVideoEngineException;
+use App\Story\Models\StoryReel;
 use App\Story\Models\StoryScene;
 use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StorySceneVersion;
@@ -49,6 +50,25 @@ final readonly class StoryAudioService
     }
 
     /**
+     * Every scene's audio in one reel, newest first, without refreshing provider state.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listForReel(Project $project, StoryReel $reel): array
+    {
+        return StorySceneAudio::query()
+            ->whereHas('scene', static function ($query) use ($reel): void {
+                $query->where('story_reel_id', $reel->id);
+            })
+            ->where('story_workspace_id', $reel->story_workspace_id)
+            ->with(['scene', 'version', 'job'])
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (StorySceneAudio $audio): array => $this->payload($audio))
+            ->all();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function create(
@@ -64,9 +84,7 @@ final readonly class StoryAudioService
             throw StoryVideoEngineException::invalidInput('An audio prompt is required.');
         }
 
-        if (! $this->dispatch->liveSupports(StoryVideoCapability::Audio)) {
-            throw StoryVideoEngineException::generationNotEnabled();
-        }
+        $this->dispatch->assertLive($project, StoryVideoCapability::Audio, $reelUuid, $sceneUuid);
 
         $liveRoles = $this->dispatch->liveAudioRoles();
         if ($liveRoles !== [] && ! in_array($role->value, $liveRoles, true)) {

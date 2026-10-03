@@ -13,8 +13,9 @@ import FinalAssetsStudio from '../../components/exports/FinalAssetsStudio';
 import AlertMessage from '../../components/ui/AlertMessage';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { ApiError } from '../../services/apiClient';
-import { formatProjectDate, statusLabel, typeLabel } from '../../services/projectConstants';
+import { formatProjectDate, statusLabel, typeLabel, WORKSPACE_SECTIONS } from '../../services/projectConstants';
 import { deleteProject, getProject, updateProject } from '../../services/projectService';
+import { normalizeStudioWorkflows, studioWorkflowLabel } from '../../services/storyConstants';
 
 const SECTION_TITLES = {
   scripts: 'Scripts',
@@ -106,7 +107,12 @@ export default function ProjectWorkspacePage() {
   }, [projectId]);
 
   const metadataEntries = useMemo(() => readableEntries(project?.metadata), [project]);
-  const settingsEntries = useMemo(() => readableEntries(project?.settings), [project]);
+  const settingsEntries = useMemo(
+    () => readableEntries(project?.settings).filter(([key]) => key !== 'studio_modules'),
+    [project],
+  );
+  const studioWorkflows = normalizeStudioWorkflows(project?.settings?.studio_modules);
+  const studioSection = WORKSPACE_SECTIONS.find((item) => item.key === activeSection && item.studioPath) || null;
 
   if (section && !SECTION_TITLES[section] && !inScriptStudio && !inImageStudio && !inVideoStudio && !inAssetStudio) {
     return <Navigate to={`/projects/${projectId}`} replace />;
@@ -189,6 +195,10 @@ export default function ProjectWorkspacePage() {
               <p className="text-secondary mb-0">{project.description || 'No description yet.'}</p>
             </div>
             <div className="d-flex flex-wrap gap-2">
+              <Link className="btn btn-primary" to={`/studio/${project.id}`}>
+                <i className="bi bi-camera-reels" aria-hidden="true" />
+                Open Creative Studio
+              </Link>
               <button
                 type="button"
                 className="btn btn-outline-primary"
@@ -255,6 +265,21 @@ export default function ProjectWorkspacePage() {
       <section className="page-section">
       <WorkspaceTabs projectId={project.id} section={activeSection} />
 
+      {studioSection ? (
+        <div className="studio-note mb-3">
+          <i className="bi bi-camera-reels" aria-hidden="true" />
+          <span className="flex-grow-1">
+            {SECTION_TITLES[activeSection]} are now made in the Creative Studio, step by step with your story, cast and scenes.
+          </span>
+          <Link
+            className="btn btn-primary btn-sm"
+            to={`/studio/${project.id}${studioSection.studioPath.startsWith('?') ? '' : '/'}${studioSection.studioPath}`}
+          >
+            Open in Creative Studio
+          </Link>
+        </div>
+      ) : null}
+
       <div className="workspace-panel">
         {activeSection === 'overview' ? (
           <div className="row g-4">
@@ -264,6 +289,12 @@ export default function ProjectWorkspacePage() {
                   <h3 className="card-heading mb-3">Overview</h3>
                   <p className="mb-4">{project.description || 'This project has no description yet.'}</p>
                   <dl className="row mb-0">
+                    <dt className="col-sm-4">Workflows</dt>
+                    <dd className="col-sm-8">
+                      {studioWorkflows.length > 0
+                        ? studioWorkflows.map(studioWorkflowLabel).join(', ')
+                        : 'All (not narrowed)'}
+                    </dd>
                     <dt className="col-sm-4">Slug</dt>
                     <dd className="col-sm-8">
                       <code>{project.slug || '—'}</code>

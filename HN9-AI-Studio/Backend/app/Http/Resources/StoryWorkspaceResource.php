@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Story\Models\StoryWorkspace;
+use App\Support\StudioWorkflows;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,6 +20,9 @@ class StoryWorkspaceResource extends JsonResource
     public function toArray(Request $request): array
     {
         $project = $this->project;
+        $user = $request->user();
+        $approve = $user !== null && $project !== null
+            && ($user->isAdmin() || (int) $user->id === (int) $project->user_id);
 
         return [
             'id' => $this->uuid,
@@ -28,10 +32,12 @@ class StoryWorkspaceResource extends JsonResource
                 'name' => $project->name,
                 'slug' => $project->slug,
                 'status' => $project->status,
+                'studio_modules' => StudioWorkflows::fromSettings($project->settings),
             ],
             'abilities' => [
                 'view' => true,
                 'select' => true,
+                'approve' => $approve,
             ],
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

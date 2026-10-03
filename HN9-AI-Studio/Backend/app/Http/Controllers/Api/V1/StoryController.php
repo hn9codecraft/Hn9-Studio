@@ -10,6 +10,7 @@ use App\Http\Resources\ProjectResource;
 use App\Http\Resources\StoryWorkspaceResource;
 use App\Story\Contracts\StoryWorkspaceServiceInterface;
 use App\Story\Models\StoryWorkspace;
+use App\Story\Services\StoryReadinessService;
 use App\Story\Video\StoryCapabilityRoute;
 use App\Support\ApiResponse;
 use App\Support\PageSize;
@@ -29,8 +30,8 @@ class StoryController extends Controller
 
         return ApiResponse::success([
             'module' => 'project_story',
-            'title' => 'Project Story',
-            'description' => 'A dedicated workspace for long-form story production, selected from an existing project.',
+            'title' => 'Creative Production Studio',
+            'description' => 'Plan, produce and finish story, image, video and audio content inside an existing project.',
             'capabilities' => array_map(
                 static fn (StoryCapabilityRoute $route): array => $route->toArray(),
                 $this->stories->capabilityCatalog(),
@@ -54,7 +55,7 @@ class StoryController extends Controller
         ]);
     }
 
-    public function show(string $uuid): JsonResponse
+    public function show(Request $request, string $uuid, StoryReadinessService $readiness): JsonResponse
     {
         $project = $this->projects->getByUuid($uuid);
 
@@ -64,7 +65,10 @@ class StoryController extends Controller
 
         $this->authorize('view', $workspace);
 
-        return ApiResponse::success(new StoryWorkspaceResource($workspace));
+        return ApiResponse::success([
+            ...(new StoryWorkspaceResource($workspace))->toArray($request),
+            'connections' => $readiness->connections(),
+        ]);
     }
 
     public function capabilities(): JsonResponse

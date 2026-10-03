@@ -38,6 +38,7 @@ final readonly class StoryCharacterReferenceService implements StoryCharacterRef
         private CharacterReferenceBinaryStore $store,
         private CharacterReferencePromptBuilder $promptBuilder,
         private ProviderDispatcherInterface $dispatcher,
+        private StoryGenerationAttemptRecorder $attempts,
     ) {}
 
     public function listForCharacter(Project $project, string $characterUuid): Collection
@@ -109,8 +110,10 @@ final readonly class StoryCharacterReferenceService implements StoryCharacterRef
         try {
             $result = $this->dispatcher->dispatch($request, $dispatchOptions);
         } catch (ProviderException $exception) {
+            $this->attempts->recordFailure($project, StoryGenerationAttemptRecorder::KIND_CHARACTER_IMAGE, 'image', $exception);
             throw StoryCharacterException::generationFailed($exception->getMessage());
         } catch (Throwable $exception) {
+            $this->attempts->recordFailure($project, StoryGenerationAttemptRecorder::KIND_CHARACTER_IMAGE, 'image', $exception);
             throw StoryCharacterException::generationFailed(
                 $exception->getMessage() !== '' ? $exception->getMessage() : 'Image generation failed.',
             );

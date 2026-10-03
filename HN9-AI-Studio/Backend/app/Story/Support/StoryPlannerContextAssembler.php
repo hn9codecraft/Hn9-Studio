@@ -63,7 +63,7 @@ final readonly class StoryPlannerContextAssembler
         $approvedStyle = $style->approvedReference;
 
         return [
-            'story_bible' => [
+            'story_details' => [
                 'id' => $bible->uuid,
                 'configured' => $bible->isConfigured(),
                 'concept' => $bible->concept,
@@ -80,7 +80,7 @@ final readonly class StoryPlannerContextAssembler
                 'default_duration' => $bible->default_duration,
             ],
             'characters' => $characterPayload,
-            'style_bible' => [
+            'visual_style' => [
                 'id' => $style->uuid,
                 'configured' => $style->isConfigured(),
                 'visual_style' => $style->visual_style,

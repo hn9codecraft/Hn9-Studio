@@ -7,7 +7,7 @@ const TITLES = {
   '/dashboard': 'Dashboard',
   '/projects': 'Projects',
   '/projects/new': 'New Project',
-  '/story': 'Project Story',
+  '/studio': 'Creative Production Studio',
   '/generations': 'Generations',
   '/providers': 'Providers',
   '/settings': 'Settings',
@@ -16,6 +16,10 @@ const TITLES = {
 function pageTitle(pathname) {
   if (TITLES[pathname]) {
     return TITLES[pathname];
+  }
+
+  if (pathname.startsWith('/studio')) {
+    return 'Creative Production Studio';
   }
 
   if (pathname.includes('/scripts')) {
@@ -36,10 +40,6 @@ function pageTitle(pathname) {
 
   if (pathname.includes('/activity')) {
     return 'Activity Studio';
-  }
-
-  if (pathname.startsWith('/story')) {
-    return 'Project Story';
   }
 
   if (pathname.startsWith('/projects/')) {
