@@ -60,9 +60,10 @@ final class StoryProductionPlanApiTest extends TestCase
         $this->assertSame([
             ['sequence' => 1, 'start_second' => 0, 'duration_seconds' => 10, 'end_second' => 10, 'kind' => 'standard'],
             ['sequence' => 2, 'start_second' => 10, 'duration_seconds' => 7, 'end_second' => 17, 'kind' => 'remainder'],
-        ], array_map(static fn (array $unit): array => array_diff_key($unit, ['id' => true]), $detail['scenes'][0]['units']));
+        ], array_map(static fn (array $unit): array => array_diff_key($unit, ['id' => true, 'selected_version_id' => true]), $detail['scenes'][0]['units']));
         foreach ($detail['scenes'][0]['units'] as $unit) {
             $this->assertTrue(Str::isUuid($unit['id']));
+            $this->assertNull($unit['selected_version_id']);
         }
 
         $this->actingAs($f['user'], 'sanctum')->getJson("{$base}/{$plan->uuid}/scenes/{$f['scenes'][1]->uuid}")

@@ -89,7 +89,9 @@ where `kind` is `standard` (a full 10 seconds) or `remainder` (the shorter final
 ## Generation Units
 
 Generates one Generation Unit. The scene is not generated as one job, and these endpoints do not
-create a Unit Version, or assemble the scene. The server chooses one video provider. See
+assemble the scene. A successful validated output is recorded as a Unit Version by the server;
+review and selection use the [unit version](#unit-versions) endpoints. The server chooses one
+video provider. See
 [Architecture](Architecture.md#generation-engine-m11183).
 
 | Method | Path | Description |
@@ -150,6 +152,77 @@ bodies, SQL or stack traces.
 
 `GET /story/projects/{project}/history` includes these attempts as `kind: unit_generation` with
 `version_label` `Unit N`.
+
+Each unit on a plan scene also includes `selected_version_id` (a version uuid, or `null`).
+
+## Unit Versions
+
+Review and selection for one Generation Unit. These endpoints do not generate video, do not
+choose a provider, and do not assemble a scene. A version exists only after a generation attempt
+for that unit stored a valid video. See [Architecture](Architecture.md#unit-versions-m11185).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `…/units/{unit}/versions` | Versions for that unit, Version A first. |
+| `GET` | `…/units/{unit}/versions/{version}` | One version. |
+| `GET` | `…/units/{unit}/versions/{version}/file` | The stored video, when the file is still present. |
+| `POST` | `…/units/{unit}/versions/{version}/approve` | Approve a video that is ready for review. Does not select it. |
+| `POST` | `…/units/{unit}/versions/{version}/request-changes` | Ask for changes. The version stays. A new version requires a new generation attempt. |
+| `POST` | `…/units/{unit}/versions/{version}/select` | Use this approved video for the final scene. Any previously selected version stays approved and is no longer selected. |
+
+- **Auth:** same as generation. Owner or admin. `401` unauthenticated, `403` another member,
+  `404` for a unit, version or plan that is not in this project.
+- **Bodies:** approve accepts an optional `comment` (max 2000). Request changes requires
+  `comment`. Select has no body. `project_id`, `generation_unit_id`, `output_asset_id`,
+  `job_id`, `provider` and `approved_by` are ignored.
+- **Idempotency:** approving an approved version, requesting changes on a version that already
+  needs changes, and selecting the version that is already selected each succeed and do not add
+  another history entry.
+- **List body:** `message` is set only when there are no versions: “No video versions yet.”,
+  “Your video is still being generated.”, or “No video version was created. The generation
+  failed.” Otherwise `message` is `null`.
+
+```json
+{
+  "data": {
+    "message": null,
+    "versions": [
+      {
+        "id": "…",
+        "unit_id": "…",
+        "version": "A",
+        "label": "Version A",
+        "status": "approved",
+        "status_label": "Approved",
+        "selected": true,
+        "selected_label": "Selected for the final scene",
+        "approved": true,
+        "duration_seconds": 10,
+        "output_duration_seconds": 10,
+        "preview_available": true,
+        "provider": "video.runway",
+        "model": "gen4.5",
+        "comment": null,
+        "created_at": "…",
+        "updated_at": "…"
+      }
+    ]
+  }
+}
+```
+
+`duration_seconds` is the unit’s length. `output_duration_seconds` is the stored file.
+`provider` and `model` are the snapshot for that attempt. The response has no operation id,
+credential, storage path or internal database id.
+
+| Status | `error_code` | When |
+|--------|--------------|------|
+| `422` | `story_review_invalid_transition` | The video is not ready, is already approved when changes are requested, or is not an approved video with a file when selected. |
+| `422` | `INVALID_INPUT` | Request changes was sent without a comment. The message is “Say what should change.” |
+
+`GET /story/projects/{project}/history` includes these steps as `kind: unit_version` with
+`version_label` such as `Version A`. Events are `version_created`, `ready_for_review`,
+`approved`, `changes_requested`, `selected` and `deselected`.
 
 ## Request / Response Schemas
 _To be defined. Reference the JSON templates under `/Brand` and `/Agents`._

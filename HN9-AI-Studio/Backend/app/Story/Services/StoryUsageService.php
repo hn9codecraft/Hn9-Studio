@@ -15,6 +15,7 @@ use App\Story\Models\StoryGenerationAttempt;
 use App\Story\Models\StoryPlan;
 use App\Story\Models\StoryPlanVersion;
 use App\Story\Models\StoryProductionPlan;
+use App\Story\Models\StoryProductionUnitVersion;
 use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StoryUsageLedgerEntry;
 use App\Story\Models\StoryVideoGenerationJob;
@@ -30,6 +31,15 @@ final class StoryUsageService
         StoryVideoJobStatus::Completed,
         StoryVideoJobStatus::Failed,
         StoryVideoJobStatus::Cancelled,
+    ];
+
+    private const UNIT_VERSION_EVENTS = [
+        StoryProductionUnitVersionService::EVENT_CREATED => 'version_created',
+        StoryProductionUnitVersionService::EVENT_READY => 'ready_for_review',
+        StoryProductionUnitVersionService::EVENT_APPROVED => 'approved',
+        StoryProductionUnitVersionService::EVENT_CHANGES_REQUESTED => 'changes_requested',
+        StoryProductionUnitVersionService::EVENT_SELECTED => 'selected',
+        StoryProductionUnitVersionService::EVENT_DESELECTED => 'deselected',
     ];
 
     private const SOUND_EVENTS = [
@@ -133,6 +143,7 @@ final class StoryUsageService
         // Sound events go first so a version is listed before its generation job when both share a second.
         return $this->storyEvents($project)
             ->concat($this->soundEvents($project))
+            ->concat($this->unitVersionEvents($project))
             ->concat($items)
             ->concat($this->attempts($project))
             ->concat($this->renders($project))
@@ -277,6 +288,69 @@ final class StoryUsageService
                     'model_key' => null,
                     'operation_id' => null,
                     'status' => self::SOUND_EVENTS[$log->action],
+                    'error_code' => null,
+                    'error_message' => null,
+                    'created_at' => $log->created_at?->toIso8601String(),
+                    'submitted_at' => null,
+                    'started_at' => null,
+                    'completed_at' => null,
+                    'failed_at' => null,
+                    'cost' => null,
+                    'currency' => null,
+                    'cost_source' => null,
+                    'cost_reported' => false,
+                    'ledger_recorded_at' => null,
+                ];
+            });
+    }
+
+    /**
+     * Unit version review steps. Descriptions stay in the activity log; this list uses plain labels.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function unitVersionEvents(Project $project): Collection
+    {
+        $versions = StoryProductionUnitVersion::query()
+            ->with(['unit.planScene.scene.reel'])
+            ->whereHas('unit.planScene.plan.workspace', static function ($query) use ($project): void {
+                $query->where('project_id', $project->id);
+            })
+            ->get()
+            ->keyBy('id');
+        if ($versions->isEmpty()) {
+            return collect();
+        }
+
+        return ActivityLog::query()
+            ->where('subject_type', (new StoryProductionUnitVersion)->getMorphClass())
+            ->whereIn('subject_id', $versions->keys())
+            ->whereIn('action', array_keys(self::UNIT_VERSION_EVENTS))
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(static function (ActivityLog $log) use ($versions): array {
+                $version = $versions->get($log->subject_id);
+                $properties = is_array($log->properties) ? $log->properties : [];
+                $scene = $version?->unit?->planScene?->scene;
+
+                return [
+                    'id' => $log->uuid,
+                    'kind' => 'unit_version',
+                    'event' => self::UNIT_VERSION_EVENTS[$log->action],
+                    'version_label' => is_string($properties['version'] ?? null) ? $properties['version'] : null,
+                    'role' => null,
+                    'comment' => is_string($properties['comment'] ?? null) ? $properties['comment'] : null,
+                    'reel_title' => $scene?->reel?->title,
+                    'scene_sequence' => $scene?->sequence,
+                    'scene_title' => $scene?->title,
+                    'reel_id' => $scene?->reel?->uuid,
+                    'scene_id' => $scene?->uuid,
+                    'capability' => null,
+                    'provider_key' => null,
+                    'model_key' => null,
+                    'operation_id' => null,
+                    'status' => self::UNIT_VERSION_EVENTS[$log->action],
                     'error_code' => null,
                     'error_message' => null,
                     'created_at' => $log->created_at?->toIso8601String(),

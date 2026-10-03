@@ -90,7 +90,7 @@ final readonly class StoryProductionPlanService implements StoryProductionPlanSe
         $scene = StoryProductionPlanScene::query()
             ->where('story_production_plan_id', $plan->id)
             ->whereHas('scene', static fn (Builder $query) => $query->where('uuid', $sceneUuid))
-            ->with(['scene', 'units' => static fn ($query) => $query->orderBy('sequence')])
+            ->with(['scene', 'units' => static fn ($query) => $query->orderBy('sequence'), 'units.selectedVersion'])
             ->first()
             ?? throw StoryException::notFound('Production plan scene');
 
@@ -394,6 +394,7 @@ final readonly class StoryProductionPlanService implements StoryProductionPlanSe
             'scenes' => static fn ($query) => $query->orderBy('sequence'),
             'scenes.scene',
             'scenes.units' => static fn ($query) => $query->orderBy('sequence'),
+            'scenes.units.selectedVersion',
         ]);
     }
 }

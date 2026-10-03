@@ -12,6 +12,7 @@ use App\Story\Contracts\LiveStoryVideoProviderAdapterInterface;
 use App\Story\Contracts\StoryCapabilityRouterInterface;
 use App\Story\Contracts\StoryProductionPlanServiceInterface;
 use App\Story\Contracts\StoryProductionUnitGenerationServiceInterface;
+use App\Story\Contracts\StoryProductionUnitVersionServiceInterface;
 use App\Story\Contracts\StoryVideoEngineInterface;
 use App\Story\Enums\StorySceneStatus;
 use App\Story\Enums\StoryVideoCapability;
@@ -86,6 +87,7 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         private StoryContinuityService $continuity,
         private StoryMediaToolkit $media,
         private ActivityLoggerInterface $activity,
+        private StoryProductionUnitVersionServiceInterface $versions,
     ) {}
 
     public function generate(Project $project, string $planUuid, string $unitUuid, User $actor, array $input): array
@@ -262,17 +264,25 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
             return $this->rejectOutput($job, 'The generated clip is not the length of this generation unit, so it was not accepted.');
         }
 
-        $metadata = (array) $job->provider_metadata;
-        $metadata['unit_output_checked'] = true;
-        $metadata['storage']['duration_seconds'] = round($reported, 2);
-        $job->forceFill(['provider_metadata' => $metadata])->save();
+        DB::transaction(function () use ($job, $unit, $reported, $disk, $path, $mime): void {
+            $locked = StoryVideoGenerationJob::query()->whereKey($job->id)->lockForUpdate()->first();
+            if (! $locked instanceof StoryVideoGenerationJob || ($locked->provider_metadata['unit_output_checked'] ?? false) === true) {
+                return;
+            }
+            $this->versions->recordAccepted($locked, $unit, $reported, $disk, $path, $mime);
+            $metadata = (array) $locked->provider_metadata;
+            $metadata['unit_output_checked'] = true;
+            $metadata['storage']['duration_seconds'] = round($reported, 2);
+            $locked->forceFill(['provider_metadata' => $metadata])->save();
+        });
+        $job = $job->refresh();
         $this->record($job, null, self::EVENT_COMPLETED, 'Generation completed', [
             'unit_sequence' => $unit->sequence,
             'duration_seconds' => $unit->duration_seconds,
         ]);
         Log::info('Unit generation stored.', ['job' => $job->uuid, 'unit' => $unit->uuid]);
 
-        return $job->refresh();
+        return $job;
     }
 
     private function rejectOutput(StoryVideoGenerationJob $job, string $message): StoryVideoGenerationJob
@@ -604,22 +614,7 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
             return ['available' => false];
         }
 
-        $job = StoryVideoGenerationJob::query()
-            ->where('story_production_unit_id', $previous->id)
-            ->where('status', StoryVideoJobStatus::Completed->value)
-            ->orderByDesc('id')
-            ->first();
-        $storage = $job?->provider_metadata['storage'] ?? null;
-        $output = is_array($storage) && ($storage['disk'] ?? null) === 'videos' && is_string($storage['path'] ?? null)
-            ? ['disk' => 'videos', 'path' => $storage['path']]
-            : null;
-
-        return [
-            'available' => $output !== null,
-            'id' => $previous->uuid,
-            'sequence' => $previous->sequence,
-            'output' => $output,
-        ];
+        return $this->versions->continuityOutput($previous);
     }
 
     private function capability(mixed $value): StoryVideoCapability

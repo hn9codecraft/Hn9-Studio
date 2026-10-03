@@ -721,6 +721,45 @@ export function listProductionUnitGenerations(projectId, planId, unitId) {
   );
 }
 
+export function listProductionPlans(projectId) {
+  return storyGet(`/story/projects/${projectId}/production-plans`).then((payload) => (Array.isArray(payload) ? payload : []));
+}
+
+export function getProductionPlanScene(projectId, planId, sceneId) {
+  return storyGet(`/story/projects/${projectId}/production-plans/${planId}/scenes/${sceneId}`);
+}
+
+export function listProductionUnitVersions(projectId, planId, unitId) {
+  return storyGet(`/story/projects/${projectId}/production-plans/${planId}/units/${unitId}/versions`);
+}
+
+function productionUnitVersionAction(projectId, planId, unitId, versionId, action, body) {
+  return storyWrite(`/story/projects/${projectId}/production-plans/${planId}/units/${unitId}/versions/${versionId}/${action}`, {
+    method: 'POST',
+    body,
+  });
+}
+
+export function approveProductionUnitVersion(projectId, planId, unitId, versionId) {
+  return productionUnitVersionAction(projectId, planId, unitId, versionId, 'approve', {});
+}
+
+export function requestProductionUnitVersionChanges(projectId, planId, unitId, versionId, comment) {
+  return productionUnitVersionAction(projectId, planId, unitId, versionId, 'request-changes', { comment });
+}
+
+export function selectProductionUnitVersion(projectId, planId, unitId, versionId) {
+  return productionUnitVersionAction(projectId, planId, unitId, versionId, 'select', {});
+}
+
+export function getProductionUnitVersionFileUrl(projectId, planId, unitId, versionId) {
+  return storyFileUrl(
+    `/story/projects/${projectId}/production-plans/${planId}/units/${unitId}/versions/${versionId}/file`,
+    'video/*',
+    'This video could not be loaded.',
+  );
+}
+
 export function getStorySceneAudioFileUrl(projectId, reelId, sceneId, audioId) {
   return storyFileUrl(
     `/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}/file`,

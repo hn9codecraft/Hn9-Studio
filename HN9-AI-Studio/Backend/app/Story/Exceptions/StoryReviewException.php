@@ -16,6 +16,15 @@ final class StoryReviewException extends StoryException
         );
     }
 
+    public static function unit(string $message): self
+    {
+        return new self(
+            message: $message,
+            errorCode: 'story_review_invalid_transition',
+            statusCode: 422,
+        );
+    }
+
     public static function sound(string $message): self
     {
         return new self(
