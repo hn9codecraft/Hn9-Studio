@@ -86,6 +86,70 @@ endpoints. See [Architecture](Architecture.md#production-plan-m1118) for the rul
 Each unit is returned as `{ id, sequence, start_second, duration_seconds, end_second, kind }`,
 where `kind` is `standard` (a full 10 seconds) or `remainder` (the shorter final unit).
 
+## Generation Units
+
+Generates one Generation Unit. The scene is not generated as one job, and these endpoints do not
+choose a provider, create a Unit Version, or assemble the scene. See
+[Architecture](Architecture.md#generation-engine-m11183).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/story/projects/{project}/production-plans/{plan}/units/{unit}/generate` | Start or reuse one generation attempt. |
+| `GET` | `…/units/{unit}/generations` | Every attempt for that unit, oldest first. |
+| `GET` | `…/units/{unit}/generations/{job}` | Current state. This read can advance a job that is not on the queue. |
+| `POST` | `…/units/{unit}/generations/{job}/cancel` | Cancel an in-flight attempt. |
+
+- **Auth:** Sanctum bearer token. The project owner or an admin. Unauthenticated requests get
+  `401`; another member gets `403`. A unit or plan from another project, or an unknown or
+  malformed id, returns `404`.
+- **POST body:** `capability` is required and is one of `text_to_video`, `image_to_video`,
+  `reference_to_video`. Optional: `intent` (1–64 letters, numbers, `_` or `-`; omitted means
+  `initial`), `instruction` (max 500 characters), `aspect_ratio`, and `inputs` of
+  `{ type, asset_id }`. `duration_seconds`, prompts and provider fields are ignored. Duration,
+  scene text, characters, style and continuity are loaded on the server from the unit.
+- **Idempotency:** the same unit and intent returns the existing job with `created: false` and
+  `200`. A new intent creates another attempt with `201`. Repeating a request does not submit a
+  second provider job.
+- **Success body:**
+
+```json
+{
+  "data": {
+    "created": true,
+    "generation": {
+      "id": "…",
+      "unit_id": "…",
+      "capability": "text_to_video",
+      "status": "submitted",
+      "output_available": false,
+      "timed_out": false,
+      "error_code": null,
+      "error_message": null,
+      "created_at": "…",
+      "updated_at": "…"
+    }
+  }
+}
+```
+
+`output_available` is true only after the file is stored on the videos disk and its length matches
+the unit (within 0.5 seconds). The list endpoint returns those generation objects in `data`.
+
+| Status | `error_code` | When |
+|--------|--------------|------|
+| `422` | `INVALID_INPUT` | The mode, intent, picture shape, scene text, approval or reference is not valid. |
+| `422` | `VIDEO_CAPABILITY_NOT_AVAILABLE` | The connected video service cannot make this unit's exact length. Nothing is submitted. |
+| `422` | provider code such as `UPSTREAM_ERROR` | The provider rejected the submit. The job is `failed`. |
+| `501` | `GENERATION_NOT_ENABLED` | No video service is connected. No job is created. |
+
+Image and reference inputs must already belong to the same project. A reference from another
+project is `422` `INVALID_INPUT` and is not sent to a provider. Errors are a plain `message` and
+`error_code`. Responses do not include provider keys, operation ids, credentials, raw provider
+bodies, SQL or stack traces.
+
+`GET /story/projects/{project}/history` includes these attempts as `kind: unit_generation` with
+`version_label` `Unit N`.
+
 ## Request / Response Schemas
 _To be defined. Reference the JSON templates under `/Brand` and `/Agents`._
 

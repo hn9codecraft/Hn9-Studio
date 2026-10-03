@@ -19,6 +19,16 @@ class StoryProductionPlanPolicy
 
     public function view(User $user, StoryProductionPlan $plan): bool
     {
+        return $this->owns($user, $plan);
+    }
+
+    public function generate(User $user, StoryProductionPlan $plan): bool
+    {
+        return $this->owns($user, $plan);
+    }
+
+    private function owns(User $user, StoryProductionPlan $plan): bool
+    {
         $workspace = $plan->workspace ?? $plan->workspace()->first();
         $project = $workspace?->project ?? $workspace?->project()->first();
 

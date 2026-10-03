@@ -82,7 +82,7 @@ final class StoryUsageService
     public function history(Project $project): array
     {
         $jobs = StoryVideoGenerationJob::query()
-            ->with(['reel', 'scene'])
+            ->with(['reel', 'scene', 'productionUnit'])
             ->whereHas('workspace', static function ($query) use ($project): void {
                 $query->where('project_id', $project->id);
             })
@@ -99,7 +99,10 @@ final class StoryUsageService
 
             return [
                 'id' => $job->uuid,
-                'kind' => $job->capability === StoryVideoCapability::Audio->value ? 'audio' : 'video',
+                'kind' => $job->story_production_unit_id !== null
+                    ? 'unit_generation'
+                    : ($job->capability === StoryVideoCapability::Audio->value ? 'audio' : 'video'),
+                'version_label' => $job->productionUnit === null ? null : 'Unit '.$job->productionUnit->sequence,
                 'reel_title' => $job->reel?->title,
                 'scene_sequence' => $job->scene?->sequence,
                 'scene_title' => $job->scene?->title,
