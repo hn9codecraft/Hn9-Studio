@@ -15,6 +15,7 @@ use App\Story\Models\StoryProductionPlanScene;
 use App\Story\Models\StoryProductionUnit;
 use App\Story\Models\StoryProductionUnitVersion;
 use App\Story\Models\StorySceneAssembly;
+use App\Story\Models\StoryTimelineClip;
 use App\Story\Services\StorySceneAssemblyService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,6 +82,20 @@ class StorySceneAssemblyTest extends TestCase
         $snapshot = $assembly->snapshot['units'];
         $this->assertSame([1, 2, 3, 4, 5], array_column($snapshot, 'sequence'));
         $this->assertSame([10, 10, 10, 10, 7], array_column($snapshot, 'duration_seconds'));
+
+        $reel = $scene->scene->reel;
+        $timeline = $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/story/projects/{$project->uuid}/reels/{$reel->uuid}/timeline")
+            ->assertOk();
+        $clip = $timeline->json('data.clips.0');
+        $this->assertSame('video', $clip['media_kind']);
+        $this->assertArrayNotHasKey('path', $clip);
+        $this->assertArrayNotHasKey('disk', $clip);
+        $this->assertEqualsWithDelta(47000, (int) $clip['out_ms'], 500);
+        $stored = StoryTimelineClip::query()->firstOrFail();
+        $this->assertSame($assembly->id, $stored->story_scene_assembly_id);
+        $this->assertSame($assembly->path, $stored->path);
+        $this->assertNull($stored->story_scene_version_id);
     }
 
     public function test_standard_scene_lengths_match_their_unit_slots(): void
@@ -224,7 +239,14 @@ class StorySceneAssemblyTest extends TestCase
 
         $this->assertSame(2, StorySceneAssembly::query()->count());
         Storage::disk('videos')->assertExists($firstPath);
-        $this->assertNotSame($firstPath, StorySceneAssembly::query()->where('version_number', 2)->value('path'));
+        $secondPath = (string) StorySceneAssembly::query()->where('version_number', 2)->value('path');
+        $this->assertNotSame($firstPath, $secondPath);
+        $this->assertSame(1, StoryTimelineClip::query()->where('media_kind', 'video')->count());
+        $this->assertSame($secondPath, StoryTimelineClip::query()->where('media_kind', 'video')->value('path'));
+        $this->assertSame(
+            (int) StorySceneAssembly::query()->where('version_number', 2)->value('id'),
+            (int) StoryTimelineClip::query()->where('media_kind', 'video')->value('story_scene_assembly_id'),
+        );
     }
 
     public function test_the_same_selection_reuses_one_assembly(): void
@@ -235,6 +257,11 @@ class StorySceneAssemblyTest extends TestCase
         $this->actingAs($user, 'sanctum')->postJson($url)->assertOk()->assertJsonPath('data.created', false)->assertJsonPath('data.assembly.id', $first);
         $this->assertSame(1, StorySceneAssembly::query()->count());
         $this->assertCount(1, Storage::disk('videos')->allFiles('assemblies'));
+        StoryTimelineClip::query()->delete();
+        $this->actingAs($user, 'sanctum')->postJson($url)->assertOk()->assertJsonPath('data.created', false);
+        $clip = StoryTimelineClip::query()->where('media_kind', 'video')->firstOrFail();
+        $this->assertSame((int) StorySceneAssembly::query()->value('id'), (int) $clip->story_scene_assembly_id);
+        $this->assertEqualsWithDelta(10000, (int) $clip->out_ms, 500);
     }
 
     public function test_a_duplicate_insert_reuses_the_winning_assembly(): void

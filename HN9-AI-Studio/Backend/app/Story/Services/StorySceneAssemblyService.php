@@ -51,6 +51,7 @@ final class StorySceneAssemblyService implements StorySceneAssemblyServiceInterf
         private StoryProductionUnitVersionServiceInterface $versions,
         private StoryMediaToolkit $media,
         private ActivityLoggerInterface $activity,
+        private StoryTimelineService $timeline,
     ) {}
 
     public function assemble(Project $project, string $planUuid, string $sceneUuid, User $actor): array
@@ -60,6 +61,8 @@ final class StorySceneAssemblyService implements StorySceneAssemblyServiceInterf
         $existing = $this->findIntent($scene, $built['key']);
 
         if ($existing instanceof StorySceneAssembly && $existing->isComplete()) {
+            $this->placeOnTimeline($existing);
+
             return ['created' => false, 'assembly' => $this->present($existing)];
         }
         if ($existing instanceof StorySceneAssembly && $this->running($existing)) {
@@ -371,6 +374,20 @@ final class StorySceneAssemblyService implements StorySceneAssemblyServiceInterf
         $fresh = $assembly->fresh() ?? $assembly;
         $this->log($fresh, $fresh->requester, self::EVENT_COMPLETED, 'Scene video is ready');
         $this->log($fresh, $fresh->requester, self::EVENT_VERSION, 'Scene video version created');
+        $this->placeOnTimeline($fresh);
+    }
+
+    private function placeOnTimeline(StorySceneAssembly $assembly): void
+    {
+        try {
+            $assembly->loadMissing('planScene.plan.workspace.project');
+            $project = $assembly->planScene?->plan?->workspace?->project;
+            if ($project instanceof Project) {
+                $this->timeline->placeApprovedAssembly($project, $assembly);
+            }
+        } catch (Throwable) {
+            // The scene video is already saved. A timeline problem must not discard it.
+        }
     }
 
     private function assignVersion(StorySceneAssembly $assembly): int

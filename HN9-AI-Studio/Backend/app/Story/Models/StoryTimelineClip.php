@@ -30,6 +30,7 @@ class StoryTimelineClip extends Model
         'media_kind',
         'story_scene_version_id',
         'story_scene_audio_id',
+        'story_scene_assembly_id',
         'disk',
         'path',
         'in_ms',
@@ -61,5 +62,11 @@ class StoryTimelineClip extends Model
     public function sceneAudio(): BelongsTo
     {
         return $this->belongsTo(StorySceneAudio::class, 'story_scene_audio_id');
+    }
+
+    /** @return BelongsTo<StorySceneAssembly, $this> */
+    public function sceneAssembly(): BelongsTo
+    {
+        return $this->belongsTo(StorySceneAssembly::class, 'story_scene_assembly_id');
     }
 }

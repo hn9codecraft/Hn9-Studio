@@ -356,6 +356,13 @@ The row stores a snapshot of the scene, plan revision, and each unit’s version
 reference. Later changes to `selected_version_id` do not rewrite a finished assembly. The public
 API and history do not return paths, commands or FFmpeg output.
 
+A completed assembly is placed on that scene’s reel timeline. The clip stores the assembly
+file and the measured length (the scene length if the file cannot be probed). A later assembly
+for the same scene replaces that clip and leaves the earlier file on disk. Repeating the same
+assembly does not reset a trim. The public timeline payload does not include the disk or path.
+`StoryFinalRender` still reads the clip’s stored file, so the final movie uses the scene video
+rather than the individual unit files.
+
 When `story_video.queue.enabled` is on, `ProcessStorySceneAssembly` runs the build. Otherwise
 the request runs it inline, the same way local renders do. `story:recover-video-jobs` marks a
 queued or processing assembly as failed after the FFmpeg timeout and deletes a partial file. It
