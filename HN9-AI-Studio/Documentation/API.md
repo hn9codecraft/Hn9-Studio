@@ -243,8 +243,9 @@ See [Architecture](Architecture.md#scene-assembly-m11186).
   another project, `404` when the plan, scene or assembly is not in this project.
 - **Body:** ignored. A repeated request for the same selection returns the existing row with
   `created: false` and HTTP 200. The first request for a new selection returns HTTP 201.
-- **`current`:** the newest completed assembly, or `null`. Later timeline work can use this
-  without reading unit files again.
+- **`current`:** the newest completed assembly, or `null`. A completed assembly is also placed
+  on the reel timeline at the measured scene length. The timeline response does not include the
+  storage disk or path. The final movie reads that stored scene file.
 
 ```json
 {

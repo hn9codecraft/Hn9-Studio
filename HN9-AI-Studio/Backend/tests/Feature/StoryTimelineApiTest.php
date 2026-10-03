@@ -38,7 +38,10 @@ final class StoryTimelineApiTest extends TestCase
             ])
             ->assertCreated()
             ->assertJsonPath('data.output_url', null)
-            ->assertJsonPath('data.clips.0.path', 'story/first.mp4');
+            ->assertJsonPath('data.clips.0.out_ms', 30000)
+            ->assertJsonMissingPath('data.clips.0.path')
+            ->assertJsonMissingPath('data.clips.0.disk');
+        $this->assertSame('story/first.mp4', StoryTimelineClip::query()->orderBy('id')->value('path'));
 
         $audioPlaced = $this->actingAs($owner, 'sanctum')
             ->postJson($this->url($project, $reel).'/clips', [
@@ -79,8 +82,12 @@ final class StoryTimelineApiTest extends TestCase
             ->assertOk();
         $clips = $split->json('data.clips');
         $this->assertCount(3, $clips);
-        $this->assertSame('story/first.mp4', $clips[0]['path']);
-        $this->assertSame('story/first.mp4', $clips[1]['path']);
+        $this->assertArrayNotHasKey('path', $clips[0]);
+        $this->assertArrayNotHasKey('disk', $clips[0]);
+        $this->assertSame(
+            ['story/first.mp4', 'story/first.mp4'],
+            StoryTimelineClip::query()->orderBy('position')->limit(2)->pluck('path')->all(),
+        );
         $this->assertSame(1000, $clips[0]['in_ms']);
         $this->assertSame(4000, $clips[0]['out_ms']);
         $this->assertSame(4000, $clips[1]['in_ms']);
@@ -92,8 +99,11 @@ final class StoryTimelineApiTest extends TestCase
                 'source_id' => $second['version']->uuid,
             ])
             ->assertOk();
-        $this->assertSame('story/second.mp4', $replaced->json('data.clips.1.path'));
-        $this->assertSame('story/first.mp4', $replaced->json('data.clips.0.path'));
+        $this->assertArrayNotHasKey('path', $replaced->json('data.clips.1'));
+        $this->assertSame(
+            ['story/first.mp4', 'story/second.mp4'],
+            StoryTimelineClip::query()->where('media_kind', 'video')->orderBy('position')->pluck('path')->all(),
+        );
 
         $beforeFiles = Storage::disk('videos')->allFiles();
         $duplicated = $this->actingAs($owner, 'sanctum')

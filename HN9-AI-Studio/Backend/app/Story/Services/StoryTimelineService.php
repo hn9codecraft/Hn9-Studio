@@ -8,8 +8,10 @@ use App\Models\Project;
 use App\Story\Enums\StoryReviewStatus;
 use App\Story\Enums\StoryTimelineTransitionType;
 use App\Story\Exceptions\StoryException;
+use App\Story\Media\StoryMediaToolkit;
 use App\Story\Models\StoryReel;
 use App\Story\Models\StorySceneAudio;
+use App\Story\Models\StorySceneAssembly;
 use App\Story\Models\StorySceneVersion;
 use App\Story\Models\StoryTimeline;
 use App\Story\Models\StoryTimelineClip;
@@ -17,6 +19,7 @@ use App\Story\Models\StoryTimelineTransition;
 use App\Story\Models\StoryVideoGenerationJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 /**
  * Timeline data only. Clips reference private files and never call a provider.
@@ -51,6 +54,7 @@ final class StoryTimelineService
                 'media_kind' => $source['kind'],
                 'story_scene_version_id' => $source['version_id'],
                 'story_scene_audio_id' => $source['audio_id'],
+                'story_scene_assembly_id' => null,
                 'disk' => $source['disk'],
                 'path' => $source['path'],
                 'in_ms' => 0,
@@ -98,6 +102,69 @@ final class StoryTimelineService
         }
 
         $this->place($project, $reel->uuid, 'video', $version->uuid);
+    }
+
+    /**
+     * Puts the finished scene video on the reel timeline. A later assembly for the
+     * same scene replaces that clip. Repeating the same assembly keeps any trim.
+     */
+    public function placeApprovedAssembly(Project $project, StorySceneAssembly $assembly): void
+    {
+        $assembly->loadMissing('planScene.scene.reel');
+        $scene = $assembly->planScene?->scene;
+        $reel = $scene?->reel;
+        if (! $assembly->isComplete() || ! $reel instanceof StoryReel || ! $scene) {
+            return;
+        }
+        if ($assembly->disk !== 'videos' || ! is_string($assembly->path) || $assembly->path === '' || str_contains($assembly->path, '..') || ! Storage::disk('videos')->exists($assembly->path)) {
+            return;
+        }
+
+        $durationMs = $this->mediaDurationMs('videos', (string) $assembly->path, (int) $assembly->expected_duration_seconds);
+        $timeline = $this->timeline($reel);
+        $existing = StoryTimelineClip::query()
+            ->where('story_timeline_id', $timeline->id)
+            ->where('media_kind', 'video')
+            ->where(function ($query) use ($scene): void {
+                $query->whereHas('sceneVersion', static function ($query) use ($scene): void {
+                    $query->where('story_scene_id', $scene->id);
+                })->orWhereHas('sceneAssembly.planScene', static function ($query) use ($scene): void {
+                    $query->where('story_scene_id', $scene->id);
+                });
+            })
+            ->orderBy('position')
+            ->first();
+
+        if ($existing instanceof StoryTimelineClip && (int) $existing->story_scene_assembly_id === (int) $assembly->id) {
+            return;
+        }
+
+        if ($existing instanceof StoryTimelineClip) {
+            $existing->forceFill([
+                'story_scene_version_id' => null,
+                'story_scene_assembly_id' => $assembly->id,
+                'disk' => 'videos',
+                'path' => $assembly->path,
+                'in_ms' => 0,
+                'out_ms' => $durationMs,
+            ])->save();
+
+            return;
+        }
+
+        $position = (int) StoryTimelineClip::query()->where('story_timeline_id', $timeline->id)->max('position') + 1;
+        StoryTimelineClip::query()->create([
+            'story_timeline_id' => $timeline->id,
+            'position' => $position,
+            'media_kind' => 'video',
+            'story_scene_version_id' => null,
+            'story_scene_audio_id' => null,
+            'story_scene_assembly_id' => $assembly->id,
+            'disk' => 'videos',
+            'path' => $assembly->path,
+            'in_ms' => 0,
+            'out_ms' => $durationMs,
+        ]);
     }
 
     /**
@@ -153,6 +220,7 @@ final class StoryTimelineService
                 'media_kind' => 'audio',
                 'story_scene_version_id' => null,
                 'story_scene_audio_id' => $source['audio_id'],
+                'story_scene_assembly_id' => null,
                 'disk' => $source['disk'],
                 'path' => $source['path'],
                 'in_ms' => 0,
@@ -174,9 +242,10 @@ final class StoryTimelineService
         $clips = $this->clips($timeline);
         $tail = null;
         foreach ($clips as $clip) {
-            $clip->loadMissing('sceneVersion', 'sceneAudio');
+            $clip->loadMissing('sceneVersion', 'sceneAudio', 'sceneAssembly.planScene');
+            $videoSceneId = (int) ($clip->sceneVersion?->story_scene_id ?? $clip->sceneAssembly?->planScene?->story_scene_id ?? 0);
             if ($tail === null) {
-                if ($clip->media_kind === 'video' && (int) $clip->sceneVersion?->story_scene_id === $sceneId) {
+                if ($clip->media_kind === 'video' && $videoSceneId === $sceneId) {
                     $tail = $clip;
                 }
 
@@ -256,6 +325,7 @@ final class StoryTimelineService
                 'media_kind' => $clip->media_kind,
                 'story_scene_version_id' => $clip->story_scene_version_id,
                 'story_scene_audio_id' => $clip->story_scene_audio_id,
+                'story_scene_assembly_id' => $clip->story_scene_assembly_id,
                 'disk' => $clip->disk,
                 'path' => $clip->path,
                 'in_ms' => $atMs,
@@ -278,6 +348,7 @@ final class StoryTimelineService
         $clip->forceFill([
             'story_scene_version_id' => $source['version_id'],
             'story_scene_audio_id' => $source['audio_id'],
+            'story_scene_assembly_id' => null,
             'disk' => $source['disk'],
             'path' => $source['path'],
         ])->save();
@@ -301,6 +372,7 @@ final class StoryTimelineService
                 'media_kind' => $clip->media_kind,
                 'story_scene_version_id' => $clip->story_scene_version_id,
                 'story_scene_audio_id' => $clip->story_scene_audio_id,
+                'story_scene_assembly_id' => $clip->story_scene_assembly_id,
                 'disk' => $clip->disk,
                 'path' => $clip->path,
                 'in_ms' => $clip->in_ms,
@@ -471,7 +543,7 @@ final class StoryTimelineService
             'audio_id' => null,
             'disk' => 'videos',
             'path' => $path,
-            'duration_ms' => 8000,
+            'duration_ms' => $this->mediaDurationMs('videos', $path, (int) ($version->scene?->duration_seconds ?? 0)),
         ];
     }
 
@@ -505,8 +577,26 @@ final class StoryTimelineService
             'audio_id' => $audio->id,
             'disk' => 'voice',
             'path' => $audio->path,
-            'duration_ms' => 8000,
+            'duration_ms' => $this->mediaDurationMs('voice', (string) $audio->path, (int) ($audio->scene?->duration_seconds ?? 0)),
         ];
+    }
+
+    private function mediaDurationMs(string $disk, string $path, int $fallbackSeconds): int
+    {
+        try {
+            $local = Storage::disk($disk)->path($path);
+            if (is_file($local)) {
+                $seconds = app(StoryMediaToolkit::class)->probe($local)['duration'] ?? 0;
+                $ms = (int) round((float) $seconds * 1000);
+                if ($ms > 0) {
+                    return $ms;
+                }
+            }
+        } catch (Throwable) {
+            // A placeholder test file has no duration. The scene length is the fallback.
+        }
+
+        return max(1000, $fallbackSeconds * 1000);
     }
 
     /**
@@ -578,7 +668,7 @@ final class StoryTimelineService
             'id' => $timeline->uuid,
             'output_url' => null,
             'clips' => array_map(static function (StoryTimelineClip $clip): array {
-                $scene = $clip->sceneVersion?->scene ?? $clip->sceneAudio?->scene;
+                $scene = $clip->sceneVersion?->scene ?? $clip->sceneAudio?->scene ?? $clip->sceneAssembly?->planScene?->scene;
 
                 return [
                     'id' => $clip->uuid,
@@ -590,8 +680,6 @@ final class StoryTimelineService
                     'scene_id' => $scene?->uuid,
                     'scene_sequence' => $scene?->sequence,
                     'scene_title' => $scene?->title,
-                    'disk' => $clip->disk,
-                    'path' => $clip->path,
                     'in_ms' => $clip->in_ms,
                     'out_ms' => $clip->out_ms,
                     'output_url' => null,
@@ -620,7 +708,7 @@ final class StoryTimelineService
     private function loadedClips(array $clips): array
     {
         foreach ($clips as $clip) {
-            $clip->loadMissing('sceneVersion.scene', 'sceneAudio.scene');
+            $clip->loadMissing('sceneVersion.scene', 'sceneAudio.scene', 'sceneAssembly.planScene.scene');
         }
 
         return $clips;
