@@ -752,6 +752,21 @@ export function selectProductionUnitVersion(projectId, planId, unitId, versionId
   return productionUnitVersionAction(projectId, planId, unitId, versionId, 'select', {});
 }
 
+export function assembleProductionScene(projectId, planId, sceneId) {
+  return storyWrite(`/story/projects/${projectId}/production-plans/${planId}/scenes/${sceneId}/assemble`, {
+    method: 'POST',
+    body: {},
+  });
+}
+
+export function getProductionSceneAssemblyFileUrl(projectId, planId, sceneId, assemblyId) {
+  return storyFileUrl(
+    `/story/projects/${projectId}/production-plans/${planId}/scenes/${sceneId}/assemblies/${assemblyId}/file`,
+    'video/*',
+    'This scene video could not be loaded.',
+  );
+}
+
 export function getProductionUnitVersionFileUrl(projectId, planId, unitId, versionId) {
   return storyFileUrl(
     `/story/projects/${projectId}/production-plans/${planId}/units/${unitId}/versions/${versionId}/file`,

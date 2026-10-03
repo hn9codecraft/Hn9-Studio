@@ -16,6 +16,7 @@ use App\Story\Models\StoryPlan;
 use App\Story\Models\StoryPlanVersion;
 use App\Story\Models\StoryProductionPlan;
 use App\Story\Models\StoryProductionUnitVersion;
+use App\Story\Models\StorySceneAssembly;
 use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StoryUsageLedgerEntry;
 use App\Story\Models\StoryVideoGenerationJob;
@@ -40,6 +41,15 @@ final class StoryUsageService
         StoryProductionUnitVersionService::EVENT_CHANGES_REQUESTED => 'changes_requested',
         StoryProductionUnitVersionService::EVENT_SELECTED => 'selected',
         StoryProductionUnitVersionService::EVENT_DESELECTED => 'deselected',
+    ];
+
+    private const SCENE_ASSEMBLY_EVENTS = [
+        StorySceneAssemblyService::EVENT_REQUESTED => 'requested',
+        StorySceneAssemblyService::EVENT_STARTED => 'started',
+        StorySceneAssemblyService::EVENT_COMPLETED => 'completed',
+        StorySceneAssemblyService::EVENT_FAILED => 'failed',
+        StorySceneAssemblyService::EVENT_RETRIED => 'retried',
+        StorySceneAssemblyService::EVENT_VERSION => 'version_created',
     ];
 
     private const SOUND_EVENTS = [
@@ -144,6 +154,7 @@ final class StoryUsageService
         return $this->storyEvents($project)
             ->concat($this->soundEvents($project))
             ->concat($this->unitVersionEvents($project))
+            ->concat($this->sceneAssemblyEvents($project))
             ->concat($items)
             ->concat($this->attempts($project))
             ->concat($this->renders($project))
@@ -351,6 +362,69 @@ final class StoryUsageService
                     'model_key' => null,
                     'operation_id' => null,
                     'status' => self::UNIT_VERSION_EVENTS[$log->action],
+                    'error_code' => null,
+                    'error_message' => null,
+                    'created_at' => $log->created_at?->toIso8601String(),
+                    'submitted_at' => null,
+                    'started_at' => null,
+                    'completed_at' => null,
+                    'failed_at' => null,
+                    'cost' => null,
+                    'currency' => null,
+                    'cost_source' => null,
+                    'cost_reported' => false,
+                    'ledger_recorded_at' => null,
+                ];
+            });
+    }
+
+    /**
+     * Scene assembly steps. Descriptions stay in the activity log; this list uses plain labels.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function sceneAssemblyEvents(Project $project): Collection
+    {
+        $assemblies = StorySceneAssembly::query()
+            ->with(['planScene.scene.reel'])
+            ->whereHas('planScene.plan.workspace', static function ($query) use ($project): void {
+                $query->where('project_id', $project->id);
+            })
+            ->get()
+            ->keyBy('id');
+        if ($assemblies->isEmpty()) {
+            return collect();
+        }
+
+        return ActivityLog::query()
+            ->where('subject_type', (new StorySceneAssembly)->getMorphClass())
+            ->whereIn('subject_id', $assemblies->keys())
+            ->whereIn('action', array_keys(self::SCENE_ASSEMBLY_EVENTS))
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(static function (ActivityLog $log) use ($assemblies): array {
+                $assembly = $assemblies->get($log->subject_id);
+                $properties = is_array($log->properties) ? $log->properties : [];
+                $scene = $assembly?->planScene?->scene;
+
+                return [
+                    'id' => $log->uuid,
+                    'kind' => 'scene_assembly',
+                    'event' => self::SCENE_ASSEMBLY_EVENTS[$log->action],
+                    'version_label' => is_string($properties['version'] ?? null) ? $properties['version'] : null,
+                    'role' => null,
+                    'comment' => null,
+                    'reel_title' => $scene?->reel?->title,
+                    'scene_sequence' => $scene?->sequence,
+                    'scene_title' => $scene?->title,
+                    'reel_id' => $scene?->reel?->uuid,
+                    'scene_id' => $scene?->uuid,
+                    'capability' => null,
+                    'provider_key' => null,
+                    'model_key' => null,
+                    'operation_id' => null,
+                    'status' => self::SCENE_ASSEMBLY_EVENTS[$log->action],
                     'error_code' => null,
                     'error_message' => null,
                     'created_at' => $log->created_at?->toIso8601String(),

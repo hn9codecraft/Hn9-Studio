@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Jobs\ProcessStoryVideoJob;
+use App\Story\Contracts\StorySceneAssemblyServiceInterface;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Services\StoryVideoDispatchService;
@@ -23,7 +24,7 @@ class RecoverStoryVideoJobs extends Command
 
     protected $description = 'Resume accepted Story video jobs without submitting new provider jobs';
 
-    public function handle(StoryVideoJobRunner $runner, StoryVideoDispatchService $dispatch): int
+    public function handle(StoryVideoJobRunner $runner, StoryVideoDispatchService $dispatch, StorySceneAssemblyServiceInterface $assemblies): int
     {
         $jobs = StoryVideoGenerationJob::query()
             ->whereIn('provider_key', $dispatch->liveKeys())
@@ -53,7 +54,10 @@ class RecoverStoryVideoJobs extends Command
             }
         }
 
+        $stale = $assemblies->recoverStale();
+
         $this->info('Resumed '.$jobs->count().' story video job(s).');
+        $this->info('Closed '.$stale.' interrupted scene assembly job(s).');
 
         return self::SUCCESS;
     }

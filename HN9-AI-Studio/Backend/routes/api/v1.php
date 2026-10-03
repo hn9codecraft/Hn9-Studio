@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\StoryProductionUnitVersionController;
 use App\Http\Controllers\Api\V1\StoryReelController;
 use App\Http\Controllers\Api\V1\StoryRenderController;
 use App\Http\Controllers\Api\V1\StoryReviewController;
+use App\Http\Controllers\Api\V1\StorySceneAssemblyController;
 use App\Http\Controllers\Api\V1\StorySceneController;
 use App\Http\Controllers\Api\V1\StoryStyleBibleController;
 use App\Http\Controllers\Api\V1\StoryStyleReferenceController;
@@ -297,6 +298,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/versions/{versionUuid}/approve', [StoryProductionUnitVersionController::class, 'approve'])->name('story.projects.production-plans.units.versions.approve');
     Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/versions/{versionUuid}/request-changes', [StoryProductionUnitVersionController::class, 'requestChanges'])->name('story.projects.production-plans.units.versions.request-changes');
     Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/versions/{versionUuid}/select', [StoryProductionUnitVersionController::class, 'select'])->name('story.projects.production-plans.units.versions.select');
+    Route::post('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemble', [StorySceneAssemblyController::class, 'store'])->name('story.projects.production-plans.scenes.assemble');
+    Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemblies', [StorySceneAssemblyController::class, 'index'])->name('story.projects.production-plans.scenes.assemblies.index');
+    Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemblies/{assemblyUuid}', [StorySceneAssemblyController::class, 'show'])->name('story.projects.production-plans.scenes.assemblies.show');
+    Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemblies/{assemblyUuid}/file', [StorySceneAssemblyController::class, 'file'])->name('story.projects.production-plans.scenes.assemblies.file');
     Route::get('story/projects/{uuid}/reels', [StoryReelController::class, 'index'])->name('story.projects.reels.index');
     Route::post('story/projects/{uuid}/reels', [StoryReelController::class, 'store'])->name('story.projects.reels.store');
     Route::post('story/projects/{uuid}/reels/reorder', [StoryReelController::class, 'reorder'])->name('story.projects.reels.reorder');

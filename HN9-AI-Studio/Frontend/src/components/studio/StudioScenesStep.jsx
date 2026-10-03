@@ -9,7 +9,9 @@ import {
   editStorySceneVersion,
   extendStorySceneVersion,
   approveProductionUnitVersion,
+  assembleProductionScene,
   getProductionPlanScene,
+  getProductionSceneAssemblyFileUrl,
   getProductionUnitVersionFileUrl,
   getStorySceneVersionFileUrl,
   getStoryStyle,
@@ -552,6 +554,8 @@ function UnitVersionsPanel({ scene, onClose }) {
   const [busy, setBusy] = useState('');
   const [noteFor, setNoteFor] = useState(null);
   const [note, setNote] = useState('');
+  const [assembly, setAssembly] = useState(null);
+  const [building, setBuilding] = useState(false);
 
   async function load() {
     const plans = await listProductionPlans(projectId);
@@ -618,7 +622,43 @@ function UnitVersionsPanel({ scene, onClose }) {
           Close
         </button>
       </div>
-      <p className="small text-secondary">Each unit keeps every video. Choose one approved video for the final scene.</p>
+      <p className="small text-secondary">Each unit keeps every video. Choose one approved video, then build them into one scene video.</p>
+      {state?.planId && canApprove ? (
+        <div className="mb-3">
+          <BusyButton
+            className="btn btn-primary btn-sm"
+            busy={building}
+            busyLabel="Building…"
+            onClick={() => {
+              setBuilding(true);
+              setError('');
+              assembleProductionScene(projectId, state.planId, scene.id)
+                .then((result) => setAssembly(result?.assembly || null))
+                .catch((err) => setError(friendlyError(err, 'The scene video could not be built.')))
+                .finally(() => setBuilding(false));
+            }}
+          >
+            Build scene video
+          </BusyButton>
+          {assembly ? (
+            <div className="mt-2">
+              <StatusBadge tone={assembly.status === 'completed' ? 'success' : assembly.status === 'failed' ? 'danger' : 'progress'}>
+                {assembly.status_label}
+              </StatusBadge>
+              {assembly.label ? <span className="small ms-2">{assembly.label}</span> : null}
+              {assembly.error_message ? <p className="small text-danger mt-2 mb-0">{assembly.error_message}</p> : null}
+              {assembly.output_available ? (
+                <div className="mt-2">
+                  <MediaPreview
+                    load={() => getProductionSceneAssemblyFileUrl(projectId, state.planId, scene.id, assembly.id)}
+                    label={`${sceneName(scene)} scene video`}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {error ? <p className="text-danger small">{error}</p> : null}
       {state === null ? <p className="small text-secondary mb-0">Loading units…</p> : null}
       {state && !state.planId ? <p className="small text-secondary mb-0">No video versions yet.</p> : null}
