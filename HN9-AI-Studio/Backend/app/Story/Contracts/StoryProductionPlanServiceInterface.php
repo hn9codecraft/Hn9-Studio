@@ -28,8 +28,9 @@ interface StoryProductionPlanServiceInterface
     public function sceneForPlan(Project $project, string $planUuid, string $sceneUuid): StoryProductionPlanScene;
 
     /**
-     * Plans a finished Story Plan Version whose scenes exist. Repeating the call for the
+     * Plans an approved Story Plan Version whose scenes exist. Repeating the call for the
      * same version returns the existing plan; a different version needs revise().
+     * Approval itself goes through StoryPlanApprovalServiceInterface.
      *
      * @return array{plan: StoryProductionPlan, created: bool}
      */

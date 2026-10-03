@@ -47,13 +47,16 @@ trait BuildsProductionPlanFixtures
      * @param  list<int>  $durations
      * @return array{0: StoryPlanVersion, 1: StoryReel, 2: list<StoryScene>}
      */
-    protected function materializedVersion(StoryWorkspace $workspace, StoryPlan $plan, int $number, array $durations): array
+    protected function materializedVersion(StoryWorkspace $workspace, StoryPlan $plan, int $number, array $durations, bool $approved = true): array
     {
         $version = StoryPlanVersion::factory()->create([
             'story_plan_id' => $plan->id,
             'version' => $number,
             'status' => StoryPlanVersionStatus::Completed->value,
         ]);
+        if ($approved) {
+            $version->forceFill(['approved_at' => now(), 'approved_by' => $plan->workspace->project->user_id])->save();
+        }
         $plan->forceFill(['current_version_id' => $version->id])->save();
 
         $reel = StoryReel::factory()->create([

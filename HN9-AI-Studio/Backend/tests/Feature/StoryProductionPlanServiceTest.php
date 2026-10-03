@@ -161,6 +161,24 @@ final class StoryProductionPlanServiceTest extends TestCase
         $this->assertNothingWritten();
     }
 
+    public function test_a_version_that_was_not_approved_is_rejected(): void
+    {
+        $f = $this->productionFixture([10]);
+        $f['version']->forceFill(['approved_at' => null, 'approved_by' => null])->save();
+
+        $exception = $this->assertRejected('story_production_source_not_ready', fn () => $this->service->createForVersion($f['project'], $f['plan']->uuid, $f['version']->uuid));
+        $this->assertSame('Approve this story version before preparing it for production.', $exception->getMessage());
+        $this->assertNothingWritten();
+
+        $f['version']->forceFill(['approved_at' => now()])->save();
+        $plan = $this->service->createForVersion($f['project'], $f['plan']->uuid, $f['version']->uuid)['plan'];
+        [$unapproved] = $this->materializedVersion($f['workspace'], $f['plan'], 2, [20], approved: false);
+
+        $this->assertRejected('story_production_source_not_ready', fn () => $this->service->revise($f['project'], $plan->uuid, $unapproved->uuid));
+        $this->assertTrue($plan->refresh()->isCurrent());
+        $this->assertSame(1, StoryProductionPlan::query()->count());
+    }
+
     public function test_a_version_without_scenes_is_rejected(): void
     {
         $f = $this->productionFixture([10, 20]);

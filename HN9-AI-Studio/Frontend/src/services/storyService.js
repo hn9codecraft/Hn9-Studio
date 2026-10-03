@@ -288,10 +288,31 @@ export function listStoryPlanVersions(projectId, planId) {
   );
 }
 
-export function materializeStoryPlanVersion(projectId, planId, versionId) {
-  return storyWrite(`/story/projects/${projectId}/plans/${planId}/versions/${versionId}/materialize`, {
+/** Approves a finished story version and prepares its scenes for production. Safe to repeat. */
+export function approveStoryPlanVersion(projectId, planId, versionId) {
+  return storyWrite(`/story/projects/${projectId}/plans/${planId}/versions/${versionId}/approve`, {
     method: 'POST',
   });
+}
+
+/** The newest story plan whose latest version finished with scenes, or null. */
+export function readyStoryPlan(plans) {
+  return (
+    (plans || []).find(
+      (plan) => plan.current_version?.status === 'completed' && (plan.current_version.plan?.scenes || []).length > 0,
+    ) || null
+  );
+}
+
+/** Where the plan's latest version stands: reviewed or not, and whether production is prepared from it. */
+export function storyPlanStage(plan) {
+  const version = plan?.current_version || null;
+  const production = plan?.production_plan || null;
+  return {
+    approved: version?.review_status === 'approved',
+    productionReady: Boolean(version && production && production.source_version?.id === version.id),
+    production,
+  };
 }
 
 export function listStoryReels(projectId) {

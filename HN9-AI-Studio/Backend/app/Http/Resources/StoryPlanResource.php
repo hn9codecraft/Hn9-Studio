@@ -32,6 +32,12 @@ class StoryPlanResource extends JsonResource
             'status' => $this->status,
             'scene_count_estimate' => (int) ceil($this->requested_duration_seconds / StoryPlanDurationCalculator::SCENE_TARGET_SECONDS),
             'current_version' => $current === null ? null : (new StoryPlanVersionResource($current))->resolve(),
+            'production_plan' => $this->whenLoaded(
+                'currentProductionPlan',
+                fn (): ?array => $this->currentProductionPlan === null
+                    ? null
+                    : (new StoryProductionPlanResource($this->currentProductionPlan))->resolve($request),
+            ),
             'workspace' => $workspace === null ? null : [
                 'id' => $workspace->uuid,
                 'status' => $workspace->status,

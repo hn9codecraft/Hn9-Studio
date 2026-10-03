@@ -22,6 +22,7 @@ use App\Story\Contracts\StoryCharacterReferenceRepositoryInterface;
 use App\Story\Contracts\StoryCharacterReferenceServiceInterface;
 use App\Story\Contracts\StoryCharacterRepositoryInterface;
 use App\Story\Contracts\StoryCharacterServiceInterface;
+use App\Story\Contracts\StoryPlanApprovalServiceInterface;
 use App\Story\Contracts\StoryPlanMaterializerInterface;
 use App\Story\Contracts\StoryPlannerServiceInterface;
 use App\Story\Contracts\StoryPlanRepositoryInterface;
@@ -54,6 +55,7 @@ use App\Story\Repositories\StoryWorkspaceRepository;
 use App\Story\Services\StoryBibleService;
 use App\Story\Services\StoryCharacterReferenceService;
 use App\Story\Services\StoryCharacterService;
+use App\Story\Services\StoryPlanApprovalService;
 use App\Story\Services\StoryPlanMaterializer;
 use App\Story\Services\StoryPlannerService;
 use App\Story\Services\StoryProductionPlanService;
@@ -167,6 +169,7 @@ class StoryServiceProvider extends ServiceProvider
         $this->app->bind(StorySceneServiceInterface::class, StorySceneService::class);
         $this->app->bind(StoryPlanMaterializerInterface::class, StoryPlanMaterializer::class);
         $this->app->bind(StoryProductionPlanServiceInterface::class, StoryProductionPlanService::class);
+        $this->app->bind(StoryPlanApprovalServiceInterface::class, StoryPlanApprovalService::class);
     }
 
     private static function realVideoProviderEnabled(mixed $app): bool

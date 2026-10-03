@@ -24,12 +24,13 @@ class StoryRuntimeException extends StoryException
         );
     }
 
-    public static function materializationFailed(string $detail): self
+    public static function materializationFailed(string $detail, ?\Throwable $previous = null): self
     {
         return new self(
             message: $detail,
             errorCode: 'story_materialization_failed',
             statusCode: 422,
+            previous: $previous,
         );
     }
 

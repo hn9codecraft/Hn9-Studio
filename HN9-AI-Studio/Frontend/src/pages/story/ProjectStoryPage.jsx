@@ -308,6 +308,7 @@ function StudioWorkspace({ projectId }) {
       query.set('section', section);
       query.set('reel', nextReel);
       query.delete('scene');
+      query.delete('plan');
       navigate({ pathname: `/studio/${projectId}`, search: `?${query.toString()}` }, { replace: true });
     },
     [navigate, projectId, searchParams, section],
@@ -416,7 +417,7 @@ function StudioWorkspace({ projectId }) {
       case 'cast':
         return <StudioCastStep nav={nav} />;
       case 'scenes':
-        return <StudioScenesStep nav={nav} focusSceneId={searchParams.get('scene')} />;
+        return <StudioScenesStep nav={nav} focusSceneId={searchParams.get('scene')} openPlanner={searchParams.get('plan') === 'review'} />;
       case 'sound':
         return <StudioSoundStep nav={nav} focusSceneId={searchParams.get('scene')} />;
       case 'final':

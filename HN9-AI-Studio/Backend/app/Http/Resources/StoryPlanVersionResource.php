@@ -22,6 +22,8 @@ class StoryPlanVersionResource extends JsonResource
             'id' => $this->uuid,
             'version' => $this->version,
             'status' => $this->status,
+            'review_status' => $this->reviewStatus()->value,
+            'approved_at' => $this->approved_at?->toIso8601String(),
             'instruction' => $this->instruction,
             'master_story' => $this->master_story,
             'plan' => $this->safePlan(),

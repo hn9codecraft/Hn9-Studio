@@ -51,10 +51,14 @@ const VIDEO_MODES = [
   { value: 'reference', flag: 'reference', label: 'From my character/style', hint: 'Keep your approved character or style pictures consistent.' },
 ];
 
-export default function StudioScenesStep({ nav, focusSceneId = null }) {
-  const { reels, reel, reelId, sceneStatus, connections, selectReel, project } = useStudio();
+export default function StudioScenesStep({ nav, focusSceneId = null, openPlanner = false }) {
+  const { reels, reel, reelId, sceneStatus, connections, selectReel, project, goTo } = useStudio();
   const [editing, setEditing] = useState(null);
-  const [planning, setPlanning] = useState(false);
+  const [planning, setPlanning] = useState(openPlanner);
+
+  useEffect(() => {
+    if (openPlanner) setPlanning(true);
+  }, [openPlanner]);
   const scenes = sortedScenes(reel);
   const statusById = useMemo(() => Object.fromEntries(sceneStatus.map((item) => [item.scene_id, item])), [sceneStatus]);
   const videoConnected = Boolean(connections?.video && Object.values(connections.video).some(Boolean));
@@ -86,8 +90,16 @@ export default function StudioScenesStep({ nav, focusSceneId = null }) {
           onDone={(newReelId) => {
             setPlanning(false);
             if (newReelId) selectReel(newReelId);
+            else if (openPlanner) goTo('scenes');
           }}
-          onCancel={reels.length > 0 ? () => setPlanning(false) : null}
+          onCancel={
+            reels.length > 0
+              ? () => {
+                  setPlanning(false);
+                  if (openPlanner) goTo('scenes');
+                }
+              : null
+          }
         />
         <StepFooter prev={nav.prev} onNavigate={nav.onNavigate} />
       </div>
@@ -103,12 +115,10 @@ export default function StudioScenesStep({ nav, focusSceneId = null }) {
           <i className="bi bi-plus-lg me-1" aria-hidden="true" />
           Add scene
         </button>
-        {connections?.story_planning ? (
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setPlanning(true)}>
-            <i className="bi bi-magic me-1" aria-hidden="true" />
-            Plan from story
-          </button>
-        ) : null}
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setPlanning(true)}>
+          <i className="bi bi-journal-check me-1" aria-hidden="true" />
+          Story plan
+        </button>
       </StepHeader>
 
       {reels.length > 1 ? (

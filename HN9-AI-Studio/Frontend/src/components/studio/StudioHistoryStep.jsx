@@ -12,6 +12,20 @@ const KINDS = {
   style_image: { label: 'Look & feel picture', icon: 'bi-palette', step: 'cast' },
   final_video: { label: 'Final video build', icon: 'bi-collection-play', step: 'final' },
   sound_review: { label: 'Scene sound', icon: 'bi-music-note-list', step: 'sound' },
+  story_plan: { label: 'Story plan', icon: 'bi-journal-check', step: 'scenes', params: { plan: 'review' } },
+  production_plan: { label: 'Production plan', icon: 'bi-diagram-3', step: 'scenes' },
+};
+
+const STORY_EVENTS = {
+  ready_for_review: { label: 'Ready for review', tone: 'progress' },
+  approved: { label: 'Story approved', tone: 'success' },
+  approval_failed: { label: 'Approval failed', tone: 'danger' },
+};
+
+const PRODUCTION_EVENTS = {
+  created: { label: 'Production is ready', tone: 'success' },
+  revised: { label: 'Updated for the new story version', tone: 'success' },
+  reused: { label: 'Already prepared', tone: 'neutral' },
 };
 
 const SOUND_EVENTS = {
@@ -24,12 +38,15 @@ const SOUND_EVENTS = {
 
 function badgeFor(item) {
   if (item.kind === 'sound_review') return SOUND_EVENTS[item.event] || { label: 'Updated', tone: 'neutral' };
+  if (item.kind === 'story_plan') return STORY_EVENTS[item.event] || { label: 'Updated', tone: 'neutral' };
+  if (item.kind === 'production_plan') return PRODUCTION_EVENTS[item.event] || { label: 'Updated', tone: 'neutral' };
   if (item.kind === 'audio' && item.status === 'completed') return { label: 'Sound ready', tone: 'success' };
   return { label: jobStatusLabel(item.status), tone: jobTone(item.status) };
 }
 
 function problemText(item) {
   if (item.kind === 'audio' && item.status === 'failed' && item.error_message) return soundFailure(item);
+  if (item.kind === 'story_plan') return item.error_message || 'The story could not be approved. Nothing was changed.';
   return failureReason(item.error_code, item.status);
 }
 
@@ -137,7 +154,13 @@ export default function StudioHistoryStep() {
                       <button
                         type="button"
                         className="btn btn-link btn-sm p-0"
-                        onClick={() => goTo(kind.step, item.scene_id ? { scene: item.scene_id, reel: item.reel_id } : item.reel_id ? { reel: item.reel_id } : {})}
+                        onClick={() =>
+                          goTo(
+                            kind.step,
+                            kind.params ||
+                              (item.scene_id ? { scene: item.scene_id, reel: item.reel_id } : item.reel_id ? { reel: item.reel_id } : {}),
+                          )
+                        }
                       >
                         {item.status === 'not_connected' ? 'Open this step' : 'Go there to try again'}
                       </button>

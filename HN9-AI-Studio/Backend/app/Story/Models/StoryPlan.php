@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -66,6 +67,12 @@ class StoryPlan extends Model
     public function currentVersion(): BelongsTo
     {
         return $this->belongsTo(StoryPlanVersion::class, 'current_version_id');
+    }
+
+    /** @return HasOne<StoryProductionPlan, $this> */
+    public function currentProductionPlan(): HasOne
+    {
+        return $this->hasOne(StoryProductionPlan::class, 'current_for_story_plan_id');
     }
 
     public function statusEnum(): StoryPlanStatus

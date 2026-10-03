@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { STORY_ASPECT_RATIOS, STORY_LANGUAGES, storyFieldError } from '../../services/storyConstants';
 import { updateProject } from '../../services/projectService';
-import { updateStoryBible } from '../../services/storyService';
+import { listStoryPlans, readyStoryPlan, storyPlanStage, updateStoryBible } from '../../services/storyService';
 import { friendlyError } from '../../services/studioMessages';
 import { useFeedback, useStudio } from './StudioContext';
-import { BusyButton, StepFooter, StepHeader } from './StudioUi';
+import { BusyButton, StatusBadge, StepFooter, StepHeader } from './StudioUi';
 
 const SUGGESTIONS = {
   genre: ['Adventure', 'Comedy', 'Drama', 'Fantasy', 'Mystery', 'Educational', 'Product story'],
@@ -40,6 +40,52 @@ function formFromStory(story, title) {
     voice_style: story?.audio_defaults?.voice_style || '',
     music_mood: story?.audio_defaults?.music_mood || '',
   };
+}
+
+/** Where the latest story plan stands, with the next step. Hidden until a plan has been written. */
+function StoryPlanStatus() {
+  const { projectId, goTo } = useStudio();
+  const [plan, setPlan] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listStoryPlans(projectId)
+      .then((plans) => {
+        if (!cancelled) setPlan(readyStoryPlan(plans));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  if (!plan) return null;
+  const { approved, productionReady, production } = storyPlanStage(plan);
+  const prepared = approved && productionReady;
+
+  return (
+    <section className="card border-0 glass-card mb-3" aria-labelledby="story-plan-status">
+      <div className="card-body d-flex flex-wrap align-items-center gap-2">
+        <i className="bi bi-journal-check" aria-hidden="true" />
+        <h3 className="h6 mb-0" id="story-plan-status">
+          Story plan
+        </h3>
+        <StatusBadge tone={prepared ? 'success' : 'progress'}>{prepared ? 'Approved · production ready' : 'Ready for review'}</StatusBadge>
+        <span className="small text-secondary flex-grow-1">
+          {prepared ? 'Its scenes are prepared for video production.' : 'Review the planned scenes, then approve them to prepare production.'}
+        </span>
+        {prepared ? (
+          <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => goTo('scenes', production?.reel?.id ? { reel: production.reel.id } : {})}>
+            Continue to Scenes
+          </button>
+        ) : (
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => goTo('scenes', { plan: 'review' })}>
+            Review story plan
+          </button>
+        )}
+      </div>
+    </section>
+  );
 }
 
 export default function StudioStoryStep({ nav }) {
@@ -143,6 +189,8 @@ export default function StudioStoryStep({ nav }) {
         title="Story"
         purpose="Describe your video once. Every later step (characters, scenes, video and sound) uses these details, so you never type them again."
       />
+
+      <StoryPlanStatus />
 
       <form
         className="card border-0 glass-card"
@@ -284,7 +332,8 @@ export default function StudioStoryStep({ nav }) {
                   ))}
                 </select>
                 <div className="form-text" id="story-default-duration-help">
-                  Videos are planned in 30-second scenes, so 2 minutes is about four scenes.
+                  Scenes are planned in roughly 30-second story beats, so 2 minutes starts as about four scenes. You can change any
+                  scene’s length later.
                 </div>
               </div>
               <div className="col-md-6">{field('location', 'Main location', { placeholder: 'e.g. A lighthouse on a cliff' })}</div>

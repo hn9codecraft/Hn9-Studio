@@ -34,6 +34,11 @@ class StoryPlanPolicy
         return $this->owns($user, $plan);
     }
 
+    public function approve(User $user, StoryPlan $plan): bool
+    {
+        return $this->owns($user, $plan);
+    }
+
     private function owns(User $user, StoryPlan $plan): bool
     {
         $workspace = $plan->workspace ?? $plan->workspace()->first();

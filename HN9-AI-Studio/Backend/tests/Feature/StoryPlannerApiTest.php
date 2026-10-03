@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\User;
 use App\Providers\AIServiceProvider;
 use App\Story\Models\StoryPlan;
 use App\Story\Models\StoryPlanVersion;
+use App\Story\Models\StoryReel;
+use App\Story\Services\StoryPlannerService;
 use App\Story\Support\StoryPlanDurationCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -18,8 +21,8 @@ use Tests\TestCase;
 
 final class StoryPlannerApiTest extends TestCase
 {
-    use RefreshDatabase;
     use InteractsWithProviderPlatform;
+    use RefreshDatabase;
 
     public function test_unauthenticated_plan_requests_are_rejected(): void
     {
@@ -129,6 +132,12 @@ final class StoryPlannerApiTest extends TestCase
         $this->assertSame(60, $response->json('data.current_version.plan.scenes.1.end_second'));
         $this->assertStringNotContainsString('sk-test', $response->getContent() ?: '');
         $this->assertSame(1, StoryPlanVersion::query()->count());
+        $response->assertJsonPath('data.current_version.review_status', 'ready_for_review')
+            ->assertJsonPath('data.current_version.approved_at', null)
+            ->assertJsonPath('data.production_plan', null);
+        $ready = ActivityLog::query()->where('action', StoryPlannerService::EVENT_VERSION_READY)->sole();
+        $this->assertSame(2, $ready->properties['scene_count']);
+        $this->assertSame(0, StoryReel::query()->count());
 
         Http::assertSent(function ($request): bool {
             $body = $request->body();

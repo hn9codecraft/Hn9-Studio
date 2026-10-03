@@ -12,6 +12,9 @@ use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Models\StoryFinalRender;
 use App\Story\Models\StoryGenerationAttempt;
+use App\Story\Models\StoryPlan;
+use App\Story\Models\StoryPlanVersion;
+use App\Story\Models\StoryProductionPlan;
 use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StoryUsageLedgerEntry;
 use App\Story\Models\StoryVideoGenerationJob;
@@ -35,6 +38,18 @@ final class StoryUsageService
         StoryAudioService::EVENT_APPROVED => 'approved',
         StoryAudioService::EVENT_CHANGES_REQUESTED => 'changes_requested',
         StoryAudioService::EVENT_SELECTED => 'selected',
+    ];
+
+    private const STORY_EVENTS = [
+        StoryPlannerService::EVENT_VERSION_READY => 'ready_for_review',
+        StoryPlanApprovalService::EVENT_APPROVED => 'approved',
+        StoryPlanApprovalService::EVENT_APPROVAL_FAILED => 'approval_failed',
+    ];
+
+    private const PRODUCTION_PLAN_EVENTS = [
+        StoryProductionPlanService::EVENT_CREATED => 'created',
+        StoryProductionPlanService::EVENT_REVISED => 'revised',
+        StoryPlanApprovalService::EVENT_PLAN_REUSED => 'reused',
     ];
 
     public function recordTerminal(StoryVideoGenerationJob $job): void
@@ -113,7 +128,8 @@ final class StoryUsageService
         });
 
         // Sound events go first so a version is listed before its generation job when both share a second.
-        return $this->soundEvents($project)
+        return $this->storyEvents($project)
+            ->concat($this->soundEvents($project))
             ->concat($items)
             ->concat($this->attempts($project))
             ->concat($this->renders($project))
@@ -265,6 +281,88 @@ final class StoryUsageService
                     'started_at' => null,
                     'completed_at' => null,
                     'failed_at' => null,
+                    'cost' => null,
+                    'currency' => null,
+                    'cost_source' => null,
+                    'cost_reported' => false,
+                    'ledger_recorded_at' => null,
+                ];
+            });
+    }
+
+    /**
+     * Story approval and production plan steps from the activity log, shaped like job rows.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function storyEvents(Project $project): Collection
+    {
+        $versions = StoryPlanVersion::query()
+            ->whereHas('plan.workspace', static function ($query) use ($project): void {
+                $query->where('project_id', $project->id);
+            })
+            ->get(['id', 'story_plan_id', 'version'])
+            ->keyBy('id');
+        if ($versions->isEmpty()) {
+            return collect();
+        }
+        // The version's "plan" column shadows its plan() relation, so titles are read separately.
+        $titles = StoryPlan::query()->whereIn('id', $versions->pluck('story_plan_id')->unique())->pluck('title', 'id');
+        $productionPlans = StoryProductionPlan::query()
+            ->whereIn('story_plan_version_id', $versions->keys())
+            ->get(['id', 'story_plan_version_id', 'revision'])
+            ->keyBy('id');
+
+        return ActivityLog::query()
+            ->where(static function ($query) use ($versions, $productionPlans): void {
+                $query->where(static function ($inner) use ($versions): void {
+                    $inner->where('subject_type', (new StoryPlanVersion)->getMorphClass())
+                        ->whereIn('subject_id', $versions->keys())
+                        ->whereIn('action', array_keys(self::STORY_EVENTS));
+                });
+                if ($productionPlans->isNotEmpty()) {
+                    $query->orWhere(static function ($inner) use ($productionPlans): void {
+                        $inner->where('subject_type', (new StoryProductionPlan)->getMorphClass())
+                            ->whereIn('subject_id', $productionPlans->keys())
+                            ->whereIn('action', array_keys(self::PRODUCTION_PLAN_EVENTS));
+                    });
+                }
+            })
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(static function (ActivityLog $log) use ($versions, $productionPlans, $titles): array {
+                $isPlan = isset(self::PRODUCTION_PLAN_EVENTS[$log->action]);
+                $productionPlan = $isPlan ? $productionPlans->get($log->subject_id) : null;
+                $version = $versions->get($isPlan ? $productionPlan?->story_plan_version_id : $log->subject_id);
+                $properties = is_array($log->properties) ? $log->properties : [];
+                $event = $isPlan ? self::PRODUCTION_PLAN_EVENTS[$log->action] : self::STORY_EVENTS[$log->action];
+                $failed = $log->action === StoryPlanApprovalService::EVENT_APPROVAL_FAILED;
+
+                return [
+                    'id' => $log->uuid,
+                    'kind' => $isPlan ? 'production_plan' : 'story_plan',
+                    'event' => $event,
+                    'version_label' => $version === null ? null : 'Story version '.$version->version,
+                    'role' => null,
+                    'comment' => null,
+                    'reel_title' => $version === null ? null : $titles->get($version->story_plan_id),
+                    'scene_sequence' => null,
+                    'scene_title' => null,
+                    'reel_id' => null,
+                    'scene_id' => null,
+                    'capability' => null,
+                    'provider_key' => null,
+                    'model_key' => null,
+                    'operation_id' => null,
+                    'status' => $failed ? StoryVideoJobStatus::Failed->value : $event,
+                    'error_code' => $failed && is_string($properties['error_code'] ?? null) ? $properties['error_code'] : null,
+                    'error_message' => $failed && is_string($properties['reason'] ?? null) ? mb_substr($properties['reason'], 0, 300) : null,
+                    'created_at' => $log->created_at?->toIso8601String(),
+                    'submitted_at' => null,
+                    'started_at' => null,
+                    'completed_at' => null,
+                    'failed_at' => $failed ? $log->created_at?->toIso8601String() : null,
                     'cost' => null,
                     'currency' => null,
                     'cost_source' => null,
