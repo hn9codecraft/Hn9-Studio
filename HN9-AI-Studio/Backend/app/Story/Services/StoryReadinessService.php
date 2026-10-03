@@ -6,6 +6,7 @@ namespace App\Story\Services;
 
 use App\AI\Contracts\ProviderManagerInterface;
 use App\AI\Support\Capability;
+use App\Story\Contracts\StoryAudioVoiceCatalogInterface;
 use App\Story\Enums\StoryAudioRole;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Media\StoryMediaToolkit;
@@ -30,7 +31,7 @@ final readonly class StoryReadinessService
      *     story_planning: bool,
      *     reference_images: bool,
      *     video: array{text: bool, image: bool, reference: bool, edit: bool, extend: bool},
-     *     sound: array{roles: list<string>},
+     *     sound: array{roles: list<string>, voices: list<string>, default_voice: string|null},
      *     video_builder: bool
      * }
      */
@@ -46,12 +47,29 @@ final readonly class StoryReadinessService
                 'edit' => $this->dispatch->liveSupports(StoryVideoCapability::VideoEdit),
                 'extend' => $this->dispatch->liveSupports(StoryVideoCapability::VideoExtend),
             ],
-            'sound' => [
-                'roles' => $this->dispatch->liveSupports(StoryVideoCapability::Audio)
-                    ? array_values($this->dispatch->liveAudioRoles() ?: StoryAudioRole::values())
-                    : [],
-            ],
+            'sound' => $this->sound(),
             'video_builder' => $this->media->available(),
+        ];
+    }
+
+    /**
+     * Roles and voice names the connected sound service can use. Voice names only, never ids.
+     *
+     * @return array{roles: list<string>, voices: list<string>, default_voice: string|null}
+     */
+    private function sound(): array
+    {
+        $adapter = $this->dispatch->liveAdapterFor(StoryVideoCapability::Audio);
+        if ($adapter === null) {
+            return ['roles' => [], 'voices' => [], 'default_voice' => null];
+        }
+
+        $catalog = $adapter instanceof StoryAudioVoiceCatalogInterface ? $adapter : null;
+
+        return [
+            'roles' => array_values($this->dispatch->liveAudioRoles() ?: StoryAudioRole::values()),
+            'voices' => array_values($catalog?->voiceNames() ?? []),
+            'default_voice' => $catalog?->defaultVoiceName(),
         ];
     }
 

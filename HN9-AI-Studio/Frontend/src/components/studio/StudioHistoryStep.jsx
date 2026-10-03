@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getStoryHistory } from '../../services/storyService';
-import { failureReason, formatDateTime, friendlyError, jobStatusLabel } from '../../services/studioMessages';
+import { failureReason, formatDateTime, friendlyError, jobStatusLabel, soundFailure } from '../../services/studioMessages';
 import { useStudio } from './StudioContext';
 import { jobTone, StatusBadge, StepHeader, StepSkeleton } from './StudioUi';
 
@@ -11,7 +11,27 @@ const KINDS = {
   character_image: { label: 'Character picture', icon: 'bi-person-bounding-box', step: 'cast' },
   style_image: { label: 'Look & feel picture', icon: 'bi-palette', step: 'cast' },
   final_video: { label: 'Final video build', icon: 'bi-collection-play', step: 'final' },
+  sound_review: { label: 'Scene sound', icon: 'bi-music-note-list', step: 'sound' },
 };
+
+const SOUND_EVENTS = {
+  version_created: { label: 'Version created', tone: 'neutral' },
+  reworked: { label: 'New version made', tone: 'neutral' },
+  approved: { label: 'Approved', tone: 'success' },
+  changes_requested: { label: 'Changes requested', tone: 'warning' },
+  selected: { label: 'Chosen for the video', tone: 'success' },
+};
+
+function badgeFor(item) {
+  if (item.kind === 'sound_review') return SOUND_EVENTS[item.event] || { label: 'Updated', tone: 'neutral' };
+  if (item.kind === 'audio' && item.status === 'completed') return { label: 'Sound ready', tone: 'success' };
+  return { label: jobStatusLabel(item.status), tone: jobTone(item.status) };
+}
+
+function problemText(item) {
+  if (item.kind === 'audio' && item.status === 'failed' && item.error_message) return soundFailure(item);
+  return failureReason(item.error_code, item.status);
+}
 
 const FILTERS = [
   { value: 'all', label: 'Everything' },
@@ -85,6 +105,7 @@ export default function StudioHistoryStep() {
           {visible.map((item) => {
             const kind = KINDS[item.kind] || KINDS.video;
             const problem = isProblem(item);
+            const badge = badgeFor(item);
             const where = [
               item.scene_sequence ? `Scene ${item.scene_sequence}${item.scene_title ? ` · ${item.scene_title}` : ''}` : null,
               item.reel_title,
@@ -95,12 +116,16 @@ export default function StudioHistoryStep() {
                   <div className="d-flex flex-wrap align-items-start gap-2">
                     <i className={`bi ${kind.icon} studio-history-icon`} aria-hidden="true" />
                     <div className="flex-grow-1 min-w-0">
-                      <span className="fw-semibold d-block">{kind.label}</span>
+                      <span className="fw-semibold d-block">
+                        {kind.label}
+                        {item.version_label ? ` · ${item.version_label}` : ''}
+                      </span>
                       {where.length ? <span className="small text-secondary d-block">{where.join(' in ')}</span> : null}
                     </div>
-                    <StatusBadge tone={jobTone(item.status)}>{jobStatusLabel(item.status)}</StatusBadge>
+                    <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>
                   </div>
-                  {problem ? <p className="small mt-2 mb-0">{failureReason(item.error_code, item.status)}</p> : null}
+                  {problem ? <p className="small mt-2 mb-0">{problemText(item)}</p> : null}
+                  {item.comment ? <p className="small mt-2 mb-0">“{item.comment}”</p> : null}
                   <div className="d-flex flex-wrap align-items-center gap-3 mt-2 small text-secondary">
                     <span>{formatDateTime(item.created_at)}</span>
                     {item.cost_reported ? (

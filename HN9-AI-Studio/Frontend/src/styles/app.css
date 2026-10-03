@@ -2305,6 +2305,30 @@ html[data-theme='dark'] .studio-badge--danger {
   grid-column: 1 / -1;
 }
 
+.studio-sound-detail {
+  display: block;
+  margin-top: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.studio-sound-versions {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: 0;
+}
+
+.studio-sound-version {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.studio-sound-version .studio-sound-actions {
+  margin-left: auto;
+}
+
 @media (max-width: 575.98px) {
   .studio-sound-row {
     grid-template-columns: 1fr auto;
@@ -2313,6 +2337,11 @@ html[data-theme='dark'] .studio-badge--danger {
   .studio-sound-actions {
     grid-column: 1 / -1;
     justify-content: flex-start;
+  }
+
+  .studio-sound-version .studio-sound-actions {
+    margin-left: 0;
+    width: 100%;
   }
 }
 

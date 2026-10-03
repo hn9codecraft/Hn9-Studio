@@ -41,14 +41,20 @@ return [
         'enabled' => env('STORY_VIDEO_REAL_PROVIDER'),
         'key' => 'video.live',
         'durations' => [8],
-        'audio_roles' => [
-            'voice',
-            'narration',
-            'dialogue',
-            'music',
-            'sfx',
-            'ambient',
-            'generated',
+    ],
+
+    /*
+    | Scene sound. ElevenLabs speaks through the shared AI provider configured in
+    | config/ai.php (ELEVENLABS_*); it connects only when that provider is enabled
+    | and has a voice. Text-to-speech covers spoken roles only.
+    */
+    'audio_providers' => [
+        'elevenlabs' => [
+            'key' => 'audio.elevenlabs',
+            'label' => 'ElevenLabs voice',
+            'priority' => (int) env('ELEVENLABS_STORY_PRIORITY', 260),
+            'roles' => ['voice', 'narration', 'dialogue'],
+            'max_characters' => (int) env('ELEVENLABS_STORY_MAX_CHARACTERS', 5000),
         ],
     ],
 

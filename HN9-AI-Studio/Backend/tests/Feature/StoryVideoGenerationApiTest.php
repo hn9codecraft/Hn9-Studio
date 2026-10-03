@@ -17,11 +17,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Tests\Support\ConfiguresElevenLabsSound;
 use Tests\Support\FakeStoryMediaToolkit;
 use Tests\TestCase;
 
 final class StoryVideoGenerationApiTest extends TestCase
 {
+    use ConfiguresElevenLabsSound;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -280,7 +282,27 @@ final class StoryVideoGenerationApiTest extends TestCase
         Http::fake();
         [$user, $project] = $this->ownerProject();
 
-        // Audio without a role is rejected by the router — no silent audio substitute.
+        // The video service never makes sound: with no sound service connected, audio is not configured.
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/story/projects/{$project->uuid}/video/generate", [
+                'capability' => 'audio',
+                'duration_seconds' => 8,
+                'prompt' => 'not via video generate',
+            ])
+            ->assertStatus(501)
+            ->assertJsonPath('message', 'Sound generation is not configured yet.');
+
+        Http::assertNothingSent();
+        $this->assertSame(0, StoryVideoGenerationJob::query()->count());
+    }
+
+    public function test_audio_without_a_role_is_rejected_when_sound_is_connected(): void
+    {
+        Http::fake();
+        $this->enableElevenLabsSound();
+        [$user, $project] = $this->ownerProject();
+
+        // No silent audio substitute: the generic video endpoint still needs a sound role.
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/v1/story/projects/{$project->uuid}/video/generate", [
                 'capability' => 'audio',

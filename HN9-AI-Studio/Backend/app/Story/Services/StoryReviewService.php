@@ -306,16 +306,27 @@ final readonly class StoryReviewService
                 static fn (StoryVideoGenerationJob $candidate): bool => ($candidate->provider_metadata['version_id'] ?? null) === $version->uuid,
             );
             $sounds = [];
+            $selected = [];
             foreach ($audio->get($scene->id) ?? [] as $item) {
+                if ($item->isSelected() && ! isset($selected[$item->role])) {
+                    $selected[$item->role] = $item;
+                }
                 if (! isset($sounds[$item->role])) {
                     $sounds[$item->role] = [
                         'id' => $item->uuid,
                         'role' => $item->role,
                         'status' => $item->status,
+                        'review_status' => $item->reviewStatusEnum()->value,
+                        'version_label' => StoryAudioService::versionLabel((int) $item->version_number),
                         'has_file' => $item->hasPrivateFile(),
                         'error_code' => $item->error_code,
                     ];
                 }
+            }
+            foreach ($sounds as $role => $sound) {
+                $pick = $selected[$role] ?? null;
+                $sounds[$role]['approved_id'] = $pick?->uuid;
+                $sounds[$role]['approved_label'] = $pick === null ? null : StoryAudioService::versionLabel((int) $pick->version_number);
             }
 
             return [

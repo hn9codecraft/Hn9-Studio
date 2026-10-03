@@ -232,6 +232,7 @@ final class StoryRenderApiTest extends TestCase
             'story_scene_id' => $second['scene']->id,
             'role' => 'narration',
             'status' => 'completed',
+            'review_status' => 'approved',
             'idempotency_key' => 'render-sound-test',
             'disk' => 'voice',
             'path' => 'story/voice.mp3',
