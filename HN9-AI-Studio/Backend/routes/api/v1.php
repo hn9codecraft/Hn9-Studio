@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\V1\StoryFinalReviewController;
 use App\Http\Controllers\Api\V1\StoryHistoryController;
 use App\Http\Controllers\Api\V1\StoryPlanController;
 use App\Http\Controllers\Api\V1\StoryProductionPlanController;
+use App\Http\Controllers\Api\V1\StoryProductionUnitGenerationController;
 use App\Http\Controllers\Api\V1\StoryReelController;
 use App\Http\Controllers\Api\V1\StoryRenderController;
 use App\Http\Controllers\Api\V1\StoryReviewController;
@@ -285,6 +286,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('story/projects/{uuid}/production-plans', [StoryProductionPlanController::class, 'index'])->name('story.projects.production-plans.index');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}', [StoryProductionPlanController::class, 'show'])->name('story.projects.production-plans.show');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}', [StoryProductionPlanController::class, 'scene'])->name('story.projects.production-plans.scenes.show');
+    Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/generate', [StoryProductionUnitGenerationController::class, 'store'])->name('story.projects.production-plans.units.generate');
+    Route::get('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/generations', [StoryProductionUnitGenerationController::class, 'index'])->name('story.projects.production-plans.units.generations.index');
+    Route::get('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/generations/{jobUuid}', [StoryProductionUnitGenerationController::class, 'show'])->name('story.projects.production-plans.units.generations.show');
+    Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/generations/{jobUuid}/cancel', [StoryProductionUnitGenerationController::class, 'cancel'])->name('story.projects.production-plans.units.generations.cancel');
     Route::get('story/projects/{uuid}/reels', [StoryReelController::class, 'index'])->name('story.projects.reels.index');
     Route::post('story/projects/{uuid}/reels', [StoryReelController::class, 'store'])->name('story.projects.reels.store');
     Route::post('story/projects/{uuid}/reels/reorder', [StoryReelController::class, 'reorder'])->name('story.projects.reels.reorder');

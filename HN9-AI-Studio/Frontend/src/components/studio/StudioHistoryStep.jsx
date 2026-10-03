@@ -14,6 +14,7 @@ const KINDS = {
   sound_review: { label: 'Scene sound', icon: 'bi-music-note-list', step: 'sound' },
   story_plan: { label: 'Story plan', icon: 'bi-journal-check', step: 'scenes', params: { plan: 'review' } },
   production_plan: { label: 'Production plan', icon: 'bi-diagram-3', step: 'scenes' },
+  unit_generation: { label: 'Generation unit', icon: 'bi-camera-reels', step: 'scenes' },
 };
 
 const STORY_EVENTS = {

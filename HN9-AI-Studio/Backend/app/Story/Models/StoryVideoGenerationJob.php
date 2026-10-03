@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $capability
  * @property string $status
  * @property string|null $idempotency_key
+ * @property int|null $story_production_unit_id
  */
 class StoryVideoGenerationJob extends Model
 {
@@ -96,6 +97,12 @@ class StoryVideoGenerationJob extends Model
     public function scene(): BelongsTo
     {
         return $this->belongsTo(StoryScene::class, 'story_scene_id');
+    }
+
+    /** @return BelongsTo<StoryProductionUnit, $this> */
+    public function productionUnit(): BelongsTo
+    {
+        return $this->belongsTo(StoryProductionUnit::class, 'story_production_unit_id');
     }
 
     public function statusEnum(): StoryVideoJobStatus

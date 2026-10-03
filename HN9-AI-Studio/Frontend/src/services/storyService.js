@@ -703,6 +703,24 @@ export function selectStorySceneAudio(projectId, reelId, sceneId, audioId) {
   return sceneAudioAction(projectId, reelId, sceneId, audioId, 'select');
 }
 
+/** Starts one Generation Unit. Duration and context are decided on the server. Status reads stay uncached. */
+export function generateProductionUnit(projectId, planId, unitId, payload) {
+  return storyWrite(`/story/projects/${projectId}/production-plans/${planId}/units/${unitId}/generate`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function getProductionUnitGeneration(projectId, planId, unitId, jobId) {
+  return storyGet(`/story/projects/${projectId}/production-plans/${planId}/units/${unitId}/generations/${jobId}`);
+}
+
+export function listProductionUnitGenerations(projectId, planId, unitId) {
+  return storyGet(`/story/projects/${projectId}/production-plans/${planId}/units/${unitId}/generations`).then((payload) =>
+    Array.isArray(payload) ? payload : [],
+  );
+}
+
 export function getStorySceneAudioFileUrl(projectId, reelId, sceneId, audioId) {
   return storyFileUrl(
     `/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}/file`,

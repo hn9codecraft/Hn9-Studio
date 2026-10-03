@@ -93,8 +93,8 @@ Planning, review, Production Plan and generation status stay separate:
 - Approval is recorded on the version as `approved_at` / `approved_by`. The review status shown
   to users (`in_progress`, `failed`, `ready_for_review`, `approved`) is derived from both and
   never stored.
-- Production Plans keep their own `active` / `superseded` status; generation status will live on
-  unit versions (M11.18.5).
+- Production Plans keep their own `active` / `superseded` status. A generation job has its own
+  status (M11.18.3). Review status will live on unit versions (M11.18.5).
 
 ### Rules
 1. **One path.** `StoryPlanController::approve` → `StoryPlanApprovalService` →
@@ -127,5 +127,89 @@ review, story approved, production plan ready, production plan updated for a new
 production plan already prepared (a repeated approval), and approval failed with its reason.
 Failures are recorded after the rollback so they survive it; server logs keep only the driver
 error, never SQL or bound values.
+
+## Generation Engine (M11.18.3)
+
+One Generation Unit is generated at a time. A scene is never sent to a provider as one job.
+
+```
+Production Plan → Scene → Generation Unit → Generation job (one attempt)
+    → Provider execution contract → Validated output on the videos disk
+```
+
+`StoryProductionUnitGenerationService` builds one normalized request from server-side data and
+submits it through the existing video engine (`StoryVideoEngine`, `StoryVideoJobRunner`, and the
+connected live adapter). It does not rank providers, choose a fallback, create a Unit Version,
+or join clips. Those belong to M11.18.4, M11.18.5 and M11.18.6.
+
+### Unit and attempt
+
+A Generation Unit is the stable slot from M11.18.1: at most `StoryGenerationUnitCalculator::UNIT_SECONDS`
+(10) seconds, with a shorter remainder allowed. A generation job is one attempt to fill that slot.
+The same unit can have many jobs. A job is not a unit, and a successful job is not the selected
+unit version.
+
+The unit's stored `duration_seconds` is the length requested from the provider. A 10-second unit
+asks for 10 seconds; a 7-second remainder asks for 7. The engine does not round 7 up to 10, does
+not ask for 30 seconds, and does not create another unit when the connected provider cannot make
+that exact length. It returns `VIDEO_CAPABILITY_NOT_AVAILABLE` and makes no provider call.
+`StoryVideoUnitPlanner` still chunks the older scene-level generate endpoint; the unit engine
+does not use it.
+
+### Provider boundary
+
+The engine asks the existing dispatch service which live adapter is connected, then requires the
+router to select that same adapter. It does not walk fallbacks and it does not contain Runway,
+Luma or Seedance request shapes. Polling, callback and synchronous adapters all return a
+normalized status; the engine updates the HN9 job. Provider routing (priority, cost, fallback)
+is M11.18.4.
+
+### Snapshot and continuity
+
+On submit, `request_payload.metadata.context` stores the inputs that were actually used: unit,
+scene text, plan, source version, story, style, characters, mode, aspect ratio, instruction,
+requested duration, the previous scene, and the previous unit when this is not the first unit.
+Later edits to the story do not change that snapshot.
+
+Unit 1 has no previous unit. Unit 2 and later record the previous unit's completed output on the
+videos disk when one exists. If it does not, the snapshot says the previous output is unavailable
+and generation still proceeds. Unrelated project media is not used as continuity.
+
+### Job lifecycle
+
+Jobs use the existing statuses: `queued`, `submitted`, `processing`, `completed`, `failed`,
+`cancelled`. `timed_out` stays a boolean. There is no review status on the job. "Submitting" is
+the move from `queued` to `submitted`.
+
+The HTTP request creates or reuses the job and submits it. It does not wait for the provider to
+finish. When `story_video.queue.enabled` is on, the worker continues the job. When it is off, a
+status read advances one step. A submit that was claimed (`started_at` set) but never stored an
+operation id is failed by the existing recovery path and is not sent again. `story:recover-video-jobs`
+polls stored operations and does not submit.
+
+### Idempotency
+
+The key is `production-unit:{unit uuid}:{intent}`. The intent defaults to `initial`. The same
+intent, including a double click, HTTP retry or worker retry, reuses that job. A new intent
+string (`^[A-Za-z0-9_-]{1,64}$`) is an intentional new attempt and does not replace the unit or
+the earlier job. The unique key is `(story_workspace_id, idempotency_key)`. A concurrent insert
+that loses the race returns the job that won.
+
+### Output
+
+A completed provider file is accepted only when it is on the `videos` disk, is a non-empty
+`video/*` file, and its duration is within `StoryProductionUnitGenerationService::DURATION_TOLERANCE_SECONDS`
+(0.5 seconds) of the unit. That tolerance is container timing drift, not permission to accept a
+different length. A missing file, a bad type, an empty file, a download failure, a storage
+failure, or a length outside that tolerance fails the job. The unit row is not rewritten. No
+placeholder media is stored, and a provider download URL is not the asset identity.
+
+### History and responses
+
+Activity actions are `story.unit_generation.requested`, `submitted`, `completed`, `failed` and
+`retried`, once per job and action. Project History lists these jobs as `unit_generation` with
+the label `Unit N`. The generation API returns the job uuid, unit uuid, capability, status,
+output availability, timeout flag, sanitized error and timestamps. It does not return provider
+keys, model keys, operation ids, credentials or raw provider bodies.
 
 _Diagrams and component details are placeholders — expand as the system is built._
