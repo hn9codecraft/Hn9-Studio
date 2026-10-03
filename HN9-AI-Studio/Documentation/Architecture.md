@@ -137,10 +137,11 @@ Production Plan → Scene → Generation Unit → Generation job (one attempt)
     → Provider execution contract → Validated output on the videos disk
 ```
 
-`StoryProductionUnitGenerationService` builds one normalized request from server-side data and
-submits it through the existing video engine (`StoryVideoEngine`, `StoryVideoJobRunner`, and the
-connected live adapter). It does not rank providers, choose a fallback, create a Unit Version,
-or join clips. Those belong to M11.18.4, M11.18.5 and M11.18.6.
+`StoryProductionUnitGenerationService` builds one normalized request from server-side data.
+`StoryVideoProviderOrchestrator` chooses one provider before the job is created. The existing
+video engine (`StoryVideoEngine`, `StoryVideoJobRunner`, and that provider's adapter) then
+submits it. The unit service does not create a Unit Version or join clips. Those belong to
+M11.18.5 and M11.18.6.
 
 ### Unit and attempt
 
@@ -156,13 +157,53 @@ that exact length. It returns `VIDEO_CAPABILITY_NOT_AVAILABLE` and makes no prov
 `StoryVideoUnitPlanner` still chunks the older scene-level generate endpoint; the unit engine
 does not use it.
 
-### Provider boundary
+### Provider orchestration (M11.18.4)
 
-The engine asks the existing dispatch service which live adapter is connected, then requires the
-router to select that same adapter. It does not walk fallbacks and it does not contain Runway,
-Luma or Seedance request shapes. Polling, callback and synchronous adapters all return a
-normalized status; the engine updates the HN9 job. Provider routing (priority, cost, fallback)
-is M11.18.4.
+Unit generation asks the orchestrator once, and only when no job exists for that unit and intent.
+A status poll, a refresh, an HTTP retry and a worker retry do not route again.
+
+```
+Generation Unit → Generation request → Provider Orchestrator
+    → Candidate evaluation → Routing decision → One provider and model
+    → Generation engine → That provider's adapter
+```
+
+The decision is capability-first. A provider is eligible only when it is enabled, configured,
+not Gemini (`video.live` is left on the older scene engine and is omitted from unit routing),
+supports the mode (`text_to_video`, `image_to_video` or `reference_to_video`), supports the
+unit's exact duration, supports the aspect ratio and input types, has an enabled matching model,
+passes the existing circuit breaker, and accepts `validate()` before any submit. Runway, Luma
+and Seedance 2.0 are the production providers. Their duration tables stay in the adapters:
+Runway 2–10 seconds, Luma 5 and 10 for text-to-video (image-to-video and extend are 5 seconds),
+Seedance 4–15 seconds (or 30 for a 2.5 model). A 7-second unit cannot use Luma. A reference
+video can use Seedance. The unit row is never changed to fit a
+provider, and FFmpeg trimming is not a substitute.
+
+Policy lives in `story_video.routing`, not in provider `if` branches. `preferred_order`
+defaults to `video.runway`, `video.luma`, `video.seedance` (`STORY_VIDEO_PREFERRED_PROVIDERS`).
+Among eligible providers the order is preferred rank, then configured priority descending, then
+provider key. There is no quality score and no random or model-based choice. Cost and latency
+are not ranked because this build does not have a reliable per-video cost or latency series.
+`fallback_enabled` (`STORY_VIDEO_ROUTING_FALLBACK`, default true) allows the next eligible
+provider only before a job is submitted. When it is false, only the first preferred provider
+may be chosen.
+
+Fallback is a routing-time choice: not configured, disabled, missing capability, unsupported
+duration or ratio, missing model, open circuit, or `validate()` rejecting the request before
+`submit()`. Once a provider returns an operation id, that attempt stays with that provider even
+if it later fails. A claimed submit with no operation id is not sent again and is not moved to
+another provider. A different provider requires a new intent. One intent is one decision, one
+provider, one attempt and one job.
+
+The snapshot is stored on the job as `provider_metadata.routing_decision` and copied to
+`routing`: policy version (`m11.18.4`), capability, requested duration, selected provider,
+selected model, reason, the candidates that were considered, and `selected_at`. It has no
+credentials. The public unit generation response does not include it. The older scene generate
+endpoint still uses `StoryVideoDispatchService` and highest-priority live adapter selection;
+that path is not the unit orchestrator.
+
+Polling, callback and synchronous adapters still return a normalized status. The engine updates
+the HN9 job. Adapters are not rewritten for routing.
 
 ### Snapshot and continuity
 

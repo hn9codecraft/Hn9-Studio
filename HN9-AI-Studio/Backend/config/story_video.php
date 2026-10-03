@@ -64,6 +64,20 @@ return [
     | suite whenever a key is configured. The highest priority provider that
     | supports a request serves it. Keys come from the environment only.
     */
+    /*
+    | Unit routing policy. Order is the preference, not a PHP branch.
+    | Runway is first unless this list is changed. Fallback may choose the
+    | next eligible provider only before a job is submitted.
+    */
+    'routing' => [
+        'policy_version' => 'm11.18.4',
+        'preferred_order' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('STORY_VIDEO_PREFERRED_PROVIDERS', 'video.runway,video.luma,video.seedance')),
+        ))),
+        'fallback_enabled' => filter_var(env('STORY_VIDEO_ROUTING_FALLBACK', true), FILTER_VALIDATE_BOOLEAN),
+    ],
+
     'live_providers' => [
         'seedance' => [
             'enabled' => env('SEEDANCE_ENABLED'),

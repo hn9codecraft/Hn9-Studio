@@ -45,6 +45,15 @@ final class ContractStoryVideoAdapter implements LiveStoryVideoProviderAdapterIn
 
     public int $statusCalls = 0;
 
+    public bool $available = true;
+
+    /** @var list<StoryVideoCapability>|null */
+    public ?array $capabilities = null;
+
+    public bool $rejectBeforeAccept = false;
+
+    public string $vendorName = 'contract';
+
     /** @param  list<int>  $durations */
     public function __construct(
         public array $durations = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -58,7 +67,7 @@ final class ContractStoryVideoAdapter implements LiveStoryVideoProviderAdapterIn
 
     public function vendor(): string
     {
-        return 'contract';
+        return $this->vendorName;
     }
 
     public function displayName(): string
@@ -78,16 +87,18 @@ final class ContractStoryVideoAdapter implements LiveStoryVideoProviderAdapterIn
 
     public function supports(StoryVideoCapability $capability): bool
     {
-        return in_array($capability, [
+        $modes = $this->capabilities ?? [
             StoryVideoCapability::TextToVideo,
             StoryVideoCapability::ImageToVideo,
             StoryVideoCapability::ReferenceToVideo,
-        ], true);
+        ];
+
+        return in_array($capability, $modes, true);
     }
 
     public function isAvailable(StoryVideoCapability $capability): bool
     {
-        return $this->supports($capability);
+        return $this->available && $this->supports($capability);
     }
 
     public function supportedDurations(StoryVideoCapability $capability): array
@@ -161,7 +172,7 @@ final class ContractStoryVideoAdapter implements LiveStoryVideoProviderAdapterIn
                 providerKey: $this->adapterKey,
                 modelKey: 'contract-model',
                 displayName: 'Contract model',
-                capabilities: [StoryVideoCapability::TextToVideo, StoryVideoCapability::ImageToVideo, StoryVideoCapability::ReferenceToVideo],
+                capabilities: $this->capabilities ?? [StoryVideoCapability::TextToVideo, StoryVideoCapability::ImageToVideo, StoryVideoCapability::ReferenceToVideo],
                 enabled: true,
                 priority: 900,
                 durations: $this->durations,
@@ -172,7 +183,12 @@ final class ContractStoryVideoAdapter implements LiveStoryVideoProviderAdapterIn
         ];
     }
 
-    public function validate(StoryVideoGenerationRequest $request): void {}
+    public function validate(StoryVideoGenerationRequest $request): void
+    {
+        if ($this->rejectBeforeAccept) {
+            throw StoryVideoEngineException::invalidInput('The provider rejected the request before accepting it.');
+        }
+    }
 
     public function submit(StoryVideoGenerationRequest $request): StoryVideoSubmission
     {
