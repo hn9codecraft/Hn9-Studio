@@ -2398,6 +2398,47 @@ html[data-theme='dark'] .studio-badge--danger {
   gap: var(--space-2);
 }
 
+.studio-production {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.studio-production-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--hn9-surface);
+}
+
+.studio-production-clip {
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--hn9-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--hn9-surface);
+}
+
+.studio-production-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.studio-production-actions .btn {
+  min-height: 2.75rem;
+}
+
+.studio-production video,
+.studio-production .studio-video {
+  max-width: 100%;
+  height: auto;
+}
+
 .studio-transition {
   display: flex;
   align-items: center;

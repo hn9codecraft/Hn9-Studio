@@ -307,8 +307,7 @@ newest file.
 
 ### What this sprint does not do
 
-The full production workspace is M11.18.7. End-to-end provider QA is M11.18.8. Creative Studio
-lists a scene’s units and their versions, and can ask the server to build the scene video.
+Creative Studio’s scene workspace is M11.18.7. End-to-end provider QA is M11.18.8.
 Provider choice stays in M11.18.4.
 
 ## Scene Assembly (M11.18.6)
@@ -367,7 +366,27 @@ FFprobe accepts the file. Assembly does not change units, versions, generation j
 
 ### What this sprint does not do
 
-The full production workspace is M11.18.7. End-to-end provider QA is M11.18.8. This step does
+The production screen is M11.18.7. End-to-end provider QA is M11.18.8. This step does
 not call a video provider and does not build the final movie.
+
+## Scene production screen (M11.18.7)
+
+Creative Studio → Scenes is the production workflow. A scene opens into one workspace. The
+screen does not split a scene into clips and does not choose a provider.
+
+```
+Scene
+    → Production clips (the plan’s units)
+    → Version review
+    → Selection
+    → Scene assembly
+    → Scene preview
+```
+
+The scene card reads the plan’s production summary. The open scene reads
+`GET …/scenes/{scene}/production`, which returns the plan’s clips, their versions and the scene
+videos. Generate, approve, request changes, select and build call the existing unit and assembly
+routes. Active generation and an in-progress build are polled until they finish, then the
+workspace is loaded again. Provider names, operation ids and file paths are not shown.
 
 _Diagrams and component details are placeholders — expand as the system is built._

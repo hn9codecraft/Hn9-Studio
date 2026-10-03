@@ -90,7 +90,15 @@ final readonly class StoryProductionPlanService implements StoryProductionPlanSe
         $scene = StoryProductionPlanScene::query()
             ->where('story_production_plan_id', $plan->id)
             ->whereHas('scene', static fn (Builder $query) => $query->where('uuid', $sceneUuid))
-            ->with(['scene', 'units' => static fn ($query) => $query->orderBy('sequence'), 'units.selectedVersion'])
+            ->with([
+                'scene',
+                'assemblies' => static fn ($query) => $query->orderBy('id'),
+                'units' => static fn ($query) => $query->orderBy('sequence')->with('selectedVersion')->withExists([
+                    'generations as generation_active' => static fn ($query) => $query->whereIn('status', ['queued', 'submitted', 'processing']),
+                    'generations as generation_failed' => static fn ($query) => $query->where('status', 'failed'),
+                ]),
+                'units.versions' => static fn ($query) => $query->select(['id', 'story_production_unit_id', 'review_status']),
+            ])
             ->first()
             ?? throw StoryException::notFound('Production plan scene');
 
@@ -393,8 +401,12 @@ final readonly class StoryProductionPlanService implements StoryProductionPlanSe
             'nextPlan',
             'scenes' => static fn ($query) => $query->orderBy('sequence'),
             'scenes.scene',
-            'scenes.units' => static fn ($query) => $query->orderBy('sequence'),
-            'scenes.units.selectedVersion',
+            'scenes.assemblies' => static fn ($query) => $query->orderBy('id'),
+            'scenes.units' => static fn ($query) => $query->orderBy('sequence')->with('selectedVersion')->withExists([
+                'generations as generation_active' => static fn ($query) => $query->whereIn('status', ['queued', 'submitted', 'processing']),
+                'generations as generation_failed' => static fn ($query) => $query->where('status', 'failed'),
+            ]),
+            'scenes.units.versions' => static fn ($query) => $query->select(['id', 'story_production_unit_id', 'review_status']),
         ]);
     }
 }

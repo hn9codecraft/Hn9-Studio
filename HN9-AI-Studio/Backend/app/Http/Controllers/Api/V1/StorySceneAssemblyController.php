@@ -43,6 +43,13 @@ class StorySceneAssemblyController extends Controller
         return ApiResponse::success($this->assemblies->listForScene($project, $planUuid, $sceneUuid));
     }
 
+    public function workspace(string $uuid, string $planUuid, string $sceneUuid): JsonResponse
+    {
+        $project = $this->authorizeProject($uuid, $planUuid);
+
+        return ApiResponse::success($this->assemblies->workspace($project, $planUuid, $sceneUuid));
+    }
+
     public function show(string $uuid, string $planUuid, string $sceneUuid, string $assemblyUuid): JsonResponse
     {
         $project = $this->authorizeProject($uuid, $planUuid);

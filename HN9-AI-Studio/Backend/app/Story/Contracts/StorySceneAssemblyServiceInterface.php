@@ -23,6 +23,14 @@ interface StorySceneAssemblyServiceInterface
     public function listForScene(Project $project, string $planUuid, string $sceneUuid): array;
 
     /**
+     * One read for the scene workspace: backend clips, their versions and scene videos.
+     * Provider names, storage paths and operation ids are left out.
+     *
+     * @return array<string, mixed>
+     */
+    public function workspace(Project $project, string $planUuid, string $sceneUuid): array;
+
+    /**
      * @return array<string, mixed>
      */
     public function show(Project $project, string $planUuid, string $sceneUuid, string $assemblyUuid): array;

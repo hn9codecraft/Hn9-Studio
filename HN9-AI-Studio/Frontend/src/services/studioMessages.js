@@ -137,6 +137,10 @@ export function friendlyError(error, fallback = 'Something went wrong. Please tr
   if (code === 'story_media_build_failed') {
     return 'The clips could not be put together into one video. Check that every clip plays, then try again.';
   }
+  if (code === 'SCENE_NOT_READY') return 'Some video parts are not ready yet.';
+  if (code === 'SCENE_ASSEMBLY_FAILED' || code === 'SCENE_ASSEMBLY_DURATION') {
+    return looksTechnical(raw) ? "We couldn't build this scene. Please try again." : raw || "We couldn't build this scene. Please try again.";
+  }
 
   if (code.endsWith('_invalid_transition')) return transitionMessage(raw);
   if (code === 'story_render_empty') {

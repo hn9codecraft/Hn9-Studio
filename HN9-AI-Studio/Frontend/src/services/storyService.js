@@ -725,6 +725,14 @@ export function listProductionPlans(projectId) {
   return storyGet(`/story/projects/${projectId}/production-plans`).then((payload) => (Array.isArray(payload) ? payload : []));
 }
 
+export function getProductionPlan(projectId, planId) {
+  return storyGet(`/story/projects/${projectId}/production-plans/${planId}`);
+}
+
+export function getSceneProduction(projectId, planId, sceneId) {
+  return storyGet(`/story/projects/${projectId}/production-plans/${planId}/scenes/${sceneId}/production`);
+}
+
 export function getProductionPlanScene(projectId, planId, sceneId) {
   return storyGet(`/story/projects/${projectId}/production-plans/${planId}/scenes/${sceneId}`);
 }

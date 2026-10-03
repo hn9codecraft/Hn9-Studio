@@ -14,8 +14,8 @@ const KINDS = {
   sound_review: { label: 'Scene sound', icon: 'bi-music-note-list', step: 'sound' },
   story_plan: { label: 'Story plan', icon: 'bi-journal-check', step: 'scenes', params: { plan: 'review' } },
   production_plan: { label: 'Production plan', icon: 'bi-diagram-3', step: 'scenes' },
-  unit_generation: { label: 'Generation unit', icon: 'bi-camera-reels', step: 'scenes' },
-  unit_version: { label: 'Unit video', icon: 'bi-collection-play', step: 'scenes' },
+  unit_generation: { label: 'Production clip', icon: 'bi-camera-reels', step: 'scenes' },
+  unit_version: { label: 'Production clip', icon: 'bi-collection-play', step: 'scenes' },
   scene_assembly: { label: 'Scene video', icon: 'bi-film', step: 'scenes' },
 };
 
@@ -45,7 +45,7 @@ const UNIT_VERSION_EVENTS = {
   ready_for_review: { label: 'Ready for review', tone: 'progress' },
   approved: { label: 'Approved', tone: 'success' },
   changes_requested: { label: 'Changes requested', tone: 'warning' },
-  selected: { label: 'Selected for the final scene', tone: 'success' },
+  selected: { label: 'Selected for this clip', tone: 'success' },
   deselected: { label: 'No longer selected', tone: 'neutral' },
 };
 

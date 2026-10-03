@@ -285,6 +285,25 @@ FFmpeg command, stderr, provider name or internal database id.
 `GET /story/projects/{project}/history` includes these steps as `kind: scene_assembly`. Events
 are `requested`, `started`, `completed`, `failed`, `retried` and `version_created`.
 
+A production plan scene also includes a `production` summary: clip, selected, approved, review,
+changes, generating and failed counts, plus `scene_video` of `none`, `building`, `ready` or
+`failed`. The clip list itself stays on `units`.
+
+## Scene production
+
+One read for the Creative Studio scene workspace. It does not generate, review or assemble.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `…/scenes/{scene}/production` | Clips from the plan, their versions, and scene videos. |
+
+`{scene}` is the story scene id. Auth matches scene assembly (owner or admin). The payload has
+`plan_id`, `duration_seconds`, `clips`, `current` and `assemblies`. Each clip has `sequence`,
+`start_second`, `duration_seconds`, `end_second`, `message`, `versions` and, while a video is
+being made, `active_generation` with `id` and `status` only. Versions omit provider and model.
+Paths, commands and operation ids are not included. Generate, review and build stay on their
+existing routes.
+
 ## Request / Response Schemas
 _To be defined. Reference the JSON templates under `/Brand` and `/Agents`._
 
