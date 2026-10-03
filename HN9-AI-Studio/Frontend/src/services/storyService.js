@@ -630,6 +630,14 @@ export function getStoryVideoFileUrl(projectId, jobId) {
   );
 }
 
+export function getStorySceneVersionFileUrl(projectId, reelId, sceneId, versionId) {
+  return storyFileUrl(
+    `/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/versions/${versionId}/file`,
+    'video/mp4',
+    'This version could not be loaded.',
+  );
+}
+
 export function getStoryAudioRoles() {
   return storyGet('/story/audio/roles', CATALOG_TTL_MS);
 }

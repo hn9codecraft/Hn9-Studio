@@ -14,12 +14,20 @@ use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Models\StoryWorkspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use App\Story\Media\StoryMediaToolkit;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\FakeStoryMediaToolkit;
 use Tests\TestCase;
 
 final class StoryFinalReviewApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->app->instance(StoryMediaToolkit::class, new FakeStoryMediaToolkit);
+    }
 
     public function test_submit_and_approve_keep_the_render_file_and_do_not_call_a_provider(): void
     {

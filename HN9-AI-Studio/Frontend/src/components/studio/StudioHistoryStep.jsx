@@ -103,10 +103,9 @@ export default function StudioHistoryStep() {
                   {problem ? <p className="small mt-2 mb-0">{failureReason(item.error_code, item.status)}</p> : null}
                   <div className="d-flex flex-wrap align-items-center gap-3 mt-2 small text-secondary">
                     <span>{formatDateTime(item.created_at)}</span>
-                    {item.model_key && item.status === 'completed' ? <span>Model: {item.model_key}</span> : null}
                     {item.cost_reported ? (
                       <span>
-                        Cost reported by provider: {item.cost} {item.currency}
+                        Reported cost: {item.cost} {item.currency}
                       </span>
                     ) : null}
                     {problem ? (

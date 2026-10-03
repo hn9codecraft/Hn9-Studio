@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { STORY_ASPECT_RATIOS, STORY_LANGUAGES, storyFieldError } from '../../services/storyConstants';
+import { updateProject } from '../../services/projectService';
 import { updateStoryBible } from '../../services/storyService';
 import { friendlyError } from '../../services/studioMessages';
 import { useFeedback, useStudio } from './StudioContext';
@@ -11,8 +12,19 @@ const SUGGESTIONS = {
   video_style: ['3D animation', 'Watercolor illustration', 'Anime', 'Cinematic live action', 'Flat 2D animation', 'Claymation'],
 };
 
-function formFromStory(story) {
+const LENGTHS = [
+  { value: '', label: 'Decide later' },
+  { value: '30', label: '30 seconds' },
+  { value: '60', label: '1 minute' },
+  { value: '90', label: '1 minute 30 seconds' },
+  { value: '120', label: '2 minutes' },
+  { value: '180', label: '3 minutes' },
+  { value: '300', label: '5 minutes' },
+];
+
+function formFromStory(story, title) {
   return {
+    title: title || '',
     concept: story?.concept || '',
     genre: story?.genre || '',
     tone: story?.tone || '',
@@ -20,6 +32,7 @@ function formFromStory(story) {
     language: story?.language || '',
     video_style: story?.video_style || '',
     aspect_ratio: story?.aspect_ratio || '',
+    default_duration: story?.default_duration ? String(story.default_duration) : '',
     world: story?.world || '',
     location: story?.location || '',
     time_period: story?.time_period || '',
@@ -30,38 +43,49 @@ function formFromStory(story) {
 }
 
 export default function StudioStoryStep({ nav }) {
-  const { projectId, bible, refresh } = useStudio();
+  const { projectId, project, bible, refresh, renameProject } = useStudio();
   const feedback = useFeedback();
-  const [saved, setSaved] = useState(() => formFromStory(bible));
+  const [saved, setSaved] = useState(() => formFromStory(bible, project?.name));
   const [values, setValues] = useState(saved);
   const [errors, setErrors] = useState(null);
   const [saving, setSaving] = useState(false);
   const dirty = JSON.stringify(values) !== JSON.stringify(saved);
   const hasIdea = values.concept.trim().length > 0;
+  const hasTitle = values.title.trim().length > 0;
 
   function setField(field, value) {
     setValues((current) => ({ ...current, [field]: value }));
   }
 
   async function save() {
+    if (!hasTitle) {
+      setErrors({ errors: { title: ['Give your video a title.'] } });
+      return false;
+    }
     setSaving(true);
     setErrors(null);
-    const { voice_style, music_mood, ...rest } = values;
+    const { voice_style, music_mood, title, ...rest } = values;
 
     try {
+      const name = title.trim();
+      if (name !== saved.title) {
+        await updateProject(projectId, { name });
+        renameProject?.(name);
+      }
       const story = await updateStoryBible(projectId, {
         ...rest,
         aspect_ratio: rest.aspect_ratio || null,
+        default_duration: rest.default_duration ? Number(rest.default_duration) : null,
         audio_defaults: { ...(bible?.audio_defaults || {}), voice_style, music_mood },
       });
-      const next = formFromStory(story);
+      const next = formFromStory(story, name);
       setSaved(next);
       setValues(next);
       await refresh(['bible']);
       feedback.success('Story details saved.');
       return true;
     } catch (err) {
-      setErrors(err);
+      setErrors(err?.errors?.name ? { ...err, errors: { ...err.errors, title: err.errors.name } } : err);
       feedback.error(friendlyError(err, 'Your story details could not be saved. Please try again.'));
       return false;
     } finally {
@@ -130,6 +154,26 @@ export default function StudioStoryStep({ nav }) {
       >
         <div className="card-body d-grid gap-3">
           <div>
+            <label className="form-label" htmlFor="story-title">
+              Title <span className="text-danger" aria-hidden="true">*</span>
+              <span className="visually-hidden"> (required)</span>
+            </label>
+            <input
+              id="story-title"
+              className={`form-control${storyFieldError(errors, 'title') ? ' is-invalid' : ''}`}
+              value={values.title}
+              onChange={(event) => setField('title', event.target.value)}
+              placeholder="e.g. The Lighthouse Whale"
+              maxLength={255}
+              aria-required="true"
+              disabled={saving}
+            />
+            {storyFieldError(errors, 'title') ? (
+              <div className="invalid-feedback d-block">{storyFieldError(errors, 'title')}</div>
+            ) : null}
+          </div>
+
+          <div>
             <label className="form-label" htmlFor="story-concept">
               Your idea <span className="text-danger" aria-hidden="true">*</span>
               <span className="visually-hidden"> (required)</span>
@@ -178,6 +222,13 @@ export default function StudioStoryStep({ nav }) {
               </select>
             </div>
             <div className="col-12">
+              {field('world', 'World and setting', {
+                textarea: true,
+                rows: 2,
+                placeholder: 'e.g. A rocky northern coast where the sea is always cold and the town lives by the lighthouse.',
+              })}
+            </div>
+            <div className="col-12">
               {field('video_style', 'Visual style', {
                 placeholder: 'e.g. Watercolor illustration',
                 helper: 'How the whole video should look. Cast & Look and every scene video use this.',
@@ -186,7 +237,9 @@ export default function StudioStoryStep({ nav }) {
             </div>
           </div>
 
-          <fieldset>
+          <details className="studio-more">
+            <summary>More options (format, length, places, narration and music)</summary>
+          <fieldset className="mt-3">
             <legend className="form-label mb-1">Video format</legend>
             <div className="studio-choice-grid">
               {STORY_ASPECT_RATIOS.map((option) => (
@@ -211,15 +264,28 @@ export default function StudioStoryStep({ nav }) {
               <div className="invalid-feedback d-block">{storyFieldError(errors, 'aspect_ratio')}</div>
             ) : null}
           </fieldset>
-
-          <details className="studio-more">
-            <summary>More options (world, setting, narration and music)</summary>
             <div className="row g-3 mt-1">
-              <div className="col-12">
-                {field('world', 'The world of the story', {
-                  textarea: true,
-                  placeholder: 'e.g. A rocky northern coast where the sea is always cold and the town lives by the lighthouse.',
-                })}
+              <div className="col-md-6">
+                <label className="form-label" htmlFor="story-default-duration">
+                  Planned length
+                </label>
+                <select
+                  id="story-default-duration"
+                  className="form-select"
+                  value={values.default_duration}
+                  onChange={(event) => setField('default_duration', event.target.value)}
+                  aria-describedby="story-default-duration-help"
+                  disabled={saving}
+                >
+                  {LENGTHS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="form-text" id="story-default-duration-help">
+                  Videos are planned in 30-second scenes, so 2 minutes is about four scenes.
+                </div>
               </div>
               <div className="col-md-6">{field('location', 'Main location', { placeholder: 'e.g. A lighthouse on a cliff' })}</div>
               <div className="col-md-6">{field('time_period', 'Time period', { placeholder: 'e.g. Early 1900s' })}</div>
@@ -243,14 +309,18 @@ export default function StudioStoryStep({ nav }) {
                 Save
               </BusyButton>
             ) : null}
-            <BusyButton busy={saving} busyLabel="Saving…" disabled={!hasIdea} onClick={continueToCast}>
+            <BusyButton busy={saving} busyLabel="Saving…" disabled={!hasIdea || !hasTitle} onClick={continueToCast}>
               {dirty ? `Save and continue to ${nextLabel}` : `Continue to ${nextLabel}`}
               <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
             </BusyButton>
           </div>
         }
       />
-      {!hasIdea ? <p className="small text-secondary text-end mt-2 mb-0">Add your idea to continue.</p> : null}
+      {!hasIdea || !hasTitle ? (
+        <p className="small text-secondary text-end mt-2 mb-0">
+          {!hasTitle && !hasIdea ? 'Add a title and your idea to continue.' : !hasTitle ? 'Add a title to continue.' : 'Add your idea to continue.'}
+        </p>
+      ) : null}
     </div>
   );
 }

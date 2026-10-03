@@ -6,9 +6,13 @@ import {
   createStoryReel,
   createStoryScene,
   duplicateStoryScene,
+  editStorySceneVersion,
+  extendStorySceneVersion,
+  getStorySceneVersionFileUrl,
   getStoryStyle,
   getStoryVideoFileUrl,
   getStoryVideoJob,
+  listStorySceneVersions,
   markStoryProjectChanged,
   regenerateStoryScene,
   reorderStoryScenes,
@@ -18,6 +22,7 @@ import {
 } from '../../services/storyService';
 import {
   failureReason,
+  formatDateTime,
   formatSeconds,
   friendlyError,
   isJobActive,
@@ -295,6 +300,23 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
       </button>,
     );
   }
+  const canChange = videoReady && version && !videoBusy && review !== 'pending_review';
+  if (canChange && connections?.video?.edit) {
+    actions.push(
+      <button key="change" type="button" className="btn btn-outline-primary btn-sm" disabled={Boolean(busy)} onClick={() => setPanel('change')}>
+        <i className="bi bi-magic me-1" aria-hidden="true" />
+        Change this video
+      </button>,
+    );
+  }
+  if (canChange && connections?.video?.extend) {
+    actions.push(
+      <button key="extend" type="button" className="btn btn-outline-primary btn-sm" disabled={Boolean(busy)} onClick={() => setPanel('extend')}>
+        <i className="bi bi-arrows-angle-expand me-1" aria-hidden="true" />
+        Make it longer
+      </button>,
+    );
+  }
 
   return (
     <li id={`scene-${scene.id}`} className={`studio-scene-card card border-0 glass-card${highlighted ? ' is-highlighted' : ''}`}>
@@ -367,6 +389,11 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
                   Move down
                 </button>
               ) : null}
+              {version ? (
+                <button type="button" className="dropdown-item" onClick={() => setPanel('history')}>
+                  Version history
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="dropdown-item"
@@ -383,6 +410,54 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
         </div>
 
         {panel === 'video' ? <CreateVideoPanel scene={scene} onClose={() => setPanel(null)} onCreated={() => refresh(['status'])} /> : null}
+
+        {panel === 'change' || panel === 'extend' ? (
+          <form
+            className="studio-inline-panel"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const instruction = note.trim();
+              const extend = panel === 'extend';
+              act(
+                panel,
+                () =>
+                  extend
+                    ? extendStorySceneVersion(projectId, reelId, scene.id, version.id, instruction)
+                    : editStorySceneVersion(projectId, reelId, scene.id, version.id, instruction),
+                extend
+                  ? `${name}: a longer version is being created. It appears here as a new version when ready.`
+                  : `${name}: the changed version is being created. It appears here as a new version when ready.`,
+              ).then((ok) => ok && markStoryProjectChanged(projectId));
+            }}
+          >
+            <label className="form-label" htmlFor={`${panel}-${scene.id}`}>
+              {panel === 'extend' ? 'What happens next?' : 'What should change in this video?'}
+            </label>
+            <textarea
+              id={`${panel}-${scene.id}`}
+              className="form-control"
+              rows={2}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder={panel === 'extend' ? 'e.g. The whale dives and the girl waves goodbye.' : 'e.g. Make it night time with a full moon.'}
+              aria-describedby={`${panel}-${scene.id}-help`}
+              required
+            />
+            <div className="form-text" id={`${panel}-${scene.id}-help`}>
+              The current version stays as it is. A new version is created, and you can compare them in Version history.
+            </div>
+            <div className="d-flex gap-2 mt-2">
+              <BusyButton type="submit" className="btn btn-primary btn-sm" busy={busy === panel} busyLabel="Sending…" disabled={!note.trim()}>
+                {panel === 'extend' ? 'Make it longer' : 'Create changed version'}
+              </BusyButton>
+              <button type="button" className="btn btn-link btn-sm" onClick={() => setPanel(null)}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : null}
+
+        {panel === 'history' ? <SceneVersionHistory scene={scene} onClose={() => setPanel(null)} /> : null}
 
         {panel === 'rework' ? (
           <form
@@ -432,6 +507,80 @@ function SceneCard({ scene, status, isFirst, isLast, scenes, highlighted, onEdit
         ) : null}
       </div>
     </li>
+  );
+}
+
+function SceneVersionHistory({ scene, onClose }) {
+  const { projectId, reelId } = useStudio();
+  const [versions, setVersions] = useState(null);
+  const [error, setError] = useState('');
+  const [open, setOpen] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listStorySceneVersions(projectId, reelId, scene.id)
+      .then((items) => {
+        if (!cancelled) setVersions([...items].reverse());
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setVersions([]);
+          setError(friendlyError(err, 'Version history could not be loaded.'));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, reelId, scene.id]);
+
+  return (
+    <section className="studio-inline-panel" aria-labelledby={`history-${scene.id}`}>
+      <div className="d-flex align-items-center justify-content-between mb-2">
+        <h4 className="h6 mb-0" id={`history-${scene.id}`}>
+          Version history
+        </h4>
+        <button type="button" className="btn btn-link btn-sm" onClick={onClose}>
+          Close
+        </button>
+      </div>
+      {error ? <p className="text-danger small">{error}</p> : null}
+      {versions === null ? <p className="small text-secondary mb-0">Loading versions…</p> : null}
+      {versions?.length === 0 && !error ? <p className="small text-secondary mb-0">No versions yet.</p> : null}
+      {versions?.length ? (
+        <ol className="list-unstyled d-grid gap-2 mb-0" reversed>
+          {versions.map((item) => (
+            <li key={item.id} className="border rounded p-2">
+              <div className="d-flex flex-wrap align-items-center gap-2">
+                <span className="fw-semibold">Version {item.version}</span>
+                <StatusBadge tone={reviewTone(item.status)}>{reviewStatusLabel(item.status)}</StatusBadge>
+                {item.created_at ? <span className="small text-secondary">{formatDateTime(item.created_at)}</span> : null}
+                {item.has_file ? (
+                  <button
+                    type="button"
+                    className="btn btn-link btn-sm p-0 ms-auto"
+                    aria-expanded={open === item.id}
+                    onClick={() => setOpen(open === item.id ? null : item.id)}
+                  >
+                    {open === item.id ? 'Hide video' : 'Watch'}
+                  </button>
+                ) : (
+                  <span className="small text-secondary ms-auto">No video</span>
+                )}
+              </div>
+              {item.review_comment ? <p className="small mb-0 mt-1">Feedback: “{item.review_comment}”</p> : null}
+              {open === item.id ? (
+                <div className="mt-2">
+                  <MediaPreview
+                    load={() => getStorySceneVersionFileUrl(projectId, reelId, scene.id, item.id)}
+                    label={`${sceneName(scene)} version ${item.version}`}
+                  />
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </section>
   );
 }
 

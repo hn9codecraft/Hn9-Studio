@@ -26,10 +26,19 @@ class StoryVideoEngineException extends StoryException
         );
     }
 
+    public static function provider(StoryVideoErrorCode $code, string $detail): self
+    {
+        return new self(
+            message: $detail,
+            errorCode: $code->value,
+            statusCode: 422,
+        );
+    }
+
     public static function generationNotEnabled(): self
     {
         return new self(
-            message: 'Video creation is not connected yet. Connect a video provider in Settings to create this video.',
+            message: 'Video creation is not connected yet. An administrator needs to connect a video service before videos can be made.',
             errorCode: StoryVideoErrorCode::GenerationNotEnabled->value,
             statusCode: 501,
         );

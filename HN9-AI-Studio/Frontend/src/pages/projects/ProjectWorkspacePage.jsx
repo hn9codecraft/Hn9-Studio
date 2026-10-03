@@ -218,7 +218,7 @@ export default function ProjectWorkspacePage() {
 
           <dl className="workspace-meta row mt-4 mb-0">
             <div className="col-sm-6 col-lg-3 mb-3 mb-lg-0">
-              <dt>Type</dt>
+              <dt>Category</dt>
               <dd>{typeLabel(project.type)}</dd>
             </div>
             <div className="col-sm-6 col-lg-3 mb-3 mb-lg-0">

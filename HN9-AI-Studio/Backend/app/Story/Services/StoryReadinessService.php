@@ -8,6 +8,7 @@ use App\AI\Contracts\ProviderManagerInterface;
 use App\AI\Support\Capability;
 use App\Story\Enums\StoryAudioRole;
 use App\Story\Enums\StoryVideoCapability;
+use App\Story\Media\StoryMediaToolkit;
 use Illuminate\Contracts\Config\Repository as Config;
 
 /**
@@ -21,6 +22,7 @@ final readonly class StoryReadinessService
         private ProviderManagerInterface $providers,
         private StoryVideoDispatchService $dispatch,
         private Config $config,
+        private StoryMediaToolkit $media,
     ) {}
 
     /**
@@ -28,7 +30,8 @@ final readonly class StoryReadinessService
      *     story_planning: bool,
      *     reference_images: bool,
      *     video: array{text: bool, image: bool, reference: bool, edit: bool, extend: bool},
-     *     sound: array{roles: list<string>}
+     *     sound: array{roles: list<string>},
+     *     video_builder: bool
      * }
      */
     public function connections(): array
@@ -48,6 +51,7 @@ final readonly class StoryReadinessService
                     ? array_values($this->dispatch->liveAudioRoles() ?: StoryAudioRole::values())
                     : [],
             ],
+            'video_builder' => $this->media->available(),
         ];
     }
 

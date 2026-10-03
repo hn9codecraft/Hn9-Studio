@@ -69,15 +69,25 @@ export default function ProjectForm({
         <div className="row g-3 mb-4">
           <div className="col-md-6">
             <label className="form-label" htmlFor="type">
-              Type
+              Category
             </label>
-            <select id="type" name="type" className="form-select" value={values.type} onChange={handleChange}>
+            <select
+              id="type"
+              name="type"
+              className="form-select"
+              value={values.type}
+              onChange={handleChange}
+              aria-describedby="type-help"
+            >
               {types.map((type) => (
                 <option key={type.value || 'none'} value={type.value}>
                   {type.label}
                 </option>
               ))}
             </select>
+            <div className="form-text" id="type-help">
+              For organising and filtering your projects. The studio steps come from “What will you produce?”.
+            </div>
           </div>
           <div className="col-md-6">
             <label className="form-label" htmlFor="status">

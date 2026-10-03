@@ -59,7 +59,10 @@ final readonly class StoryReviewService
             ->with('comments.author')
             ->orderBy('version')
             ->get()
-            ->map(fn (StorySceneVersion $version): array => $this->sceneVersionPayload($version))
+            ->map(fn (StorySceneVersion $version): array => [
+                ...$this->sceneVersionPayload($version),
+                'has_file' => $this->jobHasFile($this->versionJob($scene, $version)),
+            ])
             ->all();
     }
 
@@ -694,6 +697,7 @@ final readonly class StoryReviewService
             'output_url' => null,
             'submitted_at' => $version->submitted_at?->toIso8601String(),
             'reviewed_at' => $version->reviewed_at?->toIso8601String(),
+            'created_at' => $version->created_at?->toIso8601String(),
             'comments' => $version->comments->map(static fn (StorySceneComment $comment): array => [
                 'id' => $comment->uuid,
                 'body' => $comment->body,

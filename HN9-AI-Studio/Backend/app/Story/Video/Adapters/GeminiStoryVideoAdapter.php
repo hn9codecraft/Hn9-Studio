@@ -14,7 +14,7 @@ use App\AI\Support\ProviderErrorSanitizer;
 use App\AI\Requests\VideoRequest;
 use App\Models\Project;
 use App\Services\VideoBinaryStore;
-use App\Story\Contracts\StoryVideoProviderAdapterInterface;
+use App\Story\Contracts\LiveStoryVideoProviderAdapterInterface;
 use App\Story\Enums\StoryVideoAsyncMode;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryVideoErrorCode;
@@ -33,13 +33,18 @@ use Throwable;
  * Real video adapter. Vendor client usage stays in this class.
  * Core services see only the adapter key and normalized jobs.
  */
-final readonly class GeminiStoryVideoAdapter implements StoryVideoProviderAdapterInterface
+final readonly class GeminiStoryVideoAdapter implements LiveStoryVideoProviderAdapterInterface
 {
     public function __construct(
         private CatalogStoryVideoAdapter $catalog,
         private GeminiProvider $provider,
         private VideoBinaryStore $binaries,
     ) {}
+
+    public function vendor(): string
+    {
+        return 'gemini';
+    }
 
     public function key(): string
     {

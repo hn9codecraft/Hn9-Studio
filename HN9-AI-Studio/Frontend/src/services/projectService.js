@@ -11,9 +11,13 @@ export function listProjects({
   sort = 'created_at',
   order = 'desc',
   cache = false,
+  page = 1,
 } = {}) {
   const params = new URLSearchParams();
   params.set('perPage', String(perPage));
+  if (page > 1) {
+    params.set('page', String(page));
+  }
   params.set('sort', sort);
   params.set('order', order);
 

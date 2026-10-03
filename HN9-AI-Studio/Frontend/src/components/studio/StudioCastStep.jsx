@@ -492,7 +492,7 @@ function LookAndFeel() {
             </div>
             <div className="col-lg-6">
               <h4 className="h6 mb-1">Style pictures</h4>
-              <p className="small text-secondary">An approved picture shows the provider exactly how your video should look.</p>
+              <p className="small text-secondary">An approved picture shows the video service exactly how your video should look.</p>
               <StudioReferencePictures subject="the look & feel" api={pictureApi} />
             </div>
           </div>

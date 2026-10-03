@@ -23,10 +23,10 @@ class RecoverStoryVideoJobs extends Command
 
     protected $description = 'Resume accepted Story video jobs without submitting new provider jobs';
 
-    public function handle(StoryVideoJobRunner $runner): int
+    public function handle(StoryVideoJobRunner $runner, StoryVideoDispatchService $dispatch): int
     {
         $jobs = StoryVideoGenerationJob::query()
-            ->where('provider_key', StoryVideoDispatchService::LIVE_PROVIDER_KEY)
+            ->whereIn('provider_key', $dispatch->liveKeys())
             ->whereIn('status', [
                 StoryVideoJobStatus::Queued->value,
                 StoryVideoJobStatus::Submitted->value,

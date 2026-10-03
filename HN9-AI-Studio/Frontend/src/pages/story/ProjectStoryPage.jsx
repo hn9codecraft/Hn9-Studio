@@ -43,17 +43,36 @@ export default function ProjectStoryPage() {
   );
 }
 
+const PICKER_PAGE_SIZE = 24;
+
 function StudioProjectPicker() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError('');
 
-    listProjects({ perPage: 50, cache: true })
+    listProjects({ perPage: PICKER_PAGE_SIZE, search: query, cache: !query })
       .then((result) => {
-        if (!cancelled) setProjects(Array.isArray(result.data) ? result.data : []);
+        if (cancelled) return;
+        setProjects(Array.isArray(result.data) ? result.data : []);
+        setPage(1);
+        setLastPage(Number(result.meta?.lastPage) || 1);
+        setTotal(Number(result.meta?.total) || 0);
       })
       .catch((err) => {
         if (!cancelled) setError(friendlyError(err, 'Your projects could not be loaded. Please try again.'));
@@ -65,7 +84,23 @@ function StudioProjectPicker() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [query]);
+
+  async function showMore() {
+    setLoadingMore(true);
+    try {
+      const next = page + 1;
+      const result = await listProjects({ perPage: PICKER_PAGE_SIZE, search: query, page: next });
+      const more = Array.isArray(result.data) ? result.data : [];
+      setProjects((current) => [...current, ...more.filter((item) => !current.some((existing) => existing.id === item.id))]);
+      setPage(next);
+      setLastPage(Number(result.meta?.lastPage) || next);
+    } catch (err) {
+      setError(friendlyError(err, 'More projects could not be loaded. Please try again.'));
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   return (
     <div className="story-page">
@@ -87,14 +122,42 @@ function StudioProjectPicker() {
         </div>
       ) : null}
 
+      <div className="mb-3" role="search">
+        <label className="visually-hidden" htmlFor="studio-project-search">
+          Search projects
+        </label>
+        <div className="input-group">
+          <span className="input-group-text" aria-hidden="true">
+            <i className="bi bi-search" />
+          </span>
+          <input
+            id="studio-project-search"
+            type="search"
+            className="form-control"
+            placeholder="Search projects by name"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+        {!loading && total > 0 ? (
+          <p className="small text-secondary mt-1 mb-0" aria-live="polite">
+            Showing {projects.length} of {total} project{total === 1 ? '' : 's'}
+          </p>
+        ) : null}
+      </div>
+
       {loading ? <StepSkeleton rows={3} /> : null}
 
-      {!loading && !error && projects.length === 0 ? (
+      {!loading && !error && projects.length === 0 && !query ? (
         <EmptyState icon="bi-camera-reels" title="No projects yet" description="Create a project to get its Creative Studio.">
           <Link className="btn btn-primary" to="/projects/new">
             New Project
           </Link>
         </EmptyState>
+      ) : null}
+
+      {!loading && !error && projects.length === 0 && query ? (
+        <EmptyState icon="bi-search" title="No matching projects" description={`Nothing is called “${query}”. Try a different name.`} />
       ) : null}
 
       {!loading && projects.length > 0 ? (
@@ -112,6 +175,14 @@ function StudioProjectPicker() {
               </Link>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {!loading && page < lastPage ? (
+        <div className="text-center mt-4">
+          <button type="button" className="btn btn-outline-primary" onClick={showMore} disabled={loadingMore}>
+            {loadingMore ? 'Loading…' : 'Show more projects'}
+          </button>
         </div>
       ) : null}
     </div>
@@ -294,6 +365,8 @@ function StudioWorkspace({ projectId }) {
       goTo,
       selectReel,
       setFinalState,
+      renameProject: (name) =>
+        setWorkspace((current) => ({ ...current, project: { ...current.project, name } })),
       setWorkflows: (next) =>
         setWorkspace((current) => ({
           ...current,

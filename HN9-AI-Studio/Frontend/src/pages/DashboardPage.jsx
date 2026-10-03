@@ -66,7 +66,7 @@ export default function DashboardPage() {
           <h1 className="section-title mb-2">Welcome back, {user?.name || 'there'}</h1>
           <p className="dashboard-hero-copy mb-0">
             Counts are live from your projects. Zeros are real. The Action Center lists only items that currently need
-            work. Usage and cost below only include recorded provider executions.
+            work. Usage and cost below only include work that was actually carried out.
           </p>
         </div>
       </section>

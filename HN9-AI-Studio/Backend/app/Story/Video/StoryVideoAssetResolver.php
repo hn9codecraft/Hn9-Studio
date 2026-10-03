@@ -22,6 +22,18 @@ final class StoryVideoAssetResolver
 {
     public function resolve(Project $project, StoryVideoGenerationRequest $request): StoryVideoGenerationRequest
     {
+        if ($request->capability === StoryVideoCapability::ReferenceToVideo) {
+            $this->referenceImage($project, $request);
+            $inputs = array_map(
+                fn (StoryVideoInput $input): StoryVideoInput => $input->type === StoryVideoInputType::ReferenceImage
+                    ? $this->ownedReference($project, $input)
+                    : $input,
+                $request->inputs,
+            );
+
+            return $this->withInputs($request, $inputs);
+        }
+
         $input = match ($request->capability) {
             StoryVideoCapability::ImageToVideo => $this->characterImage($project, $request),
             StoryVideoCapability::ReferenceToVideo => $this->referenceImage($project, $request),
@@ -44,6 +56,14 @@ final class StoryVideoAssetResolver
             $inputs[] = $existing;
         }
 
+        return $this->withInputs($request, $inputs);
+    }
+
+    /**
+     * @param  list<StoryVideoInput>  $inputs
+     */
+    private function withInputs(StoryVideoGenerationRequest $request, array $inputs): StoryVideoGenerationRequest
+    {
         return new StoryVideoGenerationRequest(
             capability: $request->capability,
             workspaceUuid: $request->workspaceUuid,
@@ -74,12 +94,12 @@ final class StoryVideoAssetResolver
             throw StoryVideoEngineException::invalidInput('A stored scene video is required.');
         }
 
-        $owned = StoryVideoGenerationJob::query()
+        $owner = StoryVideoGenerationJob::query()
             ->whereHas('workspace', static function ($query) use ($project): void {
                 $query->where('project_id', $project->id);
             })
             ->get()
-            ->contains(static function (StoryVideoGenerationJob $job) use ($disk, $path): bool {
+            ->first(static function (StoryVideoGenerationJob $job) use ($disk, $path): bool {
                 $storage = $job->provider_metadata['storage'] ?? null;
 
                 return is_array($storage)
@@ -87,9 +107,11 @@ final class StoryVideoAssetResolver
                     && ($storage['path'] ?? null) === $path;
             });
 
-        if (! $owned || ! Storage::disk($disk)->exists($path)) {
+        if (! $owner instanceof StoryVideoGenerationJob || ! Storage::disk($disk)->exists($path)) {
             throw StoryVideoEngineException::invalidInput('A stored scene video is required.');
         }
+
+        $assembled = (int) ($owner->provider_metadata['unit_count'] ?? 1) > 1;
 
         return new StoryVideoInput(
             type: StoryVideoInputType::Video,
@@ -98,6 +120,8 @@ final class StoryVideoAssetResolver
                 'disk' => $disk,
                 'path' => $path,
                 'mime' => is_string($mime) && $mime !== '' ? $mime : 'video/mp4',
+                'provider_key' => $assembled ? null : $owner->provider_key,
+                'operation_id' => $assembled ? null : $owner->operation_id,
             ],
             role: $input->role,
             order: $input->order,
@@ -119,6 +143,12 @@ final class StoryVideoAssetResolver
             StoryVideoInputType::ReferenceImage,
             'An owned character or style reference is required.',
         );
+
+        return $this->ownedReference($project, $input);
+    }
+
+    private function ownedReference(Project $project, StoryVideoInput $input): StoryVideoInput
+    {
         $assetId = (string) $input->assetId;
         $character = $this->findCharacterReference($project, $assetId);
         if ($character instanceof StoryCharacterReference) {

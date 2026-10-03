@@ -6,6 +6,9 @@ namespace App\Story\Services;
 
 use App\Models\Project;
 use App\Story\Enums\StoryVideoJobStatus;
+use App\Story\Media\StoryMediaOverlay;
+use App\Story\Media\StoryMediaSegment;
+use App\Story\Media\StoryMediaToolkit;
 use App\Story\Exceptions\StoryException;
 use App\Story\Models\StoryExport;
 use App\Story\Models\StoryFinalRender;
@@ -18,7 +21,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 /**
- * Renders a timeline into one private file from stored clips. No provider calls.
+ * Renders a timeline into one private MP4 from stored clips with FFmpeg.
+ * No provider calls; when FFmpeg is missing the build fails honestly.
  */
 final class StoryRenderService
 {
@@ -26,7 +30,7 @@ final class StoryRenderService
 
     public const EMPTY = 'story_render_empty';
 
-    public function __construct(private StoryTimelineComposer $composer) {}
+    public function __construct(private StoryMediaToolkit $media) {}
 
     /**
      * @return array<string, mixed>
@@ -57,26 +61,20 @@ final class StoryRenderService
         $render->forceFill(['status' => StoryVideoJobStatus::Processing->value])->save();
 
         try {
-            $segments = $this->segments($clips);
-            $bytes = $this->composer->compose($segments);
-            $partial = 'renders/'.$render->uuid.'.partial';
-            $final = 'renders/'.$render->uuid.'.mp4';
-            Storage::disk('videos')->put($partial, $bytes);
-            $stored = Storage::disk('videos')->get($partial);
-            if (! is_string($stored) || $stored !== $bytes) {
-                throw new StoryException('The render file could not be stored.', 'story_render_failed', 422);
-            }
-            Storage::disk('videos')->move($partial, $final);
-            if (Storage::disk('videos')->exists($partial)) {
-                Storage::disk('videos')->delete($partial);
-            }
+            [$segments, $overlays] = $this->segments($clips);
+            $file = $this->media->compose(
+                $segments,
+                $overlays,
+                'renders/'.$render->uuid.'.mp4',
+                $this->aspectRatio($reel),
+            );
             $render->forceFill([
                 'status' => StoryVideoJobStatus::Completed->value,
-                'disk' => 'videos',
-                'path' => $final,
-                'mime' => 'video/mp4',
-                'size_bytes' => strlen($bytes),
-                'checksum' => hash('sha256', $bytes),
+                'disk' => $file->disk,
+                'path' => $file->path,
+                'mime' => $file->mime,
+                'size_bytes' => $file->size,
+                'checksum' => $file->checksum,
                 'error_code' => null,
                 'error_message' => null,
             ])->save();
@@ -145,8 +143,11 @@ final class StoryRenderService
     }
 
     /**
+     * Picture clips play in order with their transitions; each sound clip is
+     * laid under the picture clip it follows.
+     *
      * @param  list<StoryTimelineClip>  $clips
-     * @return list<array{media_kind: string, in_ms: int, out_ms: int, transition: string|null, transition_ms: int, bytes: string}>
+     * @return array{0: list<StoryMediaSegment>, 1: list<StoryMediaOverlay>}
      */
     private function segments(array $clips): array
     {
@@ -154,36 +155,53 @@ final class StoryRenderService
             throw new StoryException('The timeline has no clips to render.', self::EMPTY, 422);
         }
 
-        $transitions = [];
+        $incoming = [];
         $timelineId = $clips[0]->story_timeline_id;
         foreach (StoryTimelineTransition::query()->where('story_timeline_id', $timelineId)->get() as $transition) {
-            $transitions[$transition->from_clip_id] = $transition;
+            $incoming[$transition->to_clip_id] = $transition;
         }
 
         $segments = [];
-        foreach ($clips as $index => $clip) {
-            if (! in_array($clip->disk, ['videos', 'voice'], true) || str_contains($clip->path, '..')) {
+        $overlays = [];
+        $elapsed = 0.0;
+        $currentStart = 0.0;
+        foreach ($clips as $clip) {
+            if (! in_array($clip->disk, ['videos', 'voice'], true) || str_contains((string) $clip->path, '..')) {
                 throw new StoryException('A timeline source file is missing.', self::SOURCE_MISSING, 422);
             }
             if (! Storage::disk($clip->disk)->exists($clip->path)) {
                 throw new StoryException('A timeline source file is missing.', self::SOURCE_MISSING, 422);
             }
-            $bytes = Storage::disk($clip->disk)->get($clip->path);
-            if (! is_string($bytes) || $bytes === '') {
-                throw new StoryException('A timeline source file is missing.', self::SOURCE_MISSING, 422);
+
+            $in = max(0, (int) $clip->in_ms) / 1000;
+            $out = max(0, (int) $clip->out_ms) / 1000;
+            if ($clip->media_kind === 'audio') {
+                $overlays[] = new StoryMediaOverlay($clip->disk, $clip->path, $currentStart, $in, $out > $in ? $out : null);
+
+                continue;
             }
-            $incoming = $index > 0 ? ($transitions[$clips[$index - 1]->id] ?? null) : null;
-            $segments[] = [
-                'media_kind' => $clip->media_kind,
-                'in_ms' => $clip->in_ms,
-                'out_ms' => $clip->out_ms,
-                'transition' => $incoming?->type,
-                'transition_ms' => (int) ($incoming->duration_ms ?? 0),
-                'bytes' => $bytes,
-            ];
+
+            $transition = $segments === [] ? null : ($incoming[$clip->id] ?? null);
+            $type = in_array($transition?->type, ['dissolve', 'fade'], true) ? $transition->type : 'cut';
+            $fade = $type === 'cut' ? 0.0 : max(0, (int) $transition->duration_ms) / 1000;
+            $segments[] = new StoryMediaSegment($clip->disk, $clip->path, $in, $out > $in ? $out : null, $type, $fade);
+
+            $currentStart = max(0.0, $elapsed - $fade);
+            $elapsed = $currentStart + max(0.0, $out - $in);
         }
 
-        return $segments;
+        if ($segments === []) {
+            throw new StoryException('The timeline needs at least one scene video to build the final video.', self::EMPTY, 422);
+        }
+
+        return [$segments, $overlays];
+    }
+
+    private function aspectRatio(StoryReel $reel): string
+    {
+        $ratio = $reel->workspace?->bible?->aspect_ratio;
+
+        return is_string($ratio) && in_array($ratio, ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9'], true) ? $ratio : '16:9';
     }
 
     private function discardPartial(StoryFinalRender $render): void

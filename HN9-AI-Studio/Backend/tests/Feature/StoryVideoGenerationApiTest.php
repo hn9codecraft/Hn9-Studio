@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\Project;
 use App\Models\User;
+use App\Story\Media\StoryMediaToolkit;
 use App\Story\Models\StoryCharacter;
 use App\Story\Models\StoryCharacterReference;
 use App\Story\Models\StoryStyleBible;
@@ -16,6 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Tests\Support\FakeStoryMediaToolkit;
 use Tests\TestCase;
 
 final class StoryVideoGenerationApiTest extends TestCase
@@ -34,6 +36,26 @@ final class StoryVideoGenerationApiTest extends TestCase
             'ai.providers.gemini.video_models' => ['configured-video-model'],
             'ai.providers.gemini.video_default_model' => 'configured-video-model',
         ]);
+        $this->app->instance(StoryMediaToolkit::class, new FakeStoryMediaToolkit);
+    }
+
+    public function test_long_scene_is_refused_honestly_when_the_video_builder_is_missing(): void
+    {
+        Http::fake();
+        $this->app->instance(StoryMediaToolkit::class, new FakeStoryMediaToolkit(installed: false));
+        [$user, $project] = $this->ownerProject();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/story/projects/{$project->uuid}/video/generate", [
+                'capability' => 'text_to_video',
+                'duration_seconds' => 30,
+                'prompt' => 'A long scene',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('error_code', 'INVALID_INPUT');
+
+        Http::assertNothingSent();
+        $this->assertSame(0, StoryVideoGenerationJob::query()->count());
     }
 
     public function test_text_to_video_submits_once_and_hides_secrets(): void

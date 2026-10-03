@@ -99,7 +99,7 @@ export default function ProjectsPage() {
                   <thead>
                     <tr>
                       <th scope="col">Project</th>
-                      <th scope="col">Type</th>
+                      <th scope="col">Category</th>
                       <th scope="col">Status</th>
                       <th scope="col">Created</th>
                     </tr>
