@@ -8,8 +8,6 @@ import { createProject } from '../../services/projectService';
 const INITIAL_VALUES = {
   name: '',
   description: '',
-  type: '',
-  status: 'draft',
 };
 
 export default function CreateProjectPage() {
@@ -29,8 +27,6 @@ export default function CreateProjectPage() {
       const project = await createProject({
         name: values.name.trim(),
         description: values.description.trim(),
-        type: values.type,
-        status: values.status,
         ...(workflows.length > 0 ? { settings: { studio_modules: workflows } } : {}),
       });
       navigate(openStudio ? `/studio/${project.id}` : `/projects/${project.id}`, { replace: true });
@@ -69,6 +65,7 @@ export default function CreateProjectPage() {
               error={error}
               submitLabel="Create project"
               creating
+              showTypeAndStatus={false}
               actions={
                 <div className="d-flex flex-wrap gap-2">
                   <button className="btn btn-primary" type="submit" name="intent" value="studio" disabled={submitting}>

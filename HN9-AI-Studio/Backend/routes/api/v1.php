@@ -286,6 +286,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/submit-review', [StoryReviewController::class, 'submitReel'])->name('story.projects.reels.submit-review');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/approve', [StoryReviewController::class, 'approveReel'])->name('story.projects.reels.approve');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/needs-rework', [StoryReviewController::class, 'reworkReel'])->name('story.projects.reels.needs-rework');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/scene-status', [StoryReviewController::class, 'reelSceneStatus'])->name('story.projects.reels.scene-status');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes', [StorySceneController::class, 'index'])->name('story.projects.reels.scenes.index');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes', [StorySceneController::class, 'store'])->name('story.projects.reels.scenes.store');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/reorder', [StorySceneController::class, 'reorder'])->name('story.projects.reels.scenes.reorder');
@@ -307,6 +308,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}', [StoryReviewController::class, 'versionStatus'])->name('story.projects.reels.scenes.versions.show');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/file', [StoryReviewController::class, 'versionFile'])->name('story.projects.reels.scenes.versions.file');
     Route::get('story/audio/roles', [StoryAudioController::class, 'roles'])->name('story.audio.roles');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/audio', [StoryAudioController::class, 'reelIndex'])->name('story.projects.reels.audio.index');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio', [StoryAudioController::class, 'index'])->name('story.projects.reels.scenes.audio.index');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio', [StoryAudioController::class, 'store'])->name('story.projects.reels.scenes.audio.store');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}', [StoryAudioController::class, 'show'])->name('story.projects.reels.scenes.audio.show');
@@ -320,6 +322,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/timeline/clips/{clipUuid}/replace', [StoryTimelineController::class, 'replace'])->name('story.projects.reels.timeline.clips.replace');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/timeline/clips/{clipUuid}/duplicate', [StoryTimelineController::class, 'duplicate'])->name('story.projects.reels.timeline.clips.duplicate');
     Route::delete('story/projects/{uuid}/reels/{reelUuid}/timeline/clips/{clipUuid}', [StoryTimelineController::class, 'destroy'])->name('story.projects.reels.timeline.clips.destroy');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/renders', [StoryRenderController::class, 'index'])->name('story.projects.reels.renders.index');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/renders', [StoryRenderController::class, 'store'])->name('story.projects.reels.renders.store');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}', [StoryRenderController::class, 'show'])->name('story.projects.reels.renders.show');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/file', [StoryRenderController::class, 'file'])->name('story.projects.reels.renders.file');

@@ -60,10 +60,6 @@ export function getStoryWorkspace(projectId) {
   return storyGet(`/story/projects/${projectId}`, CONTEXT_TTL_MS);
 }
 
-export function listStoryCapabilities() {
-  return storyGet('/story/capabilities', CATALOG_TTL_MS).then((payload) => (Array.isArray(payload) ? payload : []));
-}
-
 export function getStoryBible(projectId) {
   return storyGet(`/story/projects/${projectId}/bible`, CONTEXT_TTL_MS);
 }
@@ -155,25 +151,36 @@ export function archiveStoryCharacterReference(projectId, characterId, reference
   );
 }
 
-export async function getStoryCharacterReferenceFileUrl(projectId, characterId, referenceId) {
-  const token = getToken();
-  const base = getApiBaseUrl();
-  const response = await fetch(
-    `${base}/story/projects/${projectId}/characters/${characterId}/references/${referenceId}/file`,
-    {
-      headers: {
-        Accept: 'image/*',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+// Stored files never change for a given id, so their object URLs are kept for
+// the session; callers must not revoke them.
+function storyFileUrl(path, accept, errorMessage) {
+  return cachedRequest(
+    `storyfile:${path}`,
+    async () => {
+      const token = getToken();
+      const response = await fetch(`${getApiBaseUrl()}${path}`, {
+        headers: {
+          Accept: accept,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(errorMessage);
+      }
+
+      return URL.createObjectURL(await response.blob());
     },
+    { ttlMs: Number.POSITIVE_INFINITY },
   );
+}
 
-  if (!response.ok) {
-    throw new Error('Unable to load character reference image.');
-  }
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
+export function getStoryCharacterReferenceFileUrl(projectId, characterId, referenceId) {
+  return storyFileUrl(
+    `/story/projects/${projectId}/characters/${characterId}/references/${referenceId}/file`,
+    'image/*',
+    'This picture could not be loaded.',
+  );
 }
 
 export function getStoryStyle(projectId) {
@@ -239,25 +246,12 @@ export function archiveStoryStyleReference(projectId, referenceId) {
   });
 }
 
-export async function getStoryStyleReferenceFileUrl(projectId, referenceId) {
-  const token = getToken();
-  const base = getApiBaseUrl();
-  const response = await fetch(
-    `${base}/story/projects/${projectId}/style/references/${referenceId}/file`,
-    {
-      headers: {
-        Accept: 'image/*',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    },
+export function getStoryStyleReferenceFileUrl(projectId, referenceId) {
+  return storyFileUrl(
+    `/story/projects/${projectId}/style/references/${referenceId}/file`,
+    'image/*',
+    'This picture could not be loaded.',
   );
-
-  if (!response.ok) {
-    throw new Error('Unable to load style reference image.');
-  }
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
 }
 
 export function listStoryPlans(projectId) {
@@ -301,7 +295,7 @@ export function materializeStoryPlanVersion(projectId, planId, versionId) {
 }
 
 export function listStoryReels(projectId) {
-  return storyGet(`/story/projects/${projectId}/reels`).then((payload) =>
+  return storyGet(`/story/projects/${projectId}/reels`, CONTEXT_TTL_MS).then((payload) =>
     Array.isArray(payload) ? payload : [],
   );
 }
@@ -409,11 +403,31 @@ export function reworkStoryScene(projectId, reelId, sceneId, comment) {
   });
 }
 
-export function regenerateStoryScene(projectId, reelId, sceneId, comment = null) {
+/** Creates a new scene version and requests its video ({ mode, prompt, reference_id, comment }). */
+export function regenerateStoryScene(projectId, reelId, sceneId, { comment = null, mode = 'text', prompt = null, referenceId = null } = {}) {
   return storyWrite(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/regenerate`, {
     method: 'POST',
-    body: { comment },
+    body: { comment, mode, prompt, reference_id: referenceId },
   });
+}
+
+/** Latest version, video and sound status for every scene in a reel (one request). */
+export function getStoryReelSceneStatus(projectId, reelId) {
+  return storyGet(`/story/projects/${projectId}/reels/${reelId}/scene-status`, CONTEXT_TTL_MS).then((payload) =>
+    Array.isArray(payload) ? payload : [],
+  );
+}
+
+export function listStoryReelAudio(projectId, reelId) {
+  return storyGet(`/story/projects/${projectId}/reels/${reelId}/audio`, CONTEXT_TTL_MS).then((payload) =>
+    Array.isArray(payload) ? payload : [],
+  );
+}
+
+export function listStoryRenders(projectId, reelId) {
+  return storyGet(`/story/projects/${projectId}/reels/${reelId}/renders`, CONTEXT_TTL_MS).then((payload) =>
+    Array.isArray(payload) ? payload : [],
+  );
 }
 
 export function editStorySceneVersion(projectId, reelId, sceneId, versionId, instruction) {
@@ -465,7 +479,7 @@ export function estimateStorySceneCount(durationSeconds) {
 }
 
 export function getStoryTimeline(projectId, reelId) {
-  return storyGet(`/story/projects/${projectId}/reels/${reelId}/timeline`);
+  return storyGet(`/story/projects/${projectId}/reels/${reelId}/timeline`, CONTEXT_TTL_MS);
 }
 
 export function placeStoryTimelineClip(projectId, reelId, mediaKind, sourceId) {
@@ -523,25 +537,12 @@ export function getStoryRender(projectId, reelId, renderId) {
   return storyGet(`/story/projects/${projectId}/reels/${reelId}/renders/${renderId}`);
 }
 
-export async function getStoryRenderFileUrl(projectId, reelId, renderId) {
-  const token = getToken();
-  const base = getApiBaseUrl();
-  const response = await fetch(
-    `${base}/story/projects/${projectId}/reels/${reelId}/renders/${renderId}/file`,
-    {
-      headers: {
-        Accept: 'video/mp4',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    },
+export function getStoryRenderFileUrl(projectId, reelId, renderId) {
+  return storyFileUrl(
+    `/story/projects/${projectId}/reels/${reelId}/renders/${renderId}/file`,
+    'video/mp4',
+    'The final video file is not available yet.',
   );
-
-  if (!response.ok) {
-    throw new Error('The final render file is not available.');
-  }
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
 }
 
 export function submitStoryRenderReview(projectId, reelId, renderId, comment = null) {
@@ -566,7 +567,7 @@ export function reworkStoryRender(projectId, reelId, renderId, comment, targetKi
 }
 
 export function getStoryHistory(projectId) {
-  return storyGet(`/story/projects/${projectId}/history`).then((payload) =>
+  return storyGet(`/story/projects/${projectId}/history`, CONTEXT_TTL_MS).then((payload) =>
     Array.isArray(payload) ? payload : [],
   );
 }
@@ -617,62 +618,16 @@ export function setStoryTimelineTransition(projectId, reelId, fromClipId, toClip
   });
 }
 
-export function getStoryVideoCapabilities() {
-  return storyGet('/story/video/capabilities', CATALOG_TTL_MS).then((payload) =>
-    Array.isArray(payload) ? payload : [],
-  );
-}
-
-export function getStoryVideoProviders() {
-  return storyGet('/story/video/providers', CATALOG_TTL_MS).then((payload) =>
-    Array.isArray(payload) ? payload : [],
-  );
-}
-
-export function validateStoryVideoCompatibility(projectId, payload) {
-  return storyWrite(`/story/projects/${projectId}/video/validate`, {
-    method: 'POST',
-    body: payload,
-  });
-}
-
-export function prepareStoryVideoJob(projectId, payload) {
-  return storyWrite(`/story/projects/${projectId}/video/jobs`, {
-    method: 'POST',
-    body: payload,
-  });
-}
-
-export function generateStoryVideo(projectId, payload) {
-  return storyWrite(`/story/projects/${projectId}/video/generate`, {
-    method: 'POST',
-    body: payload,
-  });
-}
-
 export function getStoryVideoJob(projectId, jobId) {
   return storyGet(`/story/projects/${projectId}/video/jobs/${jobId}`);
 }
 
-export async function getStoryVideoFileUrl(projectId, jobId) {
-  const token = getToken();
-  const base = getApiBaseUrl();
-  const response = await fetch(
-    `${base}/story/projects/${projectId}/video/jobs/${jobId}/file`,
-    {
-      headers: {
-        Accept: 'video/mp4',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    },
+export function getStoryVideoFileUrl(projectId, jobId) {
+  return storyFileUrl(
+    `/story/projects/${projectId}/video/jobs/${jobId}/file`,
+    'video/mp4',
+    'This video could not be loaded.',
   );
-
-  if (!response.ok) {
-    throw new Error('Unable to load the stored video.');
-  }
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
 }
 
 export function getStoryAudioRoles() {
@@ -695,23 +650,10 @@ export function getStorySceneAudio(projectId, reelId, sceneId, audioId) {
   return storyGet(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}`);
 }
 
-export async function getStorySceneAudioFileUrl(projectId, reelId, sceneId, audioId) {
-  const token = getToken();
-  const base = getApiBaseUrl();
-  const response = await fetch(
-    `${base}/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}/file`,
-    {
-      headers: {
-        Accept: 'audio/*',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    },
+export function getStorySceneAudioFileUrl(projectId, reelId, sceneId, audioId) {
+  return storyFileUrl(
+    `/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}/file`,
+    'audio/*',
+    'This sound could not be loaded.',
   );
-
-  if (!response.ok) {
-    throw new Error('Unable to load the stored audio.');
-  }
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
 }

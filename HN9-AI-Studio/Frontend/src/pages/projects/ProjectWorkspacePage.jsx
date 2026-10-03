@@ -13,7 +13,7 @@ import FinalAssetsStudio from '../../components/exports/FinalAssetsStudio';
 import AlertMessage from '../../components/ui/AlertMessage';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { ApiError } from '../../services/apiClient';
-import { formatProjectDate, statusLabel, typeLabel } from '../../services/projectConstants';
+import { formatProjectDate, statusLabel, typeLabel, WORKSPACE_SECTIONS } from '../../services/projectConstants';
 import { deleteProject, getProject, updateProject } from '../../services/projectService';
 import { normalizeStudioWorkflows, studioWorkflowLabel } from '../../services/storyConstants';
 
@@ -112,6 +112,7 @@ export default function ProjectWorkspacePage() {
     [project],
   );
   const studioWorkflows = normalizeStudioWorkflows(project?.settings?.studio_modules);
+  const studioSection = WORKSPACE_SECTIONS.find((item) => item.key === activeSection && item.studioPath) || null;
 
   if (section && !SECTION_TITLES[section] && !inScriptStudio && !inImageStudio && !inVideoStudio && !inAssetStudio) {
     return <Navigate to={`/projects/${projectId}`} replace />;
@@ -263,6 +264,21 @@ export default function ProjectWorkspacePage() {
 
       <section className="page-section">
       <WorkspaceTabs projectId={project.id} section={activeSection} />
+
+      {studioSection ? (
+        <div className="studio-note mb-3">
+          <i className="bi bi-camera-reels" aria-hidden="true" />
+          <span className="flex-grow-1">
+            {SECTION_TITLES[activeSection]} are now made in the Creative Studio, step by step with your story, cast and scenes.
+          </span>
+          <Link
+            className="btn btn-primary btn-sm"
+            to={`/studio/${project.id}${studioSection.studioPath.startsWith('?') ? '' : '/'}${studioSection.studioPath}`}
+          >
+            Open in Creative Studio
+          </Link>
+        </div>
+      ) : null}
 
       <div className="workspace-panel">
         {activeSection === 'overview' ? (

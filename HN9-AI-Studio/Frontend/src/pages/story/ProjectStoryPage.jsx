@@ -1,34 +1,46 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import StudioWorkflowPicker from '../../components/projects/StudioWorkflowPicker';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useMatch, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import ImageStudio from '../../components/images/ImageStudio';
 import AlertMessage from '../../components/ui/AlertMessage';
 import EmptyState from '../../components/ui/EmptyState';
-import { ApiError } from '../../services/apiClient';
-import { getProject, listProjects, updateProject } from '../../services/projectService';
-import { statusLabel } from '../../services/projectConstants';
+import { StudioContext, StudioFeedbackProvider } from '../../components/studio/StudioContext';
+import { StepSkeleton } from '../../components/studio/StudioUi';
+import { listProjects } from '../../services/projectService';
 import {
   normalizeStudioWorkflows,
-  STUDIO_GROUPS,
-  STUDIO_PROJECT_TOOLS,
+  resolveStudioSection,
   studioWorkflowLabel,
-  visibleStudioSections,
+  visibleStudioSecondary,
+  visibleStudioSteps,
 } from '../../services/storyConstants';
-import { getStoryProjectRevision, getStoryWorkspace } from '../../services/storyService';
+import {
+  getStoryBible,
+  getStoryProjectRevision,
+  getStoryReelSceneStatus,
+  getStoryWorkspace,
+  listStoryCharacters,
+  listStoryReels,
+} from '../../services/storyService';
+import { friendlyError } from '../../services/studioMessages';
 
-const StoryBibleForm = lazy(() => import('../../components/story/StoryBibleForm'));
-const StoryCharactersPanel = lazy(() => import('../../components/story/StoryCharactersPanel'));
-const StoryPlannerPanel = lazy(() => import('../../components/story/StoryPlannerPanel'));
-const StoryReelsPanel = lazy(() => import('../../components/story/StoryReelsPanel'));
-const StoryStylePanel = lazy(() => import('../../components/story/StoryStylePanel'));
-const StoryVideoEnginePanel = lazy(() => import('../../components/story/StoryVideoEnginePanel'));
-const StoryAudioStudioPanel = lazy(() => import('../../components/story/StoryAudioStudioPanel'));
-const StoryTimelinePanel = lazy(() => import('../../components/story/StoryTimelinePanel'));
-const StoryHistoryPanel = lazy(() => import('../../components/story/StoryHistoryPanel'));
+const StudioStoryStep = lazy(() => import('../../components/studio/StudioStoryStep'));
+const StudioCastStep = lazy(() => import('../../components/studio/StudioCastStep'));
+const StudioScenesStep = lazy(() => import('../../components/studio/StudioScenesStep'));
+const StudioSoundStep = lazy(() => import('../../components/studio/StudioSoundStep'));
+const StudioFinalStep = lazy(() => import('../../components/studio/StudioFinalStep'));
+const StudioHistoryStep = lazy(() => import('../../components/studio/StudioHistoryStep'));
+const StudioSettingsStep = lazy(() => import('../../components/studio/StudioSettingsStep'));
 
 export default function ProjectStoryPage() {
   const { projectId } = useParams();
 
-  return projectId ? <StudioWorkspace key={projectId} projectId={projectId} /> : <StudioProjectPicker />;
+  return projectId ? (
+    <StudioFeedbackProvider>
+      <StudioWorkspace key={projectId} projectId={projectId} />
+    </StudioFeedbackProvider>
+  ) : (
+    <StudioProjectPicker />
+  );
 }
 
 function StudioProjectPicker() {
@@ -44,7 +56,7 @@ function StudioProjectPicker() {
         if (!cancelled) setProjects(Array.isArray(result.data) ? result.data : []);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Unable to load your projects.');
+        if (!cancelled) setError(friendlyError(err, 'Your projects could not be loaded. Please try again.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -61,7 +73,7 @@ function StudioProjectPicker() {
         <div>
           <h1 className="h3 mb-2">Creative Production Studio</h1>
           <p className="page-lede mb-0">
-            Every project has a studio for planning, producing and finishing its content. Choose a project to open it.
+            Every project has a studio that takes it from story to finished video. Choose a project to open it.
           </p>
         </div>
         <Link className="btn btn-primary" to="/projects/new">
@@ -75,14 +87,10 @@ function StudioProjectPicker() {
         </div>
       ) : null}
 
-      {loading ? <StudioSkeleton rows={3} /> : null}
+      {loading ? <StepSkeleton rows={3} /> : null}
 
       {!loading && !error && projects.length === 0 ? (
-        <EmptyState
-          icon="bi-camera-reels"
-          title="No projects yet"
-          description="Create a project to get its Creative Studio."
-        >
+        <EmptyState icon="bi-camera-reels" title="No projects yet" description="Create a project to get its Creative Studio.">
           <Link className="btn btn-primary" to="/projects/new">
             New Project
           </Link>
@@ -91,57 +99,59 @@ function StudioProjectPicker() {
 
       {!loading && projects.length > 0 ? (
         <div className="row g-3">
-          {projects.map((project) => {
-            const workflows = normalizeStudioWorkflows(project.settings?.studio_modules);
-
-            return (
-              <div className="col-12 col-md-6 col-xl-4" key={project.id}>
-                <Link
-                  to={`/studio/${project.id}`}
-                  className="project-card glass-card card border-0 h-100 text-decoration-none"
-                >
-                  <div className="card-body d-flex flex-column">
-                    <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
-                      <h2 className="card-heading h6 mb-0">{project.name}</h2>
-                      <span className={`status-pill status-${project.status || 'draft'}`}>
-                        {statusLabel(project.status)}
-                      </span>
-                    </div>
-                    <WorkflowChips workflows={workflows} />
-                    <span className="small text-secondary mt-auto pt-3">
-                      Open studio <i className="bi bi-arrow-right" aria-hidden="true" />
-                    </span>
-                  </div>
-                </Link>
-              </div>
-            );
-          })}
+          {projects.map((project) => (
+            <div className="col-12 col-md-6 col-xl-4" key={project.id}>
+              <Link to={`/studio/${project.id}`} className="project-card glass-card card border-0 h-100 text-decoration-none">
+                <div className="card-body d-flex flex-column">
+                  <h2 className="card-heading h6 mb-2">{project.name}</h2>
+                  <WorkflowChips workflows={normalizeStudioWorkflows(project.settings?.studio_modules)} />
+                  <span className="small text-secondary mt-auto pt-3">
+                    Open studio <i className="bi bi-arrow-right" aria-hidden="true" />
+                  </span>
+                </div>
+              </Link>
+            </div>
+          ))}
         </div>
       ) : null}
     </div>
   );
 }
 
+const EMPTY_DATA = { bible: null, characters: [], reels: [], sceneStatus: null };
+
 function StudioWorkspace({ projectId }) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const imagesRoot = useMatch('/studio/:projectId/images');
+  const imagesNew = useMatch('/studio/:projectId/images/new');
+  const imagesGenerate = useMatch('/studio/:projectId/images/generate');
+  const imagesRegenerate = useMatch('/studio/:projectId/images/:imageId/regenerate');
+  const imagesDetail = useMatch('/studio/:projectId/images/:imageId');
+  const inImages = Boolean(imagesRoot || imagesNew || imagesGenerate || imagesRegenerate || imagesDetail);
+
   const [workspace, setWorkspace] = useState(null);
+  const [data, setData] = useState(EMPTY_DATA);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [focusReelId, setFocusReelId] = useState(null);
-  const [panelKeys, setPanelKeys] = useState({});
-  const seenRevisions = useRef({});
+  const [finalState, setFinalState] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    getStoryWorkspace(projectId)
-      .then((result) => {
-        if (!cancelled) setWorkspace(result);
+    Promise.all([
+      getStoryWorkspace(projectId),
+      getStoryBible(projectId).catch(() => null),
+      listStoryCharacters(projectId).catch(() => []),
+      listStoryReels(projectId).catch(() => []),
+    ])
+      .then(([space, bible, characters, reels]) => {
+        if (cancelled) return;
+        setWorkspace(space);
+        setData((current) => ({ ...current, bible, characters, reels }));
       })
       .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Unable to open this studio.');
-        }
+        if (!cancelled) setError(friendlyError(err, 'This studio could not be opened. Please try again.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -152,34 +162,153 @@ function StudioWorkspace({ projectId }) {
     };
   }, [projectId]);
 
-  const workflows = normalizeStudioWorkflows(workspace?.project?.studio_modules);
-  const sections = visibleStudioSections(workflows);
-  const requested = searchParams.get('section') || 'overview';
-  const section = sections.some((item) => item.key === requested) ? requested : 'overview';
-  const [visited, setVisited] = useState(() => [section]);
-  const mounted = visited.includes(section) ? visited : [...visited, section];
+  const requestedReel = searchParams.get('reel');
+  const reelId = data.reels.some((reel) => reel.id === requestedReel) ? requestedReel : data.reels[0]?.id || null;
+  const reel = data.reels.find((item) => item.id === reelId) || null;
 
-  function selectSection(next) {
-    if (next === section) return;
-
-    // Sections stay mounted after their first visit. One is rebuilt only when
-    // this client changed the project's story data since it was last shown.
-    const revision = getStoryProjectRevision(projectId);
-    seenRevisions.current[section] = revision;
-    const seen = seenRevisions.current[next];
-    if (seen !== undefined && seen < revision) {
-      setPanelKeys((keys) => ({ ...keys, [next]: (keys[next] || 0) + 1 }));
+  useEffect(() => {
+    if (!reelId) {
+      if (!loading) setData((current) => (current.sceneStatus?.length === 0 ? current : { ...current, sceneStatus: [] }));
+      return undefined;
     }
-    seenRevisions.current[next] = revision;
 
-    setVisited((current) => (current.includes(next) ? current : [...current, next]));
-    setSearchParams(next === 'overview' ? {} : { section: next }, { replace: true });
-  }
+    let cancelled = false;
+    getStoryReelSceneStatus(projectId, reelId)
+      .then((sceneStatus) => {
+        if (!cancelled) setData((current) => ({ ...current, sceneStatus }));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, reelId, loading]);
+
+  /** Re-reads shared data after a step changed it. Keys: bible, characters, reels, status. */
+  const refresh = useCallback(
+    async (keys) => {
+      const loaders = {
+        bible: () => getStoryBible(projectId),
+        characters: () => listStoryCharacters(projectId),
+        reels: () => listStoryReels(projectId),
+        sceneStatus: () => (reelId ? getStoryReelSceneStatus(projectId, reelId) : Promise.resolve([])),
+      };
+      const wanted = keys.map((key) => (key === 'status' ? 'sceneStatus' : key)).filter((key) => loaders[key]);
+      const results = await Promise.all(
+        wanted.map((key) =>
+          loaders[key]()
+            .then((value) => [key, value])
+            .catch(() => null),
+        ),
+      );
+      setData((current) => ({ ...current, ...Object.fromEntries(results.filter(Boolean)) }));
+    },
+    [projectId, reelId],
+  );
+
+  const workflows = normalizeStudioWorkflows(workspace?.project?.studio_modules);
+  const steps = visibleStudioSteps(workflows);
+  const secondary = visibleStudioSecondary(workflows);
+  const requested = inImages ? 'images' : resolveStudioSection(searchParams.get('section'));
+  const isKnown = [...steps, ...secondary].some((item) => item.key === requested);
+  const section = isKnown ? requested : steps[0]?.key || 'story';
+
+  const goTo = useCallback(
+    (next, params = {}) => {
+      if (next === 'images') {
+        navigate(`/studio/${projectId}/images`);
+        return;
+      }
+      const query = new URLSearchParams();
+      query.set('section', next);
+      const nextReel = params.reel || reelId;
+      if (nextReel) query.set('reel', nextReel);
+      Object.entries(params).forEach(([key, value]) => {
+        if (key !== 'reel' && value) query.set(key, value);
+      });
+      navigate({ pathname: `/studio/${projectId}`, search: `?${query.toString()}` });
+    },
+    [navigate, projectId, reelId],
+  );
+
+  const selectReel = useCallback(
+    (nextReel) => {
+      const query = new URLSearchParams(searchParams);
+      query.set('section', section);
+      query.set('reel', nextReel);
+      query.delete('scene');
+      navigate({ pathname: `/studio/${projectId}`, search: `?${query.toString()}` }, { replace: true });
+    },
+    [navigate, projectId, searchParams, section],
+  );
+
+  // Steps stay mounted after their first visit so revisiting one costs no
+  // requests. A step is rebuilt only when another step changed project data.
+  const [visited, setVisited] = useState(() => [section]);
+  const [panelKeys, setPanelKeys] = useState({});
+  const seenRevisions = useRef({});
+  const lastSection = useRef(section);
+
+  useEffect(() => {
+    const previous = lastSection.current;
+    if (previous === section) return;
+
+    const revision = getStoryProjectRevision(projectId);
+    seenRevisions.current[previous] = revision;
+    const seen = seenRevisions.current[section];
+    if (seen !== undefined && seen < revision) {
+      setPanelKeys((keys) => ({ ...keys, [section]: (keys[section] || 0) + 1 }));
+    }
+    seenRevisions.current[section] = revision;
+    lastSection.current = section;
+    setVisited((current) => (current.includes(section) ? current : [...current, section]));
+
+    document.querySelector('.studio-header')?.scrollIntoView({ block: 'start' });
+    document.getElementById(`studio-panel-${section}`)?.focus({ preventScroll: true });
+    const stepper = document.querySelector('.studio-stepper');
+    const activeStep = stepper?.querySelector('.studio-stepper-item.is-active');
+    if (stepper && activeStep && stepper.scrollWidth > stepper.clientWidth) {
+      const box = stepper.getBoundingClientRect();
+      const item = activeStep.getBoundingClientRect();
+      stepper.scrollLeft += item.left - box.left - (box.width - item.width) / 2;
+    }
+  }, [section, projectId]);
+
+  const project = workspace?.project || {};
+  const connections = workspace?.connections || null;
+  const canApprove = Boolean(workspace?.abilities?.approve);
+
+  const contextValue = useMemo(
+    () => ({
+      projectId,
+      project,
+      connections,
+      canApprove,
+      bible: data.bible,
+      characters: data.characters,
+      reels: data.reels,
+      reel,
+      reelId,
+      sceneStatus: data.sceneStatus || [],
+      refresh,
+      goTo,
+      selectReel,
+      setFinalState,
+      setWorkflows: (next) =>
+        setWorkspace((current) => ({
+          ...current,
+          project: { ...current.project, studio_modules: next.length > 0 ? next : null },
+        })),
+    }),
+    [projectId, project, connections, canApprove, data, reel, reelId, refresh, goTo, selectReel],
+  );
 
   if (loading) {
     return (
       <div className="story-page">
-        <StudioSkeleton rows={2} hero />
+        <div className="studio-skeleton-block studio-skeleton-hero" />
+        <div className="studio-skeleton-block studio-skeleton-nav" />
+        <StepSkeleton rows={2} />
       </div>
     );
   }
@@ -193,266 +322,174 @@ function StudioWorkspace({ projectId }) {
           All studios
         </Link>
         <div className="mt-4">
-          <AlertMessage>{error || 'Studio not found.'}</AlertMessage>
+          <AlertMessage>{error || 'This studio could not be found.'}</AlertMessage>
         </div>
       </div>
     );
   }
 
-  const project = workspace.project || {};
+  const allSections = [...steps, ...secondary];
+  const current = allSections.find((item) => item.key === section);
+  const stepIndex = steps.findIndex((step) => step.key === section);
+  const prev = stepIndex > 0 ? steps[stepIndex - 1] : null;
+  const next = stepIndex >= 0 && stepIndex < steps.length - 1 ? steps[stepIndex + 1] : null;
+  const progress = stepProgress(data, finalState);
 
   function renderPanel(key) {
+    const nav = { prev, next, onNavigate: goTo };
     switch (key) {
-      case 'overview':
-        return (
-          <StudioOverview
-            projectId={projectId}
-            sections={sections}
-            workflows={workflows}
-            onOpen={selectSection}
-            onWorkflowsSaved={(next) =>
-              setWorkspace((current) => ({
-                ...current,
-                project: { ...current.project, studio_modules: next.length > 0 ? next : null },
-              }))
-            }
-          />
-        );
       case 'story':
-        return <StoryBibleForm projectId={projectId} />;
-      case 'characters':
-        return <StoryCharactersPanel projectId={projectId} />;
-      case 'style':
-        return <StoryStylePanel projectId={projectId} />;
-      case 'planner':
+        return <StudioStoryStep nav={nav} />;
+      case 'cast':
+        return <StudioCastStep nav={nav} />;
+      case 'scenes':
+        return <StudioScenesStep nav={nav} focusSceneId={searchParams.get('scene')} />;
+      case 'sound':
+        return <StudioSoundStep nav={nav} focusSceneId={searchParams.get('scene')} />;
+      case 'final':
+        return <StudioFinalStep nav={nav} />;
+      case 'history':
+        return <StudioHistoryStep />;
+      case 'settings':
+        return <StudioSettingsStep />;
+      case 'images':
         return (
-          <StoryPlannerPanel
-            projectId={projectId}
-            onMaterialized={(reelId) => {
-              setFocusReelId(reelId || null);
-              selectSection('reels');
-            }}
+          <ImageStudio
+            project={project}
+            basePath={`/studio/${projectId}/images`}
+            creating={Boolean(imagesNew)}
+            generating={Boolean(imagesGenerate)}
+            parentImageId={imagesRegenerate?.params.imageId || null}
+            imageId={!imagesNew && !imagesGenerate && !imagesRegenerate ? imagesDetail?.params.imageId || null : null}
           />
         );
-      case 'reels':
-        return <StoryReelsPanel projectId={projectId} focusReelId={focusReelId} />;
-      case 'video':
-        return <StoryVideoEnginePanel projectId={projectId} />;
-      case 'audio':
-        return <StoryAudioStudioPanel projectId={projectId} />;
-      case 'timeline':
-        return <StoryTimelinePanel projectId={projectId} />;
-      case 'history':
-        return <StoryHistoryPanel projectId={projectId} />;
       default:
         return null;
     }
   }
 
   return (
-    <div className="story-page">
-      <section className="page-section page-section--flush workspace-hero glass-card card border-0">
-        <div className="card-body">
-          <div className="d-flex flex-wrap justify-content-between gap-3 mb-3">
-            <Link to="/studio" className="activity-link small text-decoration-none">
-              <i className="bi bi-arrow-left me-1" aria-hidden="true" />
-              All studios
-            </Link>
-            <span className={`status-pill status-${project.status || 'draft'}`}>{statusLabel(project.status)}</span>
-          </div>
-          <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
-            <div>
-              <p className="section-kicker mb-1">Creative Production Studio</p>
-              <h1 className="section-title mb-2">{project.name}</h1>
-              <WorkflowChips workflows={workflows} />
+    <StudioContext.Provider value={contextValue}>
+      <div className="story-page studio">
+        <header className="studio-header">
+          <nav aria-label="Breadcrumb">
+            <ol className="breadcrumb studio-breadcrumb mb-2">
+              <li className="breadcrumb-item">
+                <Link to="/studio">Creative Studio</Link>
+              </li>
+              <li className="breadcrumb-item">
+                <Link to={`/studio/${projectId}`}>{project.name}</Link>
+              </li>
+              <li className="breadcrumb-item active" aria-current="page">
+                {current?.label}
+              </li>
+            </ol>
+          </nav>
+          <div className="studio-header-row">
+            <h1 className="studio-title">{project.name}</h1>
+            <div className="studio-secondary-nav" role="group" aria-label="More studio pages">
+              {secondary.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`btn btn-sm ${section === item.key ? 'btn-secondary' : 'btn-outline-secondary'}`}
+                  aria-current={section === item.key ? 'page' : undefined}
+                  onClick={() => goTo(item.key)}
+                >
+                  <i className={`bi ${item.icon} me-1`} aria-hidden="true" />
+                  {item.label}
+                </button>
+              ))}
+              <Link className="btn btn-sm btn-outline-secondary" to={`/projects/${projectId}`}>
+                <i className="bi bi-folder2-open me-1" aria-hidden="true" />
+                Project files
+              </Link>
             </div>
-            <Link className="btn btn-outline-primary" to={`/projects/${projectId}`}>
-              Project details
-            </Link>
           </div>
-        </div>
-      </section>
+        </header>
 
-      <nav className="studio-nav mb-4" aria-label="Studio sections">
-        {STUDIO_GROUPS.map((group) => {
-          const items = sections.filter((item) => item.group === group.key);
-          if (items.length === 0) return null;
-
-          return (
-            <div className="studio-nav-group" key={group.key} role="tablist" aria-label={group.label || 'Start'}>
-              {group.label ? <span className="studio-nav-label">{group.label}</span> : null}
-              <div className="studio-nav-items">
-                {items.map((item) => (
+        <nav className="studio-stepper" aria-label="Production steps">
+          <ol>
+            {steps.map((step, index) => {
+              const meta = progress[step.key] || {};
+              const active = section === step.key;
+              return (
+                <li key={step.key}>
                   <button
-                    key={item.key}
                     type="button"
-                    role="tab"
-                    id={`studio-tab-${item.key}`}
-                    aria-selected={section === item.key}
-                    aria-controls={`studio-panel-${item.key}`}
-                    className={`workspace-tab ${section === item.key ? 'active' : ''}`}
-                    onClick={() => selectSection(item.key)}
+                    className={`studio-stepper-item${active ? ' is-active' : ''}${meta.done ? ' is-done' : ''}`}
+                    aria-current={active ? 'step' : undefined}
+                    onClick={() => goTo(step.key)}
                   >
-                    {item.label}
+                    <span className="studio-stepper-index" aria-hidden="true">
+                      {meta.done ? <i className="bi bi-check-lg" /> : index + 1}
+                    </span>
+                    <span className="studio-stepper-text">
+                      <span className="studio-stepper-label">{step.label}</span>
+                      {meta.text ? <span className="studio-stepper-meta">{meta.text}</span> : null}
+                    </span>
+                    <span className="visually-hidden">
+                      {`, step ${index + 1} of ${steps.length}`}
+                      {meta.done ? ', complete' : ''}
+                    </span>
                   </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </nav>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
 
-      {sections
-        .filter((item) => mounted.includes(item.key))
-        .map((item) => (
-          <div
-            key={`${item.key}-${panelKeys[item.key] || 0}`}
-            role="tabpanel"
-            id={`studio-panel-${item.key}`}
-            aria-labelledby={`studio-tab-${item.key}`}
-            hidden={item.key !== section}
-          >
-            <Suspense fallback={<StudioSkeleton rows={1} />}>{renderPanel(item.key)}</Suspense>
-          </div>
-        ))}
-    </div>
+        {allSections
+          .filter((item) => visited.includes(item.key) || item.key === section)
+          .map((item) => (
+            <section
+              key={`${item.key}-${panelKeys[item.key] || 0}`}
+              id={`studio-panel-${item.key}`}
+              className="studio-panel"
+              aria-label={item.label}
+              tabIndex={-1}
+              hidden={item.key !== section}
+            >
+              <Suspense fallback={<StepSkeleton rows={2} />}>{renderPanel(item.key)}</Suspense>
+            </section>
+          ))}
+      </div>
+    </StudioContext.Provider>
   );
 }
 
-function StudioOverview({ projectId, sections, workflows, onOpen, onWorkflowsSaved }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(workflows);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const steps = sections.filter((item) => item.key !== 'overview' && item.key !== 'history');
-  const tools = STUDIO_PROJECT_TOOLS.filter(
-    (tool) => !tool.workflow || workflows.length === 0 || workflows.includes(tool.workflow),
-  );
+function stepProgress(data, finalState) {
+  const characters = data.characters || [];
+  const ready = characters.filter((character) => character.approved_reference).length;
+  const statusLoaded = data.sceneStatus !== null;
+  const scenes = data.sceneStatus || [];
+  const approved = scenes.filter((item) => item.version?.status === 'approved').length;
+  const withSound = scenes.filter((item) => (item.sounds || []).some((sound) => sound.has_file)).length;
+  const pending = { done: false, text: '' };
 
-  async function saveWorkflows() {
-    setSaving(true);
-    setError('');
-
-    try {
-      // Project updates replace the whole settings object, so merge with what is stored.
-      const current = await getProject(projectId);
-      const stored = current?.settings && typeof current.settings === 'object' && !Array.isArray(current.settings)
-        ? current.settings
-        : {};
-      const { studio_modules: _previous, ...rest } = stored;
-      await updateProject(projectId, { settings: draft.length > 0 ? { ...rest, studio_modules: draft } : rest });
-      onWorkflowsSaved(draft);
-      setEditing(false);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Unable to save workflows.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="row g-4">
-      <div className="col-lg-7">
-        <div className="card border-0 glass-card h-100">
-          <div className="card-body">
-            <h2 className="card-heading h5 mb-1">Your production steps</h2>
-            <p className="text-secondary small mb-3">Work top to bottom. Every step saves on its own.</p>
-            <ol className="studio-steps list-unstyled mb-0">
-              {steps.map((item, index) => (
-                <li key={item.key}>
-                  <button type="button" className="studio-step" onClick={() => onOpen(item.key)}>
-                    <span className="studio-step-index">{index + 1}</span>
-                    <span className="studio-step-text">
-                      <span className="studio-step-title">{item.label}</span>
-                      <span className="studio-step-desc">{item.description}</span>
-                    </span>
-                    <i className="bi bi-chevron-right" aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ol>
-            {steps.length === 0 ? (
-              <p className="text-secondary mb-0">Use the project tools for this workflow.</p>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      <div className="col-lg-5 d-flex flex-column gap-4">
-        <div className="card border-0 glass-card">
-          <div className="card-body">
-            <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
-              <h2 className="card-heading h5 mb-0">Workflows</h2>
-              {!editing ? (
-                <button
-                  type="button"
-                  className="btn btn-outline-primary btn-sm"
-                  onClick={() => {
-                    setDraft(workflows);
-                    setError('');
-                    setEditing(true);
-                  }}
-                >
-                  Change
-                </button>
-              ) : null}
-            </div>
-            {error ? (
-              <div className="mb-3">
-                <AlertMessage>{error}</AlertMessage>
-              </div>
-            ) : null}
-            {editing ? (
-              <>
-                <StudioWorkflowPicker value={draft} onChange={setDraft} idPrefix="studio-workflow" disabled={saving} />
-                <div className="d-flex gap-2 mt-3">
-                  <button type="button" className="btn btn-primary btn-sm" onClick={saveWorkflows} disabled={saving}>
-                    {saving ? 'Saving…' : 'Save workflows'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary btn-sm"
-                    onClick={() => setEditing(false)}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <WorkflowChips workflows={workflows} />
-                <p className="small text-secondary mt-2 mb-0">
-                  {workflows.length === 0
-                    ? 'No workflow chosen, so every studio step is shown.'
-                    : 'Only the steps for these workflows are shown.'}
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="card border-0 glass-card">
-          <div className="card-body">
-            <h2 className="card-heading h5 mb-3">Project tools</h2>
-            <div className="studio-tool-list">
-              {tools.map((tool) => (
-                <Link key={tool.key} className="studio-tool" to={`/projects/${projectId}/${tool.path}`}>
-                  <i className={`bi ${tool.icon}`} aria-hidden="true" />
-                  <span>{tool.label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return {
+    story: data.bible?.concept ? { done: true, text: 'Done' } : { done: false, text: 'Start here' },
+    cast:
+      characters.length === 0
+        ? { done: false, text: 'No characters yet' }
+        : { done: ready === characters.length, text: `${ready} of ${characters.length} ready` },
+    scenes: !statusLoaded
+      ? pending
+      : scenes.length === 0
+        ? { done: false, text: 'No scenes yet' }
+        : { done: approved === scenes.length, text: `${approved} of ${scenes.length} approved` },
+    sound: !statusLoaded
+      ? pending
+      : scenes.length === 0
+        ? { done: false, text: 'Optional' }
+        : { done: false, text: `${withSound} of ${scenes.length} have sound` },
+    final: finalState || (!statusLoaded ? pending : { done: false, text: approved > 0 ? 'Ready to build' : 'Needs approved scenes' }),
+  };
 }
 
 function WorkflowChips({ workflows }) {
   if (workflows.length === 0) {
-    return <span className="studio-chip studio-chip--muted">All workflows</span>;
+    return <span className="studio-chip studio-chip--muted">Full production</span>;
   }
 
   return (
@@ -462,23 +499,6 @@ function WorkflowChips({ workflows }) {
           {studioWorkflowLabel(item)}
         </span>
       ))}
-    </div>
-  );
-}
-
-function StudioSkeleton({ rows = 2, hero = false }) {
-  return (
-    <div className="studio-skeleton" aria-busy="true" aria-live="polite">
-      <span className="visually-hidden">Loading studio…</span>
-      {hero ? <div className="studio-skeleton-block studio-skeleton-hero" /> : null}
-      {hero ? <div className="studio-skeleton-block studio-skeleton-nav" /> : null}
-      <div className="row g-3">
-        {Array.from({ length: rows * 3 }, (_, index) => (
-          <div className="col-12 col-md-6 col-xl-4" key={index}>
-            <div className="studio-skeleton-block studio-skeleton-card" />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

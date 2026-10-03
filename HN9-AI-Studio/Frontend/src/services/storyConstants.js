@@ -6,38 +6,16 @@ export const STORY_LANGUAGES = [
 ];
 
 export const STORY_ASPECT_RATIOS = [
-  { value: '', label: 'Not set' },
-  { value: '16:9', label: '16:9 Landscape' },
-  { value: '9:16', label: '9:16 Portrait' },
+  { value: '16:9', label: 'Landscape (16:9)', hint: 'YouTube, TV and desktop screens' },
+  { value: '9:16', label: 'Portrait (9:16)', hint: 'Reels, Shorts and TikTok' },
 ];
 
-export const CHARACTER_REFERENCE_STATUS_LABELS = {
-  draft: 'Draft',
-  pending_review: 'Pending review',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  archived: 'Archived',
-};
-
-export function characterReferenceStatusLabel(status) {
-  return CHARACTER_REFERENCE_STATUS_LABELS[status] || status || 'Unknown';
+export function aspectRatioLabel(value) {
+  return STORY_ASPECT_RATIOS.find((item) => item.value === value)?.label || 'Not chosen yet';
 }
 
 export function storyFieldError(error, field) {
   return error?.errors?.[field]?.[0] || '';
-}
-
-export function storyCapabilityLabel(capability) {
-  const labels = {
-    text_to_video: 'Text to Video',
-    image_to_video: 'Image to Video',
-    reference_to_video: 'Reference to Video',
-    video_edit: 'Video Edit',
-    video_extend: 'Video Extend',
-    audio: 'Audio',
-  };
-
-  return labels[capability] || capability || 'Unknown';
 }
 
 // Values must match App\Support\StudioWorkflows on the backend.
@@ -46,7 +24,7 @@ export const STUDIO_WORKFLOWS = [
     value: 'story',
     label: 'Story',
     icon: 'bi-journal-text',
-    description: 'Plan a narrative with story context, a scene plan, reels and scenes.',
+    description: 'Write a story and let the studio turn it into scenes.',
   },
   {
     value: 'images',
@@ -58,98 +36,76 @@ export const STUDIO_WORKFLOWS = [
     value: 'videos',
     label: 'Video',
     icon: 'bi-camera-reels',
-    description: 'Generate video clips from prompts, images or references.',
+    description: 'Create scene videos from a description, a picture or your characters.',
   },
   {
     value: 'audio',
     label: 'Audio',
     icon: 'bi-soundwave',
-    description: 'Add voice, music and sound effects to scenes.',
+    description: 'Add narration, dialogue, music and sound effects to scenes.',
   },
 ];
 
-export const STUDIO_GROUPS = [
-  { key: 'start', label: '' },
-  { key: 'plan', label: 'Plan' },
-  { key: 'produce', label: 'Produce' },
-  { key: 'finish', label: 'Finish' },
-];
-
-// `workflows: null` means the section is always shown.
-export const STUDIO_SECTIONS = [
-  { key: 'overview', label: 'Overview', group: 'start', workflows: null, description: '' },
+// `workflows: null` means the step is always shown.
+export const STUDIO_STEPS = [
   {
     key: 'story',
-    label: 'Story Context',
-    group: 'plan',
-    workflows: ['story'],
-    description: 'Concept, audience, tone and world for the whole project.',
-  },
-  {
-    key: 'characters',
-    label: 'Characters',
-    group: 'plan',
-    workflows: ['story', 'images', 'videos'],
-    description: 'People and subjects, with approved reference images.',
-  },
-  {
-    key: 'style',
-    label: 'Visual Style',
-    group: 'plan',
-    workflows: ['story', 'images', 'videos'],
-    description: 'Look, lighting, color and style reference images.',
-  },
-  {
-    key: 'planner',
-    label: 'Story Planner',
-    group: 'plan',
-    workflows: ['story'],
-    description: 'Turn an idea into a timed scene plan.',
-  },
-  {
-    key: 'reels',
-    label: 'Reels & Scenes',
-    group: 'produce',
-    workflows: ['story', 'audio'],
-    description: 'Organise reels, write scenes and review them.',
-  },
-  {
-    key: 'video',
-    label: 'Video',
-    group: 'produce',
-    workflows: ['story', 'videos'],
-    description: 'Generate video clips for scenes or standalone.',
-  },
-  {
-    key: 'audio',
-    label: 'Audio',
-    group: 'produce',
-    workflows: ['audio'],
-    description: 'Voice, music and sound effects for scenes.',
-  },
-  {
-    key: 'timeline',
-    label: 'Timeline & Review',
-    group: 'finish',
-    workflows: ['story', 'audio'],
-    description: 'Assemble clips, render, review and export.',
-  },
-  {
-    key: 'history',
-    label: 'History',
-    group: 'finish',
+    label: 'Story',
+    icon: 'bi-journal-text',
     workflows: null,
-    description: 'Everything generated in this project.',
+    description: 'Your idea, audience, visual style and video format.',
+  },
+  {
+    key: 'cast',
+    label: 'Cast & Look',
+    icon: 'bi-people',
+    workflows: null,
+    description: 'Characters and the look & feel, each with an approved picture.',
+  },
+  {
+    key: 'scenes',
+    label: 'Scenes',
+    icon: 'bi-film',
+    workflows: ['story', 'videos', 'audio'],
+    description: 'Plan scenes, create each scene’s video and approve it.',
+  },
+  {
+    key: 'sound',
+    label: 'Sound',
+    icon: 'bi-soundwave',
+    workflows: ['story', 'audio'],
+    description: 'Narration, dialogue, music and sound effects for each scene.',
+  },
+  {
+    key: 'final',
+    label: 'Final Video',
+    icon: 'bi-collection-play',
+    workflows: ['story', 'videos', 'audio'],
+    description: 'Arrange approved scenes, build the video, review and download it.',
   },
 ];
 
-export const STUDIO_PROJECT_TOOLS = [
-  { key: 'images', label: 'Image Studio', icon: 'bi-image', path: 'images', workflow: 'images' },
-  { key: 'videos', label: 'Video Studio', icon: 'bi-film', path: 'videos', workflow: 'videos' },
-  { key: 'scripts', label: 'Scripts', icon: 'bi-file-earmark-text', path: 'scripts', workflow: null },
-  { key: 'assets', label: 'Assets', icon: 'bi-folder2-open', path: 'assets', workflow: null },
-  { key: 'final', label: 'Final output', icon: 'bi-box-seam', path: 'final', workflow: null },
+export const STUDIO_SECONDARY = [
+  { key: 'images', label: 'Images', icon: 'bi-image', workflows: ['images'] },
+  { key: 'history', label: 'History', icon: 'bi-clock-history', workflows: null },
+  { key: 'settings', label: 'Studio settings', icon: 'bi-sliders', workflows: null },
 ];
+
+const LEGACY_SECTIONS = {
+  overview: 'story',
+  characters: 'cast',
+  style: 'cast',
+  planner: 'scenes',
+  reels: 'scenes',
+  video: 'scenes',
+  audio: 'sound',
+  timeline: 'final',
+};
+
+/** Maps old `?section=` values (bookmarks, shared links) onto the current steps. */
+export function resolveStudioSection(value) {
+  return LEGACY_SECTIONS[value] || value || 'story';
+}
 
 export function normalizeStudioWorkflows(value) {
   if (!Array.isArray(value)) {
@@ -159,17 +115,23 @@ export function normalizeStudioWorkflows(value) {
   return STUDIO_WORKFLOWS.map((item) => item.value).filter((item) => value.includes(item));
 }
 
-/** Projects without a saved workflow choice keep every section. */
-export function visibleStudioSections(workflows) {
+function forWorkflows(items, workflows) {
   const selected = normalizeStudioWorkflows(workflows);
 
   if (selected.length === 0) {
-    return STUDIO_SECTIONS;
+    return items;
   }
 
-  return STUDIO_SECTIONS.filter(
-    (section) => !section.workflows || section.workflows.some((item) => selected.includes(item)),
-  );
+  return items.filter((item) => !item.workflows || item.workflows.some((workflow) => selected.includes(workflow)));
+}
+
+/** Projects without a saved workflow choice keep every step. */
+export function visibleStudioSteps(workflows) {
+  return forWorkflows(STUDIO_STEPS, workflows);
+}
+
+export function visibleStudioSecondary(workflows) {
+  return forWorkflows(STUDIO_SECONDARY, workflows);
 }
 
 export function studioWorkflowLabel(value) {

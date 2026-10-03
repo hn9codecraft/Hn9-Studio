@@ -61,6 +61,45 @@ final class StoryTimelineService
     }
 
     /**
+     * Puts an approved scene video on its reel's timeline: swaps the scene's existing clip
+     * to the new version, or appends one. Versions without a stored video are skipped.
+     */
+    public function placeApprovedSceneVersion(Project $project, StorySceneVersion $version): void
+    {
+        $version->loadMissing('scene.reel');
+        $reel = $version->scene?->reel;
+        if (! $reel instanceof StoryReel) {
+            return;
+        }
+
+        try {
+            $this->videoSource($project, $version->uuid);
+        } catch (StoryException) {
+            return;
+        }
+
+        $timeline = StoryTimeline::query()->where('story_reel_id', $reel->id)->first();
+        $existing = $timeline === null ? null : StoryTimelineClip::query()
+            ->where('story_timeline_id', $timeline->id)
+            ->where('media_kind', 'video')
+            ->whereHas('sceneVersion', static function ($query) use ($version): void {
+                $query->where('story_scene_id', $version->story_scene_id);
+            })
+            ->orderBy('position')
+            ->first();
+
+        if ($existing instanceof StoryTimelineClip) {
+            if ((int) $existing->story_scene_version_id !== (int) $version->id) {
+                $this->replace($project, $reel->uuid, $existing->uuid, $version->uuid);
+            }
+
+            return;
+        }
+
+        $this->place($project, $reel->uuid, 'video', $version->uuid);
+    }
+
+    /**
      * @param  list<string>  $orderedIds
      * @return array<string, mixed>
      */
@@ -444,12 +483,18 @@ final class StoryTimelineService
             'id' => $timeline->uuid,
             'output_url' => null,
             'clips' => array_map(static function (StoryTimelineClip $clip): array {
+                $scene = $clip->sceneVersion?->scene ?? $clip->sceneAudio?->scene;
+
                 return [
                     'id' => $clip->uuid,
                     'position' => $clip->position,
                     'media_kind' => $clip->media_kind,
                     'source_version_id' => $clip->sceneVersion?->uuid,
+                    'source_version_number' => $clip->sceneVersion?->version,
                     'source_audio_id' => $clip->sceneAudio?->uuid,
+                    'scene_id' => $scene?->uuid,
+                    'scene_sequence' => $scene?->sequence,
+                    'scene_title' => $scene?->title,
                     'disk' => $clip->disk,
                     'path' => $clip->path,
                     'in_ms' => $clip->in_ms,
@@ -480,7 +525,7 @@ final class StoryTimelineService
     private function loadedClips(array $clips): array
     {
         foreach ($clips as $clip) {
-            $clip->loadMissing('sceneVersion', 'sceneAudio');
+            $clip->loadMissing('sceneVersion.scene', 'sceneAudio.scene');
         }
 
         return $clips;

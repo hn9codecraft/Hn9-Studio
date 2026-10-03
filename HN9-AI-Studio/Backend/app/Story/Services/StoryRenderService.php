@@ -7,6 +7,7 @@ namespace App\Story\Services;
 use App\Models\Project;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Exceptions\StoryException;
+use App\Story\Models\StoryExport;
 use App\Story\Models\StoryFinalRender;
 use App\Story\Models\StoryReel;
 use App\Story\Models\StoryTimeline;
@@ -108,6 +109,24 @@ final class StoryRenderService
     public function show(Project $project, string $reelUuid, string $renderUuid): array
     {
         return $this->payload($this->find($project, $reelUuid, $renderUuid));
+    }
+
+    /**
+     * A reel's final video builds, newest first.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function index(Project $project, string $reelUuid): array
+    {
+        $reel = $this->reel($project, $reelUuid);
+
+        return StoryFinalRender::query()
+            ->where('story_reel_id', $reel->id)
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get()
+            ->map(fn (StoryFinalRender $render): array => $this->payload($render))
+            ->all();
     }
 
     public function file(Project $project, string $reelUuid, string $renderUuid): StreamedResponse
@@ -227,6 +246,15 @@ final class StoryRenderService
             && $render->path !== ''
             && is_string($render->disk)
             && Storage::disk($render->disk)->exists($render->path);
+        $clips = is_array($render->timeline_snapshot['clips'] ?? null) ? $render->timeline_snapshot['clips'] : [];
+        $durationMs = 0;
+        foreach ($clips as $clip) {
+            $durationMs += max(0, (int) ($clip['out_ms'] ?? 0) - (int) ($clip['in_ms'] ?? 0));
+        }
+        $export = StoryExport::query()
+            ->where('story_final_render_id', $render->id)
+            ->latest('id')
+            ->first();
 
         return [
             'id' => $render->uuid,
@@ -241,6 +269,15 @@ final class StoryRenderService
             'error_code' => $render->error_code,
             'has_file' => $ready,
             'output_url' => null,
+            'clip_count' => count($clips),
+            'duration_ms' => $durationMs,
+            'created_at' => $render->created_at?->toIso8601String(),
+            'latest_export' => $export === null ? null : [
+                'id' => $export->uuid,
+                'status' => $export->status,
+                'filename' => $export->filename,
+                'size' => $export->size,
+            ],
         ];
     }
 

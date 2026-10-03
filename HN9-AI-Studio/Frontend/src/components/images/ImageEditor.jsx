@@ -16,7 +16,7 @@ const EMPTY = {
   status: 'draft',
 };
 
-export default function ImageEditor({ projectId, imageId, creating }) {
+export default function ImageEditor({ projectId, imageId, creating, basePath = `/projects/${projectId}/images` }) {
   const navigate = useNavigate();
   const [values, setValues] = useState(EMPTY);
   const [saved, setSaved] = useState(EMPTY);
@@ -127,7 +127,7 @@ export default function ImageEditor({ projectId, imageId, creating }) {
     try {
       if (creating) {
         const created = await createImage(projectId, payload);
-        navigate(`/projects/${projectId}/images/${created.id}`, { replace: true });
+        navigate(`${basePath}/${created.id}`, { replace: true });
         return;
       }
 
@@ -150,7 +150,7 @@ export default function ImageEditor({ projectId, imageId, creating }) {
 
     try {
       await deleteImage(projectId, imageId);
-      navigate(`/projects/${projectId}/images`, { replace: true, state: { notice: 'Image request deleted.' } });
+      navigate(`${basePath}`, { replace: true, state: { notice: 'Image request deleted.' } });
     } catch (err) {
       setError(err instanceof ApiError ? err : new ApiError('Unable to delete this image request.', { status: 0 }));
       setDeleting(false);
@@ -221,7 +221,7 @@ export default function ImageEditor({ projectId, imageId, creating }) {
   if (error && !creating && !values.title && !image) {
     return (
       <div>
-        <Link to={`/projects/${projectId}/images`} className="small text-decoration-none">
+        <Link to={`${basePath}`} className="small text-decoration-none">
           <i className="bi bi-arrow-left me-1" aria-hidden="true" />
           Back to Images
         </Link>
@@ -236,7 +236,7 @@ export default function ImageEditor({ projectId, imageId, creating }) {
     <div className="image-editor">
       <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div>
-          <Link to={`/projects/${projectId}/images`} className="small text-decoration-none">
+          <Link to={`${basePath}`} className="small text-decoration-none">
             <i className="bi bi-arrow-left me-1" aria-hidden="true" />
             Back to Images
           </Link>
@@ -246,11 +246,11 @@ export default function ImageEditor({ projectId, imageId, creating }) {
           </p>
         </div>
         <div className="d-flex flex-wrap gap-2">
-          <Link className="btn btn-outline-secondary" to={`/projects/${projectId}/images/generate`}>
+          <Link className="btn btn-outline-secondary" to={`${basePath}/generate`}>
             Generate image
           </Link>
           {!creating && capabilities.regenerate ? (
-            <Link className="btn btn-outline-primary" to={`/projects/${projectId}/images/${imageId}/regenerate`}>
+            <Link className="btn btn-outline-primary" to={`${basePath}/${imageId}/regenerate`}>
               Regenerate
             </Link>
           ) : null}

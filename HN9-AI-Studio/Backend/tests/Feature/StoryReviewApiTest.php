@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\Project;
 use App\Models\User;
+use App\Story\Models\StoryGenerationAttempt;
 use App\Story\Models\StoryReel;
 use App\Story\Models\StoryScene;
 use App\Story\Models\StorySceneVersion;
@@ -77,7 +78,7 @@ final class StoryReviewApiTest extends TestCase
             ->assertJsonPath('data.status', 'needs_rework');
     }
 
-    public function test_regenerate_changes_only_the_target_scene_and_stores_no_file(): void
+    public function test_regenerate_without_a_video_provider_opens_no_version_and_stores_no_file(): void
     {
         Storage::fake('videos');
         Http::fake();
@@ -95,9 +96,11 @@ final class StoryReviewApiTest extends TestCase
             ->assertStatus(501);
 
         $this->assertSame(0, StorySceneVersion::query()->where('story_scene_id', $first->id)->count());
-        $this->assertSame(1, StorySceneVersion::query()->where('story_scene_id', $second->id)->count());
-        $version = StorySceneVersion::query()->where('story_scene_id', $second->id)->first();
-        $this->assertSame('Only this scene', $version?->continuity['review_comment'] ?? null);
+        $this->assertSame(0, StorySceneVersion::query()->where('story_scene_id', $second->id)->count());
+        $attempt = StoryGenerationAttempt::query()->sole();
+        $this->assertSame('not_connected', $attempt->status);
+        $this->assertSame('video', $attempt->kind);
+        $this->assertSame($second->id, $attempt->story_scene_id);
         $this->assertSame([], Storage::disk('videos')->allFiles());
         Http::assertNothingSent();
 

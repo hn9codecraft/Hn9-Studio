@@ -19,7 +19,7 @@ final class StoryPlannerPromptBuilder
         $system = implode("\n", [
             'You are the HN9 Project Story Planner.',
             'Produce ONLY valid JSON matching the output contract.',
-            'Preserve Story Bible, Character Bible, and Style Bible definitions.',
+            'Preserve the Story Details, Character Profiles, and Visual Style definitions.',
             'Do not invent conflicting character or style details.',
             'Do not change approved character/style definitions unless the user request explicitly asks.',
             'Break the story into the exact timed scenes provided.',
@@ -30,7 +30,7 @@ final class StoryPlannerPromptBuilder
         $contextJson = json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         $prompt = <<<PROMPT
-PROJECT STORY BIBLE / CHARACTERS / STYLE / PREVIOUS CONTEXT (JSON):
+PROJECT STORY DETAILS / CHARACTERS / VISUAL STYLE / PREVIOUS CONTEXT (JSON):
 {$contextJson}
 
 DURATION CONTRACT:

@@ -136,7 +136,8 @@ final class StoryPlannerApiTest extends TestCase
             return str_contains($request->url(), '/responses')
                 && str_contains($body, 'Aarav')
                 && str_contains($body, '3D cinematic animation')
-                && str_contains($body, 'Story Bible');
+                && str_contains($body, 'Story Details')
+                && ! str_contains($body, 'Bible');
         });
     }
 

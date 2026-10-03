@@ -18,6 +18,10 @@ function pageTitle(pathname) {
     return TITLES[pathname];
   }
 
+  if (pathname.startsWith('/studio')) {
+    return 'Creative Production Studio';
+  }
+
   if (pathname.includes('/scripts')) {
     return 'Script Studio';
   }
@@ -36,10 +40,6 @@ function pageTitle(pathname) {
 
   if (pathname.includes('/activity')) {
     return 'Activity Studio';
-  }
-
-  if (pathname.startsWith('/studio')) {
-    return 'Creative Production Studio';
   }
 
   if (pathname.startsWith('/projects/')) {

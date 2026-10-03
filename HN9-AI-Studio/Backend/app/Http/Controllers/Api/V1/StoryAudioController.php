@@ -8,6 +8,7 @@ use App\Contracts\Services\ProjectServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateStorySceneAudioRequest;
 use App\Story\Enums\StoryAudioRole;
+use App\Story\Models\StoryReel;
 use App\Story\Models\StoryScene;
 use App\Story\Models\StoryWorkspace;
 use App\Story\Services\StoryAudioService;
@@ -46,6 +47,21 @@ class StoryAudioController extends Controller
         }
 
         return ApiResponse::success($this->audio->list($project, $reelUuid, $sceneUuid, $role));
+    }
+
+    public function reelIndex(string $uuid, string $reelUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $reel = StoryReel::query()
+            ->where('uuid', $reelUuid)
+            ->whereHas('workspace', static function ($query) use ($project): void {
+                $query->where('project_id', $project->id);
+            })
+            ->firstOrFail();
+        $this->authorize('view', $reel);
+
+        return ApiResponse::success($this->audio->listForReel($project, $reel));
     }
 
     public function store(

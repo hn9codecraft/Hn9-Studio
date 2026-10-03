@@ -11,6 +11,7 @@ use App\Story\Contracts\StoryVideoEngineInterface;
 use App\Story\Contracts\StoryVideoProviderAdapterInterface;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Exceptions\StoryVideoEngineException;
+use App\Story\Models\StoryGenerationAttempt;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Video\StoryVideoAssetResolver;
 use App\Story\Video\StoryVideoGenerationRequest;
@@ -32,7 +33,38 @@ final readonly class StoryVideoDispatchService
         private StoryVideoUnitPlanner $units,
         private StoryVideoAssetResolver $assets,
         private StoryVideoJobRunner $runner,
+        private StoryGenerationAttemptRecorder $attempts,
     ) {}
+
+    /**
+     * Throws generationNotEnabled, after recording the attempt for History, when no live
+     * adapter serves the capability.
+     */
+    public function assertLive(
+        Project $project,
+        StoryVideoCapability $capability,
+        ?string $reelUuid = null,
+        ?string $sceneUuid = null,
+    ): void {
+        if ($this->liveSupports($capability)) {
+            return;
+        }
+
+        $this->attempts->record(
+            $project,
+            $capability === StoryVideoCapability::Audio
+                ? StoryGenerationAttemptRecorder::KIND_AUDIO
+                : StoryGenerationAttemptRecorder::KIND_VIDEO,
+            StoryGenerationAttempt::STATUS_NOT_CONNECTED,
+            $capability->value,
+            'provider_not_connected',
+            null,
+            $reelUuid,
+            $sceneUuid,
+        );
+
+        throw StoryVideoEngineException::generationNotEnabled();
+    }
 
     public function liveSupports(StoryVideoCapability $capability): bool
     {
@@ -64,6 +96,8 @@ final readonly class StoryVideoDispatchService
      */
     public function start(Project $project, StoryVideoGenerationRequest $request): array
     {
+        $this->assertLive($project, $request->capability, $request->reelUuid, $request->sceneUuid);
+
         $adapter = null;
         foreach ($this->router->adapters() as $candidate) {
             if ($candidate->key() === self::LIVE_PROVIDER_KEY && $candidate->supports($request->capability)) {

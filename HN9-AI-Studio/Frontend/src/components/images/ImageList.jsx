@@ -6,7 +6,7 @@ import { formatProjectDate } from '../../services/projectConstants';
 import { imageAspectRatioLabel, imageStatusClass, imageStatusLabel } from '../../services/imageConstants';
 import ImageCard from './ImageCard';
 
-export default function ImageList({ projectId, images, loading, error, meta }) {
+export default function ImageList({ projectId, images, loading, error, meta, basePath = `/projects/${projectId}/images` }) {
   if (loading) {
     return <LoadingSpinner label="Loading image requests…" />;
   }
@@ -20,10 +20,10 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
           <p className="text-secondary mb-0">Generate an image from a prompt, or save a manual image request.</p>
         </div>
         <div className="d-flex flex-wrap gap-2">
-          <Link className="btn btn-outline-primary" to={`/projects/${projectId}/images/new`}>
+          <Link className="btn btn-outline-primary" to={`${basePath}/new`}>
             New image request
           </Link>
-          <Link className="btn btn-primary" to={`/projects/${projectId}/images/generate`}>
+          <Link className="btn btn-primary" to={`${basePath}/generate`}>
             <i className="bi bi-stars me-2" aria-hidden="true" />
             Generate image
           </Link>
@@ -43,10 +43,10 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
           description="Generate an image from a prompt, or save a manual request for later."
         >
           <div className="d-flex flex-wrap justify-content-center gap-2">
-            <Link className="btn btn-outline-primary" to={`/projects/${projectId}/images/new`}>
+            <Link className="btn btn-outline-primary" to={`${basePath}/new`}>
               New image request
             </Link>
-            <Link className="btn btn-primary" to={`/projects/${projectId}/images/generate`}>
+            <Link className="btn btn-primary" to={`${basePath}/generate`}>
               Generate image
             </Link>
           </div>
@@ -74,7 +74,7 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
                     {images.map((image) => (
                       <tr key={image.id}>
                         <td>
-                          <Link to={`/projects/${projectId}/images/${image.id}`} className="fw-semibold text-decoration-none">
+                          <Link to={`${basePath}/${image.id}`} className="fw-semibold text-decoration-none">
                             {image.title}
                           </Link>
                         </td>
@@ -86,7 +86,7 @@ export default function ImageList({ projectId, images, loading, error, meta }) {
                         </td>
                         <td className="text-secondary">{formatProjectDate(image.updated_at)}</td>
                         <td className="text-end">
-                          <Link className="btn btn-sm btn-outline-primary" to={`/projects/${projectId}/images/${image.id}`}>
+                          <Link className="btn btn-sm btn-outline-primary" to={`${basePath}/${image.id}`}>
                             Open
                           </Link>
                         </td>

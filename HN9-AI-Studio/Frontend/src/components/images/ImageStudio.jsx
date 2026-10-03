@@ -8,7 +8,14 @@ import ImageGenerateForm from './ImageGenerateForm';
 import ImageList from './ImageList';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
-export default function ImageStudio({ project, creating = false, imageId = null, generating = false, parentImageId = null }) {
+export default function ImageStudio({
+  project,
+  creating = false,
+  imageId = null,
+  generating = false,
+  parentImageId = null,
+  basePath = `/projects/${project.id}/images`,
+}) {
   const location = useLocation();
   const [images, setImages] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -60,15 +67,15 @@ export default function ImageStudio({ project, creating = false, imageId = null,
   }, [project.id, showEditor, generating, parentImageId]);
 
   if (generating) {
-    return <ImageGenerateForm project={project} />;
+    return <ImageGenerateForm project={project} basePath={basePath} />;
   }
 
   if (parentImageId) {
-    return <RegenerateImage project={project} imageId={parentImageId} />;
+    return <RegenerateImage project={project} imageId={parentImageId} basePath={basePath} />;
   }
 
   if (showEditor) {
-    return <ImageEditor projectId={project.id} imageId={imageId} creating={creating} />;
+    return <ImageEditor projectId={project.id} imageId={imageId} creating={creating} basePath={basePath} />;
   }
 
   return (
@@ -81,12 +88,12 @@ export default function ImageStudio({ project, creating = false, imageId = null,
           </AlertMessage>
         </div>
       ) : null}
-      <ImageList projectId={project.id} images={images} loading={loading} error={error} meta={meta} />
+      <ImageList projectId={project.id} images={images} loading={loading} error={error} meta={meta} basePath={basePath} />
     </div>
   );
 }
 
-function RegenerateImage({ project, imageId }) {
+function RegenerateImage({ project, imageId, basePath }) {
   const [image, setImage] = useState(null);
   const [error, setError] = useState('');
 
@@ -118,5 +125,5 @@ function RegenerateImage({ project, imageId }) {
     return <LoadingSpinner label="Opening image…" />;
   }
 
-  return <ImageGenerateForm project={project} parentImage={image} />;
+  return <ImageGenerateForm project={project} parentImage={image} basePath={basePath} />;
 }

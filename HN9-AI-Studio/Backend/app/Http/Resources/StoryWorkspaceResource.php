@@ -20,6 +20,9 @@ class StoryWorkspaceResource extends JsonResource
     public function toArray(Request $request): array
     {
         $project = $this->project;
+        $user = $request->user();
+        $approve = $user !== null && $project !== null
+            && ($user->isAdmin() || (int) $user->id === (int) $project->user_id);
 
         return [
             'id' => $this->uuid,
@@ -34,6 +37,7 @@ class StoryWorkspaceResource extends JsonResource
             'abilities' => [
                 'view' => true,
                 'select' => true,
+                'approve' => $approve,
             ],
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

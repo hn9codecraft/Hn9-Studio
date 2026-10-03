@@ -26,6 +26,11 @@ export default function AppRoutes() {
           <Route path="/projects/new" element={<CreateProjectPage />} />
           <Route path="/studio" element={<ProjectStoryPage />} />
           <Route path="/studio/:projectId" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images/new" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images/generate" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images/:imageId/regenerate" element={<ProjectStoryPage />} />
+          <Route path="/studio/:projectId/images/:imageId" element={<ProjectStoryPage />} />
           <Route path="/story" element={<Navigate to="/studio" replace />} />
           <Route path="/story/:projectId" element={<LegacyStoryRedirect />} />
           <Route path="/projects/:projectId" element={<ProjectWorkspacePage />} />

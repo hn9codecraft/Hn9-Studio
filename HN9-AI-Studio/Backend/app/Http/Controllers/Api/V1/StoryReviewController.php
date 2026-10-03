@@ -14,6 +14,7 @@ use App\Story\Services\StoryReviewService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class StoryReviewController extends Controller
 {
@@ -114,14 +115,35 @@ class StoryReviewController extends Controller
         $project = $this->projects->getByUuid($uuid);
         $this->authorize('select', [StoryWorkspace::class, $project]);
         $this->authorize('review', $this->scene($project->id, $reelUuid, $sceneUuid));
-        $payload = $request->validate(['comment' => ['nullable', 'string', 'max:5000']]);
+        $payload = $request->validate([
+            'comment' => ['nullable', 'string', 'max:5000'],
+            'mode' => ['nullable', 'string', Rule::in([
+                StoryReviewService::MODE_TEXT,
+                StoryReviewService::MODE_IMAGE,
+                StoryReviewService::MODE_REFERENCE,
+            ])],
+            'prompt' => ['nullable', 'string', 'max:5000'],
+            'reference_id' => ['nullable', 'uuid'],
+        ]);
 
         return ApiResponse::success($this->reviews->regenerateScene(
             $project,
             $reelUuid,
             $sceneUuid,
             $payload['comment'] ?? null,
+            $payload['mode'] ?? StoryReviewService::MODE_TEXT,
+            $payload['prompt'] ?? null,
+            $payload['reference_id'] ?? null,
         ), 201);
+    }
+
+    public function reelSceneStatus(string $uuid, string $reelUuid): JsonResponse
+    {
+        $project = $this->projects->getByUuid($uuid);
+        $this->authorize('select', [StoryWorkspace::class, $project]);
+        $this->authorize('view', $this->reel($project->id, $reelUuid));
+
+        return ApiResponse::success($this->reviews->reelSceneStatus($project, $reelUuid));
     }
 
     public function editScene(Request $request, string $uuid, string $reelUuid, string $sceneUuid, string $versionUuid): JsonResponse

@@ -9,6 +9,7 @@ export default function ProjectForm({
   submitLabel,
   creating = false,
   currentStatus,
+  showTypeAndStatus = true,
   children = null,
   actions = null,
 }) {
@@ -64,32 +65,34 @@ export default function ProjectForm({
         ) : null}
       </div>
 
-      <div className="row g-3 mb-4">
-        <div className="col-md-6">
-          <label className="form-label" htmlFor="type">
-            Type
-          </label>
-          <select id="type" name="type" className="form-select" value={values.type} onChange={handleChange}>
-            {types.map((type) => (
-              <option key={type.value || 'none'} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+      {showTypeAndStatus ? (
+        <div className="row g-3 mb-4">
+          <div className="col-md-6">
+            <label className="form-label" htmlFor="type">
+              Type
+            </label>
+            <select id="type" name="type" className="form-select" value={values.type} onChange={handleChange}>
+              {types.map((type) => (
+                <option key={type.value || 'none'} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="col-md-6">
+            <label className="form-label" htmlFor="status">
+              Status
+            </label>
+            <select id="status" name="status" className="form-select" value={values.status} onChange={handleChange}>
+              {statuses.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="col-md-6">
-          <label className="form-label" htmlFor="status">
-            Status
-          </label>
-          <select id="status" name="status" className="form-select" value={values.status} onChange={handleChange}>
-            {statuses.map((status) => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      ) : null}
 
       {children}
 
