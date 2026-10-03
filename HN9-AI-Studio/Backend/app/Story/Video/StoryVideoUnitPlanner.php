@@ -7,7 +7,8 @@ namespace App\Story\Video;
 use App\Story\Exceptions\StoryVideoEngineException;
 
 /**
- * Splits a requested duration into provider-supported units of at most 30 seconds.
+ * Splits one provider request into provider-supported clip lengths of at most 30 seconds.
+ * This is provider chunking; production generation units come from StoryGenerationUnitCalculator.
  */
 final class StoryVideoUnitPlanner
 {

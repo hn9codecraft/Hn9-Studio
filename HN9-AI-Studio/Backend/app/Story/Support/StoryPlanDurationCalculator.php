@@ -9,13 +9,16 @@ use App\Story\Exceptions\StoryPlannerException;
 /**
  * Duration segmentation for Project Story plans.
  *
- * Decision: 30 seconds is the target generation unit. Durations that are not
- * divisible by 30 produce a final shorter scene (remainder_strategy =
+ * The planner paces a story into scenes of SCENE_TARGET_SECONDS. Durations that
+ * are not divisible by it produce a final shorter scene (remainder_strategy =
  * final_short_scene). Exact multiples use remainder_strategy = exact.
+ *
+ * This is story pacing only. Scenes stay editable to any length, and production
+ * splits each scene into generation units with StoryGenerationUnitCalculator.
  */
 final class StoryPlanDurationCalculator
 {
-    public const UNIT_SECONDS = 30;
+    public const SCENE_TARGET_SECONDS = 30;
 
     public const MIN_SECONDS = 30;
 
@@ -44,20 +47,20 @@ final class StoryPlanDurationCalculator
             );
         }
 
-        $full = intdiv($totalSeconds, self::UNIT_SECONDS);
-        $remainder = $totalSeconds % self::UNIT_SECONDS;
+        $full = intdiv($totalSeconds, self::SCENE_TARGET_SECONDS);
+        $remainder = $totalSeconds % self::SCENE_TARGET_SECONDS;
         $strategy = $remainder === 0 ? 'exact' : 'final_short_scene';
         $segments = [];
         $cursor = 0;
         $sequence = 1;
 
         for ($i = 0; $i < $full; $i++) {
-            $end = $cursor + self::UNIT_SECONDS;
+            $end = $cursor + self::SCENE_TARGET_SECONDS;
             $segments[] = [
                 'sequence' => $sequence++,
                 'start_second' => $cursor,
                 'end_second' => $end,
-                'duration_seconds' => self::UNIT_SECONDS,
+                'duration_seconds' => self::SCENE_TARGET_SECONDS,
             ];
             $cursor = $end;
         }
@@ -74,7 +77,7 @@ final class StoryPlanDurationCalculator
 
         return [
             'total_duration_seconds' => $totalSeconds,
-            'scene_duration_target_seconds' => self::UNIT_SECONDS,
+            'scene_duration_target_seconds' => self::SCENE_TARGET_SECONDS,
             'scene_count' => count($segments),
             'remainder_strategy' => $strategy,
             'segments' => $segments,

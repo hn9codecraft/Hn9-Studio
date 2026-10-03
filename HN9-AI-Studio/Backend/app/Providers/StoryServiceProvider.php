@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\AI\Contracts\ProviderDispatcherInterface;
+use App\AI\Contracts\ProviderRegistryInterface;
 use App\AI\Providers\Gemini\GeminiClient;
 use App\AI\Providers\Gemini\GeminiConfig;
 use App\AI\Providers\Gemini\GeminiModelRegistry;
@@ -14,7 +16,6 @@ use App\AI\Providers\Gemini\GeminiUsageCalculator;
 use App\AI\Support\ProviderConfigResolver;
 use App\Services\VideoBinaryStore;
 use App\Story\Contracts\StoryBibleRepositoryInterface;
-use Illuminate\Http\Client\Factory as HttpFactory;
 use App\Story\Contracts\StoryBibleServiceInterface;
 use App\Story\Contracts\StoryCapabilityRouterInterface;
 use App\Story\Contracts\StoryCharacterReferenceRepositoryInterface;
@@ -22,9 +23,10 @@ use App\Story\Contracts\StoryCharacterReferenceServiceInterface;
 use App\Story\Contracts\StoryCharacterRepositoryInterface;
 use App\Story\Contracts\StoryCharacterServiceInterface;
 use App\Story\Contracts\StoryPlanMaterializerInterface;
+use App\Story\Contracts\StoryPlannerServiceInterface;
 use App\Story\Contracts\StoryPlanRepositoryInterface;
 use App\Story\Contracts\StoryPlanVersionRepositoryInterface;
-use App\Story\Contracts\StoryPlannerServiceInterface;
+use App\Story\Contracts\StoryProductionPlanServiceInterface;
 use App\Story\Contracts\StoryReelRepositoryInterface;
 use App\Story\Contracts\StoryReelServiceInterface;
 use App\Story\Contracts\StorySceneRepositoryInterface;
@@ -36,6 +38,9 @@ use App\Story\Contracts\StoryStyleReferenceServiceInterface;
 use App\Story\Contracts\StoryVideoEngineInterface;
 use App\Story\Contracts\StoryWorkspaceRepositoryInterface;
 use App\Story\Contracts\StoryWorkspaceServiceInterface;
+use App\Story\Enums\StoryAudioRole;
+use App\Story\Enums\StoryVideoAsyncMode;
+use App\Story\Enums\StoryVideoCapability;
 use App\Story\Repositories\StoryBibleRepository;
 use App\Story\Repositories\StoryCharacterReferenceRepository;
 use App\Story\Repositories\StoryCharacterRepository;
@@ -51,16 +56,12 @@ use App\Story\Services\StoryCharacterReferenceService;
 use App\Story\Services\StoryCharacterService;
 use App\Story\Services\StoryPlanMaterializer;
 use App\Story\Services\StoryPlannerService;
+use App\Story\Services\StoryProductionPlanService;
 use App\Story\Services\StoryReelService;
 use App\Story\Services\StorySceneService;
 use App\Story\Services\StoryStyleBibleService;
 use App\Story\Services\StoryStyleReferenceService;
 use App\Story\Services\StoryWorkspaceService;
-use App\Story\Enums\StoryVideoAsyncMode;
-use App\Story\Enums\StoryVideoCapability;
-use App\Story\Enums\StoryAudioRole;
-use App\AI\Contracts\ProviderDispatcherInterface;
-use App\AI\Contracts\ProviderRegistryInterface;
 use App\Story\Video\Adapters\ElevenLabsStoryAudioAdapter;
 use App\Story\Video\Adapters\GeminiStoryVideoAdapter;
 use App\Story\Video\Adapters\LiveStoryVideoAdapterFactory;
@@ -70,6 +71,7 @@ use App\Story\Video\StoryVideoCatalogFactory;
 use App\Story\Video\StoryVideoEngine;
 use App\Story\Video\StoryVideoModelSpec;
 use App\Story\Video\StoryVideoTimeoutPolicy;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -164,6 +166,7 @@ class StoryServiceProvider extends ServiceProvider
         $this->app->bind(StorySceneRepositoryInterface::class, StorySceneRepository::class);
         $this->app->bind(StorySceneServiceInterface::class, StorySceneService::class);
         $this->app->bind(StoryPlanMaterializerInterface::class, StoryPlanMaterializer::class);
+        $this->app->bind(StoryProductionPlanServiceInterface::class, StoryProductionPlanService::class);
     }
 
     private static function realVideoProviderEnabled(mixed $app): bool
