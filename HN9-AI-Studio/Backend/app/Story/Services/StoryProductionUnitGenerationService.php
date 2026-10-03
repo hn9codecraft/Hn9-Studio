@@ -30,6 +30,8 @@ use App\Story\Support\StoryGenerationUnitCalculator;
 use App\Story\Video\StoryVideoAssetResolver;
 use App\Story\Video\StoryVideoGenerationRequest;
 use App\Story\Video\StoryVideoInput;
+use App\Story\Video\StoryVideoProviderOrchestrator;
+use App\Story\Video\StoryVideoRoutingDecision;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
@@ -42,8 +44,8 @@ use Throwable;
  * One Generation Unit, one normalized request, one generation job.
  *
  * The unit's own duration is the requested length. This service does not split
- * a scene, round a remainder up, or switch to another provider when the
- * connected one cannot make that length. Provider ranking belongs to M11.18.4.
+ * a scene or round a remainder up. Which provider runs the attempt is decided
+ * once, before submission, by StoryVideoProviderOrchestrator.
  *
  * The same intent reuses the job (the idempotency key is the unit plus that
  * intent). A new intent is an intentional new attempt and does not replace the
@@ -77,7 +79,7 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
     public function __construct(
         private StoryProductionPlanServiceInterface $plans,
         private StoryVideoEngineInterface $engine,
-        private StoryVideoDispatchService $dispatch,
+        private StoryVideoProviderOrchestrator $orchestrator,
         private StoryVideoJobRunner $runner,
         private StoryVideoAssetResolver $assets,
         private StoryCapabilityRouterInterface $router,
@@ -101,18 +103,20 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         }
 
         $this->assertReady($plan, $scene, $unit);
-        $adapter = $this->connectedAdapter($project, $capability, $scene);
-        $this->assertExactDuration($adapter, $capability, $unit);
-
-        $aspect = $this->aspectRatio($input['aspect_ratio'] ?? null, $adapter, $capability);
+        $aspect = $this->requestedAspect($input['aspect_ratio'] ?? null);
         $request = $this->assets->resolve(
             $project,
-            $this->ownedInputs($project, $this->requestFor($project, $plan, $unit, $scene, $capability, $adapter, $aspect, $key, $input)),
+            $this->ownedInputs($project, $this->requestFor($project, $plan, $unit, $scene, $capability, $aspect, $key, $input)),
         );
-        $decision = $this->engine->resolve($request);
-        if (! $decision->matched || $decision->providerKey !== $adapter->key()) {
+        $decision = $this->orchestrator->route($request);
+        if (! $decision->matched || $decision->providerKey === null) {
+            $this->throwRouting($decision);
+        }
+        $request = $this->withProvider($request, (string) $decision->providerKey, $decision->modelKey);
+        $resolved = $this->engine->resolve($request);
+        if (! $resolved->matched || $resolved->providerKey !== $decision->providerKey) {
             throw StoryVideoEngineException::capabilityNotAvailable(
-                'The connected video service cannot make this generation unit. Nothing was submitted.',
+                'The selected video service cannot make this generation unit. Nothing was submitted.',
             );
         }
 
@@ -129,8 +133,19 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
 
         $job = $this->attachUnit($prepared['job'], $unit);
         if ($prepared['created']) {
+            $metadata = (array) $job->provider_metadata;
+            $metadata['routing_decision'] = $this->orchestrator->snapshot($request, $decision);
+            $job->forceFill([
+                'provider_metadata' => $metadata,
+                'routing' => $metadata['routing_decision'],
+            ])->save();
             $this->record($job, $actor, self::EVENT_REQUESTED, 'Generation requested', ['unit_sequence' => $unit->sequence]);
-            Log::info('Unit generation requested.', ['job' => $job->uuid, 'unit' => $unit->uuid]);
+            Log::info('Unit generation requested.', [
+                'job' => $job->uuid,
+                'unit' => $unit->uuid,
+                'provider' => $decision->providerKey,
+                'routing_reason' => $metadata['routing_decision']['reason'] ?? null,
+            ]);
         }
 
         return ['job' => $this->continueJob($job, $unit), 'unit' => $unit, 'created' => (bool) $prepared['created']];
@@ -353,39 +368,7 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         }
     }
 
-    private function connectedAdapter(Project $project, StoryVideoCapability $capability, StoryScene $scene): LiveStoryVideoProviderAdapterInterface
-    {
-        $scene->loadMissing('reel');
-        $this->dispatch->assertLive($project, $capability, $scene->reel?->uuid, $scene->uuid);
-        $adapter = $this->dispatch->liveAdapterFor($capability);
-        if (! $adapter instanceof LiveStoryVideoProviderAdapterInterface) {
-            throw StoryVideoEngineException::generationNotEnabled();
-        }
-
-        return $adapter;
-    }
-
-    private function assertExactDuration(
-        LiveStoryVideoProviderAdapterInterface $adapter,
-        StoryVideoCapability $capability,
-        StoryProductionUnit $unit,
-    ): void {
-        $seconds = $unit->duration_seconds;
-        $supported = $adapter->supportedDurations($capability);
-        $fits = $supported !== []
-            ? in_array($seconds, $supported, true)
-            : ($adapter->minDurationSeconds($capability) === null || $seconds >= $adapter->minDurationSeconds($capability))
-                && ($adapter->maxDurationSeconds($capability) === null || $seconds <= $adapter->maxDurationSeconds($capability));
-        if ($fits) {
-            return;
-        }
-
-        throw StoryVideoEngineException::capabilityNotAvailable(
-            'This generation unit is '.$seconds.' seconds, and the connected video service cannot make a clip of that exact length. Nothing was submitted.',
-        );
-    }
-
-    private function aspectRatio(mixed $requested, LiveStoryVideoProviderAdapterInterface $adapter, StoryVideoCapability $capability): ?string
+    private function requestedAspect(mixed $requested): ?string
     {
         if ($requested === null || $requested === '') {
             return null;
@@ -393,12 +376,44 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         if (! is_string($requested)) {
             throw StoryVideoEngineException::invalidInput('The picture shape is not supported.');
         }
-        $ratios = $adapter->supportedAspectRatios($capability);
-        if ($ratios !== [] && ! in_array($requested, $ratios, true)) {
-            throw StoryVideoEngineException::invalidInput('The picture shape is not supported.');
-        }
 
         return $requested;
+    }
+
+    private function throwRouting(StoryVideoRoutingDecision $decision): never
+    {
+        $message = (string) ($decision->errorMessage ?: 'Video generation is not available for this scene right now.');
+        $code = StoryVideoErrorCode::tryFrom((string) $decision->errorCode);
+        if ($code === StoryVideoErrorCode::GenerationNotEnabled) {
+            throw StoryVideoEngineException::generationNotEnabled($message);
+        }
+        if ($code === StoryVideoErrorCode::InvalidInput) {
+            throw StoryVideoEngineException::invalidInput($message);
+        }
+
+        throw StoryVideoEngineException::capabilityNotAvailable($message);
+    }
+
+    private function withProvider(StoryVideoGenerationRequest $request, string $provider, ?string $model): StoryVideoGenerationRequest
+    {
+        return new StoryVideoGenerationRequest(
+            capability: $request->capability,
+            workspaceUuid: $request->workspaceUuid,
+            reelUuid: $request->reelUuid,
+            sceneUuid: $request->sceneUuid,
+            prompt: $request->prompt,
+            negativePrompt: $request->negativePrompt,
+            durationSeconds: $request->durationSeconds,
+            aspectRatio: $request->aspectRatio,
+            resolution: $request->resolution,
+            audioRequested: $request->audioRequested,
+            inputs: $request->inputs,
+            preferredProvider: $provider,
+            preferredModel: $model,
+            idempotencyKey: $request->idempotencyKey,
+            metadata: $request->metadata,
+            extensions: $request->extensions,
+        );
     }
 
     /**
@@ -410,7 +425,6 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         StoryProductionUnit $unit,
         StoryScene $scene,
         StoryVideoCapability $capability,
-        LiveStoryVideoProviderAdapterInterface $adapter,
         ?string $aspect,
         string $key,
         array $input,
@@ -433,7 +447,6 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
             durationSeconds: $unit->duration_seconds,
             aspectRatio: $aspect,
             inputs: $this->inputs($input['inputs'] ?? []),
-            preferredProvider: $adapter->key(),
             idempotencyKey: $key,
             metadata: [
                 'production_unit_id' => $unit->uuid,

@@ -89,7 +89,7 @@ where `kind` is `standard` (a full 10 seconds) or `remainder` (the shorter final
 ## Generation Units
 
 Generates one Generation Unit. The scene is not generated as one job, and these endpoints do not
-choose a provider, create a Unit Version, or assemble the scene. See
+create a Unit Version, or assemble the scene. The server chooses one video provider. See
 [Architecture](Architecture.md#generation-engine-m11183).
 
 | Method | Path | Description |
@@ -105,8 +105,9 @@ choose a provider, create a Unit Version, or assemble the scene. See
 - **POST body:** `capability` is required and is one of `text_to_video`, `image_to_video`,
   `reference_to_video`. Optional: `intent` (1–64 letters, numbers, `_` or `-`; omitted means
   `initial`), `instruction` (max 500 characters), `aspect_ratio`, and `inputs` of
-  `{ type, asset_id }`. `duration_seconds`, prompts and provider fields are ignored. Duration,
-  scene text, characters, style and continuity are loaded on the server from the unit.
+`{ type, asset_id }`. `duration_seconds`, prompts and any `provider` field are ignored. The
+server chooses the provider. Duration, scene text, characters, style and continuity are loaded
+on the server from the unit.
 - **Idempotency:** the same unit and intent returns the existing job with `created: false` and
   `200`. A new intent creates another attempt with `201`. Repeating a request does not submit a
   second provider job.
@@ -137,10 +138,10 @@ the unit (within 0.5 seconds). The list endpoint returns those generation object
 
 | Status | `error_code` | When |
 |--------|--------------|------|
-| `422` | `INVALID_INPUT` | The mode, intent, picture shape, scene text, approval or reference is not valid. |
-| `422` | `VIDEO_CAPABILITY_NOT_AVAILABLE` | The connected video service cannot make this unit's exact length. Nothing is submitted. |
-| `422` | provider code such as `UPSTREAM_ERROR` | The provider rejected the submit. The job is `failed`. |
-| `501` | `GENERATION_NOT_ENABLED` | No video service is connected. No job is created. |
+| `422` | `INVALID_INPUT` | The mode, intent, scene text, approval or reference is not valid. A picture shape no connected service supports says "The picture shape is not supported." A reference the connected services cannot use says "This video setup can't use the selected reference." |
+| `422` | `VIDEO_CAPABILITY_NOT_AVAILABLE` | No eligible provider can make this request. An unsupported clip length says "None of the connected video services supports this clip length." Otherwise the message is "Video generation is not available for this scene right now." Nothing is submitted. |
+| `422` | provider code such as `UPSTREAM_ERROR` | The chosen provider rejected the submit. The job stays with that provider and is `failed`. |
+| `501` | `GENERATION_NOT_ENABLED` | No video service is connected. The message is "Video generation is not configured yet." No job is created. |
 
 Image and reference inputs must already belong to the same project. A reference from another
 project is `422` `INVALID_INPUT` and is not sent to a provider. Errors are a plain `message` and
