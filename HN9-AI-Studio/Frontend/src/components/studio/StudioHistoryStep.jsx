@@ -15,6 +15,7 @@ const KINDS = {
   story_plan: { label: 'Story plan', icon: 'bi-journal-check', step: 'scenes', params: { plan: 'review' } },
   production_plan: { label: 'Production plan', icon: 'bi-diagram-3', step: 'scenes' },
   unit_generation: { label: 'Generation unit', icon: 'bi-camera-reels', step: 'scenes' },
+  unit_version: { label: 'Unit video', icon: 'bi-collection-play', step: 'scenes' },
 };
 
 const STORY_EVENTS = {
@@ -29,6 +30,15 @@ const PRODUCTION_EVENTS = {
   reused: { label: 'Already prepared', tone: 'neutral' },
 };
 
+const UNIT_VERSION_EVENTS = {
+  version_created: { label: 'Version created', tone: 'neutral' },
+  ready_for_review: { label: 'Ready for review', tone: 'progress' },
+  approved: { label: 'Approved', tone: 'success' },
+  changes_requested: { label: 'Changes requested', tone: 'warning' },
+  selected: { label: 'Selected for the final scene', tone: 'success' },
+  deselected: { label: 'No longer selected', tone: 'neutral' },
+};
+
 const SOUND_EVENTS = {
   version_created: { label: 'Version created', tone: 'neutral' },
   reworked: { label: 'New version made', tone: 'neutral' },
@@ -38,6 +48,7 @@ const SOUND_EVENTS = {
 };
 
 function badgeFor(item) {
+  if (item.kind === 'unit_version') return UNIT_VERSION_EVENTS[item.event] || { label: 'Updated', tone: 'neutral' };
   if (item.kind === 'sound_review') return SOUND_EVENTS[item.event] || { label: 'Updated', tone: 'neutral' };
   if (item.kind === 'story_plan') return STORY_EVENTS[item.event] || { label: 'Updated', tone: 'neutral' };
   if (item.kind === 'production_plan') return PRODUCTION_EVENTS[item.event] || { label: 'Updated', tone: 'neutral' };

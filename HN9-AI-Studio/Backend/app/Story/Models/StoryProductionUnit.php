@@ -7,6 +7,7 @@ namespace App\Story\Models;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One timeline slot inside a planned scene. The row is the slot's lasting identity:
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $sequence
  * @property int $start_second
  * @property int $duration_seconds
+ * @property int|null $selected_version_id
  */
 class StoryProductionUnit extends Model
 {
@@ -45,5 +47,17 @@ class StoryProductionUnit extends Model
     public function planScene(): BelongsTo
     {
         return $this->belongsTo(StoryProductionPlanScene::class, 'story_production_plan_scene_id');
+    }
+
+    /** @return HasMany<StoryProductionUnitVersion, $this> */
+    public function versions(): HasMany
+    {
+        return $this->hasMany(StoryProductionUnitVersion::class, 'story_production_unit_id');
+    }
+
+    /** @return BelongsTo<StoryProductionUnitVersion, $this> */
+    public function selectedVersion(): BelongsTo
+    {
+        return $this->belongsTo(StoryProductionUnitVersion::class, 'selected_version_id');
     }
 }

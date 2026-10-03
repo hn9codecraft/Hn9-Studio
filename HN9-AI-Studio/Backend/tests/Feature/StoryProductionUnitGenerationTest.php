@@ -313,11 +313,20 @@ final class StoryProductionUnitGenerationTest extends TestCase
         $this->refreshJob($f, $plan, $units[0], $firstId);
         $this->assertSame($original, StoryVideoGenerationJob::query()->where('uuid', $firstId)->firstOrFail()->request_payload['metadata']['context']['scene']['visual_prompt']);
 
+        $versionId = $this->actingAs($f['user'], 'sanctum')
+            ->getJson($this->base($f, $plan, $units[0]).'/versions')
+            ->assertOk()
+            ->json('data.versions.0.id');
+        $this->actingAs($f['user'], 'sanctum')->postJson($this->base($f, $plan, $units[0]).'/versions/'.$versionId.'/approve')->assertOk();
+        $this->actingAs($f['user'], 'sanctum')->postJson($this->base($f, $plan, $units[0]).'/versions/'.$versionId.'/select')->assertOk();
+
         $secondId = $this->generate($f, $plan, $units[1], ['intent' => 'next'])->json('data.generation.id');
         $second = StoryVideoGenerationJob::query()->where('uuid', $secondId)->firstOrFail();
-        $this->assertTrue($second->request_payload['metadata']['context']['continuity']['previous_unit']['available']);
-        $this->assertSame($units[0]->uuid, $second->request_payload['metadata']['context']['continuity']['previous_unit']['id']);
-        $this->assertSame('videos', $second->request_payload['metadata']['context']['continuity']['previous_unit']['output']['disk']);
+        $previous = $second->request_payload['metadata']['context']['continuity']['previous_unit'];
+        $this->assertTrue($previous['available']);
+        $this->assertSame($units[0]->uuid, $previous['id']);
+        $this->assertSame($versionId, $previous['version_id']);
+        $this->assertSame('videos', $previous['output']['disk']);
     }
 
     public function test_unit_two_still_generates_when_unit_one_has_no_output(): void

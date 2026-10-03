@@ -43,6 +43,7 @@ class StoryProductionPlanSceneResource extends JsonResource
                 'duration_seconds' => $unit->duration_seconds,
                 'end_second' => $unit->endSecond(),
                 'kind' => $unit->duration_seconds < $this->unitSeconds ? 'remainder' : 'standard',
+                'selected_version_id' => $unit->relationLoaded('selectedVersion') ? $unit->selectedVersion?->uuid : null,
             ])->values()->all(),
         ];
     }

@@ -56,8 +56,8 @@ Story Plan Version ──► Production Plan ──► Plan Scenes ──► Gen
    `start_second`, `duration_seconds`), not any media.
 6. **Unit identity persists across regeneration.** A unit row is never replaced when its clip is
    regenerated; every attempt will attach to the same unit.
-7. **Unit Versions are handled later** (M11.18.5). Generation and review status will live on unit
-   versions, which is why units themselves carry no status.
+7. **A unit has no review status of its own.** Review and selection live on Unit Versions
+   (M11.18.5). The unit stores only which version is selected, if any.
 8. **FFmpeg assembly happens later** (M11.18.6). It will join a scene's selected unit versions in
    `sequence` order using the stored offsets.
 9. **Production Plans are versioned and historically preserved.** Changing the story creates a
@@ -94,7 +94,7 @@ Planning, review, Production Plan and generation status stay separate:
   to users (`in_progress`, `failed`, `ready_for_review`, `approved`) is derived from both and
   never stored.
 - Production Plans keep their own `active` / `superseded` status. A generation job has its own
-  status (M11.18.3). Review status will live on unit versions (M11.18.5).
+  status (M11.18.3). Review status lives on the Unit Version (M11.18.5).
 
 ### Rules
 1. **One path.** `StoryPlanController::approve` → `StoryPlanApprovalService` →
@@ -140,8 +140,9 @@ Production Plan → Scene → Generation Unit → Generation job (one attempt)
 `StoryProductionUnitGenerationService` builds one normalized request from server-side data.
 `StoryVideoProviderOrchestrator` chooses one provider before the job is created. The existing
 video engine (`StoryVideoEngine`, `StoryVideoJobRunner`, and that provider's adapter) then
-submits it. The unit service does not create a Unit Version or join clips. Those belong to
-M11.18.5 and M11.18.6.
+submits it. Joining the selected clips into one scene video belongs to M11.18.6. A successful
+validated output is recorded as a Unit Version by M11.18.5; the generation service does not
+review or select it.
 
 ### Unit and attempt
 
@@ -212,9 +213,10 @@ scene text, plan, source version, story, style, characters, mode, aspect ratio, 
 requested duration, the previous scene, and the previous unit when this is not the first unit.
 Later edits to the story do not change that snapshot.
 
-Unit 1 has no previous unit. Unit 2 and later record the previous unit's completed output on the
-videos disk when one exists. If it does not, the snapshot says the previous output is unavailable
-and generation still proceeds. Unrelated project media is not used as continuity.
+Unit 1 has no previous unit. Unit 2 and later record the previous unit's selected, approved
+version when that file is still on the videos disk. A completed attempt that was not selected is
+not used. If no selected version is available, the snapshot says the previous output is
+unavailable and generation still proceeds. Unrelated project media is not used as continuity.
 
 ### Job lifecycle
 
@@ -252,5 +254,58 @@ Activity actions are `story.unit_generation.requested`, `submitted`, `completed`
 the label `Unit N`. The generation API returns the job uuid, unit uuid, capability, status,
 output availability, timeout flag, sanitized error and timestamps. It does not return provider
 keys, model keys, operation ids, credentials or raw provider bodies.
+
+## Unit Versions (M11.18.5)
+
+A Unit Version is one successful candidate for a Generation Unit. It is not a generation attempt,
+and it is not a new unit.
+
+```
+Generation Unit (stable slot)
+    → Generation Attempt / job
+    → Successful validated output
+    → Unit Version A, B, C …
+    → Review
+    → Approved version
+    → One selected version
+```
+
+Failed, cancelled and in-progress attempts never become versions. The server creates a version
+only inside output acceptance, after the existing videos-disk checks and the 0.5-second duration
+tolerance. There is no API that turns an arbitrary file into a version. The same job cannot
+create a second version.
+
+### Numbering and selection
+
+Version letters come from `StoryAudioService::versionLabel`. The first successful output for a
+unit is Version A, the next is Version B, and so on. The unit row is locked while the number is
+assigned. Unique keys are `(unit, version number)` and one version per generation job.
+
+Review uses the existing statuses: `pending_review` (“Ready for review”), `approved`
+(“Approved”) and `needs_rework` (“Changes requested”). Approving a version does not select it.
+The unit’s `selected_version_id` is the only selection. It may point at one approved version
+whose file still exists, or at nothing. Selecting another approved version leaves the earlier
+versions and their files in place.
+
+Requesting changes does not edit the version and does not start a new attempt. A later
+generation intent, through the existing unit engine, creates the next version on success.
+
+### Traceability
+
+Each version keeps the job it came from and a snapshot of the provider, model, capability,
+requested duration, produced duration and the routing decision (policy version, reason, selected
+provider and model). It does not store credentials, operation ids or provider URLs. The permanent
+file is the path on the `videos` disk.
+
+`StoryProductionUnitVersionService::assemblySource` answers, for one unit, whether a selected
+approved file is ready for a later scene assembly: version, sequence, start, unit duration,
+output duration and storage path. `continuityOutput` is what the next unit may use. Neither
+reads the latest job.
+
+### What this sprint does not do
+
+FFmpeg scene assembly is M11.18.6. The full production workspace is M11.18.7. End-to-end
+provider QA is M11.18.8. Creative Studio only lists a scene’s units and their versions so review
+and selection can be checked. Provider choice stays in M11.18.4.
 
 _Diagrams and component details are placeholders — expand as the system is built._
