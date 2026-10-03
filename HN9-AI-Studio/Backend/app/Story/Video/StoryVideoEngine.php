@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Story\Video;
 
 use App\Models\Project;
+use App\Story\Contracts\LiveStoryVideoProviderAdapterInterface;
 use App\Story\Contracts\StoryCapabilityRouterInterface;
 use App\Story\Contracts\StoryReelRepositoryInterface;
 use App\Story\Contracts\StorySceneRepositoryInterface;
@@ -276,6 +277,7 @@ final readonly class StoryVideoEngine implements StoryVideoEngineInterface
             'enabled' => $adapter->enabled(),
             'priority' => $adapter->priority(),
             'healthy' => $this->adapterIsHealthy($adapter),
+            'connected' => $adapter instanceof LiveStoryVideoProviderAdapterInterface,
             'capabilities' => $capabilities,
             'models' => array_map(
                 static fn (StoryVideoModelSpec $model): array => $model->toPublicArray(),
@@ -286,6 +288,10 @@ final readonly class StoryVideoEngine implements StoryVideoEngineInterface
 
     private function adapterIsHealthy(StoryVideoProviderAdapterInterface $adapter): bool
     {
+        if (! $adapter instanceof LiveStoryVideoProviderAdapterInterface) {
+            return false;
+        }
+
         foreach (StoryVideoCapability::cases() as $capability) {
             if ($adapter->isAvailable($capability)) {
                 return true;

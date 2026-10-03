@@ -42,6 +42,13 @@ export default function StudioSettingsStep() {
     { label: 'Video from a description', on: Boolean(video.text) },
     { label: 'Video from a picture', on: Boolean(video.image) },
     { label: 'Video from your characters/style', on: Boolean(video.reference) },
+    { label: 'Changing an existing scene video', on: Boolean(video.edit) },
+    { label: 'Making a scene video longer', on: Boolean(video.extend) },
+    {
+      label: 'Joining clips and building the final video',
+      on: Boolean(connections?.video_builder),
+      detail: connections?.video_builder ? '' : 'Scenes longer than one clip and the final video need this.',
+    },
     {
       label: 'Scene sound',
       on: soundRoles.length > 0,
@@ -89,10 +96,10 @@ export default function StudioSettingsStep() {
                 {user?.role === 'admin' ? (
                   <>
                     {' '}
-                    <Link to="/providers">Manage providers</Link>
+                    <Link to="/providers">Manage AI services</Link>
                   </>
                 ) : (
-                  ' Ask an administrator to connect a provider.'
+                  ' Ask an administrator to connect a creation service.'
                 )}
               </p>
             </div>

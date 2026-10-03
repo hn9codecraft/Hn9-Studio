@@ -47,7 +47,7 @@ export default function Header({ title }) {
             <div className="header-user-email">{user?.email}</div>
           </div>
         </div>
-        <button className="btn btn-ghost" type="button" onClick={handleLogout} disabled={loggingOut} aria-label={loggingOut ? 'Signing out' : 'Log out'}>
+        <button className="btn btn-ghost text-nowrap" type="button" onClick={handleLogout} disabled={loggingOut} aria-label={loggingOut ? 'Signing out' : 'Log out'}>
           {loggingOut ? 'Signing out…' : 'Log out'}
         </button>
       </div>

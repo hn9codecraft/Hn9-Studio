@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\V1\StoryFinalReviewController;
 use App\Http\Controllers\Api\V1\StoryHistoryController;
 use App\Http\Controllers\Api\V1\StoryRenderController;
 use App\Http\Controllers\Api\V1\StoryTimelineController;
+use App\Http\Controllers\Api\V1\StoryVideoCallbackController;
 use App\Http\Controllers\Api\V1\StoryVideoEngineController;
 use App\Http\Controllers\Api\V1\SystemController;
 use App\Http\Controllers\Api\V1\TraceController;
@@ -62,6 +63,10 @@ use Illuminate\Support\Facades\Route;
 // Public infrastructure and authentication endpoints.
 Route::get('health', HealthController::class)->name('health');
 Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
+Route::post('story/video-callbacks/{jobUuid}/{token}', StoryVideoCallbackController::class)
+    ->middleware('throttle:60,1')
+    ->where(['jobUuid' => '[0-9a-fA-F-]{36}', 'token' => '[A-Za-z0-9]{40,128}'])
+    ->name('story.video.callbacks');
 
 // Authenticated endpoints (Sanctum bearer token).
 Route::middleware('auth:sanctum')->group(function (): void {

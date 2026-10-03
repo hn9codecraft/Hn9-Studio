@@ -52,6 +52,73 @@ return [
         ],
     ],
 
+    /*
+    | Credentialed video providers behind the same engine. Each one registers
+    | only when its key is present; "enabled" null means: on outside the test
+    | suite whenever a key is configured. The highest priority provider that
+    | supports a request serves it. Keys come from the environment only.
+    */
+    'live_providers' => [
+        'seedance' => [
+            'enabled' => env('SEEDANCE_ENABLED'),
+            'key' => 'video.seedance',
+            'label' => 'Seedance 2.0',
+            'priority' => (int) env('SEEDANCE_PRIORITY', 300),
+            'api_key' => env('ARK_API_KEY'),
+            'base_url' => env('SEEDANCE_BASE_URL', 'https://ark.ap-southeast.bytepluses.com/api/v3'),
+            'model' => env('SEEDANCE_MODEL', 'dreamina-seedance-2-0-260128'),
+            'resolution' => env('SEEDANCE_RESOLUTION', '720p'),
+            // Public HTTPS address of this API; enables status callbacks.
+            'callback_base_url' => env('SEEDANCE_CALLBACK_BASE_URL'),
+            'execution_expires_after' => (int) env('SEEDANCE_TASK_EXPIRES_SECONDS', 172800),
+            // Edit/extend need signed URLs from a cloud videos disk.
+            'signed_reference_videos' => (bool) env('SEEDANCE_SIGNED_REFERENCE_VIDEOS', false),
+            'connect_timeout_seconds' => (int) env('SEEDANCE_CONNECT_TIMEOUT', 10),
+            'request_timeout_seconds' => (int) env('SEEDANCE_REQUEST_TIMEOUT', 60),
+            'download_timeout_seconds' => (int) env('SEEDANCE_DOWNLOAD_TIMEOUT', 180),
+        ],
+        'luma' => [
+            'enabled' => env('LUMA_ENABLED'),
+            'key' => 'video.luma',
+            'label' => 'Luma Ray',
+            'priority' => (int) env('LUMA_PRIORITY', 250),
+            'api_key' => env('LUMA_AGENTS_API_KEY'),
+            'base_url' => env('LUMA_BASE_URL', 'https://agents.lumalabs.ai/v1'),
+            'model' => env('LUMA_MODEL', 'ray-3.2'),
+            'resolution' => env('LUMA_RESOLUTION', '720p'),
+            'connect_timeout_seconds' => (int) env('LUMA_CONNECT_TIMEOUT', 10),
+            'request_timeout_seconds' => (int) env('LUMA_REQUEST_TIMEOUT', 60),
+            'download_timeout_seconds' => (int) env('LUMA_DOWNLOAD_TIMEOUT', 180),
+        ],
+        'runway' => [
+            'enabled' => env('RUNWAY_ENABLED'),
+            'key' => 'video.runway',
+            'label' => 'Runway',
+            'priority' => (int) env('RUNWAY_PRIORITY', 240),
+            'api_key' => env('RUNWAYML_API_SECRET'),
+            'base_url' => env('RUNWAY_BASE_URL', 'https://api.dev.runwayml.com'),
+            'api_version' => env('RUNWAY_API_VERSION', '2024-11-06'),
+            'model' => env('RUNWAY_MODEL', 'gen4.5'),
+            'edit_model' => env('RUNWAY_EDIT_MODEL', 'aleph2'),
+            'connect_timeout_seconds' => (int) env('RUNWAY_CONNECT_TIMEOUT', 10),
+            'request_timeout_seconds' => (int) env('RUNWAY_REQUEST_TIMEOUT', 60),
+            'download_timeout_seconds' => (int) env('RUNWAY_DOWNLOAD_TIMEOUT', 180),
+        ],
+    ],
+
+    /*
+    | Local media toolkit for joining scene parts and building the final video.
+    | When the binaries are missing the Studio says so instead of producing a file.
+    */
+    'ffmpeg' => [
+        'binary' => env('FFMPEG_BINARY', 'ffmpeg'),
+        'ffprobe_binary' => env('FFPROBE_BINARY', 'ffprobe'),
+        'timeout_seconds' => (int) env('FFMPEG_TIMEOUT', 900),
+        'width' => (int) env('STORY_RENDER_WIDTH', 1280),
+        'height' => (int) env('STORY_RENDER_HEIGHT', 720),
+        'fps' => (int) env('STORY_RENDER_FPS', 24),
+    ],
+
     'providers' => [
         [
             'key' => 'catalog.alpha',

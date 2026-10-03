@@ -54,6 +54,7 @@ final readonly class StoryVideoGenerationRequest
             $inputs[] = new StoryVideoInput(
                 type: $type,
                 assetId: isset($row['asset_id']) ? (string) $row['asset_id'] : null,
+                metadata: is_array($row['metadata'] ?? null) ? $row['metadata'] : [],
                 role: isset($row['role']) ? (string) $row['role'] : null,
                 order: (int) ($row['order'] ?? $index),
             );

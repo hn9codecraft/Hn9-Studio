@@ -1,15 +1,18 @@
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: 'bi-grid-1x2' },
   { to: '/projects', label: 'Projects', icon: 'bi-folder2-open' },
   { to: '/studio', label: 'Creative Studio', icon: 'bi-camera-reels' },
-  { to: '/generations', label: 'Generations', icon: 'bi-stars' },
-  { to: '/providers', label: 'Providers', icon: 'bi-hdd-network' },
+  { to: '/providers', label: 'AI services', icon: 'bi-hdd-network', adminOnly: true },
   { to: '/settings', label: 'Settings', icon: 'bi-gear' },
 ];
 
 export default function Sidebar() {
+  const { user } = useAuth();
+  const items = NAV_ITEMS.filter((item) => !item.adminOnly || user?.role === 'admin');
+
   return (
     <aside className="app-sidebar d-flex flex-column">
       <div className="sidebar-brand">
@@ -21,7 +24,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav flex-grow-1" aria-label="Primary">
-        {NAV_ITEMS.map((item) => (
+        {items.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -36,7 +39,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="sidebar-footnote">Connected to the Laravel API</div>
+      <div className="sidebar-footnote">Your work is saved to your studio account</div>
     </aside>
   );
 }

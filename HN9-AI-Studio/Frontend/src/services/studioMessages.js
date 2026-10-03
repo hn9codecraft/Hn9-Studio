@@ -2,10 +2,10 @@
 // a status code, an internal id or a raw server message to the person using it.
 
 export const NOT_CONNECTED = {
-  video: 'Video creation is not connected yet. Connect a video provider in Settings to create this video.',
-  sound: 'Sound creation is not connected yet. Connect an audio provider in Settings to create sound for scenes.',
-  plan: 'Automatic scene planning is not connected yet. Connect a text AI provider in Settings, or add your scenes yourself.',
-  images: 'Picture creation is not connected yet. Upload a picture instead, or connect an image provider in Settings.',
+  video: 'Video creation is not connected yet. An administrator needs to connect a video service before videos can be made.',
+  sound: 'Sound creation is not connected yet. An administrator needs to connect a sound service before scene sound can be made.',
+  plan: 'Automatic scene planning is not connected yet. Add your scenes yourself, or ask an administrator to connect a writing service.',
+  images: 'Picture creation is not connected yet. Upload a picture instead, or ask an administrator to connect a picture service.',
 };
 
 const REVIEW_STATUS = {
@@ -36,17 +36,20 @@ const ACTION_WORDS = {
 };
 
 const PROVIDER_REASONS = {
-  provider_not_connected: 'No provider was connected, so nothing was sent.',
-  GENERATION_NOT_ENABLED: 'No provider was connected, so nothing was sent.',
-  QUOTA_EXCEEDED: 'The provider account has run out of credit.',
-  RATE_LIMITED: 'The provider was busy. Try again in a minute.',
-  TIMEOUT: 'The provider took too long to answer.',
-  AUTHENTICATION_FAILED: 'The provider rejected the connection details. An admin needs to check Settings.',
-  DOWNLOAD_FAILED: 'The result could not be downloaded from the provider.',
-  INVALID_PROVIDER_RESPONSE: 'The provider sent back something unusable.',
-  SUBMISSION_UNCONFIRMED: 'The provider did not confirm the request.',
+  provider_not_connected: 'No creation service was connected, so nothing was sent.',
+  GENERATION_NOT_ENABLED: 'No creation service was connected, so nothing was sent.',
+  QUOTA_EXCEEDED: 'The creation service account has run out of credit.',
+  RATE_LIMITED: 'The creation service was busy. Try again in a minute.',
+  TIMEOUT: 'The creation service took too long to answer.',
+  AUTHENTICATION_FAILED: 'The creation service rejected the connection details. An administrator needs to check them.',
+  DOWNLOAD_FAILED: 'The finished result could not be downloaded.',
+  INVALID_PROVIDER_RESPONSE: 'The creation service sent back something unusable.',
+  SUBMISSION_UNCONFIRMED: 'The creation service did not confirm the request, so it was not sent again.',
+  INVALID_INPUT: 'The creation service could not use this request. Try changing the description or pictures.',
   story_render_empty: 'The timeline had no clips.',
   story_render_source_missing: 'A clip’s video file was missing.',
+  story_media_tools_unavailable: 'The video builder is not set up on this server yet.',
+  story_media_build_failed: 'The clips could not be put together into one video.',
 };
 
 export function reviewStatusLabel(status) {
@@ -64,7 +67,7 @@ export function isJobActive(status) {
 /** Short reason for a failed attempt, suitable for History and status rows. */
 export function failureReason(errorCode, status = 'failed') {
   if (status === 'not_connected') return PROVIDER_REASONS.provider_not_connected;
-  return PROVIDER_REASONS[errorCode] || 'The provider could not finish this. You can try again.';
+  return PROVIDER_REASONS[errorCode] || 'The creation service could not finish this. You can try again.';
 }
 
 function transitionMessage(raw) {
@@ -120,11 +123,17 @@ export function friendlyError(error, fallback = 'Something went wrong. Please tr
     code === 'ai_provider_not_configured' ||
     /No AI provider is (available|configured)/i.test(raw)
   ) {
-    return NOT_CONNECTED[area] || 'This needs a provider that is not connected yet. An admin can connect one in Settings.';
+    return NOT_CONNECTED[area] || 'This needs a creation service that is not connected yet. An administrator can connect one.';
   }
 
   if (code.endsWith('_generation_failed')) {
-    return 'The provider could not finish this. Try again in a moment.';
+    return 'The creation service could not finish this. Try again in a moment.';
+  }
+  if (code === 'story_media_tools_unavailable') {
+    return 'The video builder is not set up on this server yet, so clips cannot be joined into one video. An administrator needs to install it.';
+  }
+  if (code === 'story_media_build_failed') {
+    return 'The clips could not be put together into one video. Check that every clip plays, then try again.';
   }
 
   if (code.endsWith('_invalid_transition')) return transitionMessage(raw);

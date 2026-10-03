@@ -60,6 +60,7 @@ use App\Story\Enums\StoryVideoAsyncMode;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryAudioRole;
 use App\Story\Video\Adapters\GeminiStoryVideoAdapter;
+use App\Story\Video\Adapters\LiveStoryVideoAdapterFactory;
 use App\Story\Video\CatalogStoryVideoAdapter;
 use App\Story\Video\StoryCapabilityRouter;
 use App\Story\Video\StoryVideoCatalogFactory;
@@ -102,6 +103,14 @@ class StoryServiceProvider extends ServiceProvider
                     ),
                     $app->make(VideoBinaryStore::class),
                 ));
+            }
+
+            $live = $app->make(LiveStoryVideoAdapterFactory::class)->fromConfig(
+                (array) config('story_video.live_providers', []),
+                $app->environment('testing'),
+            );
+            foreach ($live as $adapter) {
+                $router->register($adapter);
             }
 
             return $router;

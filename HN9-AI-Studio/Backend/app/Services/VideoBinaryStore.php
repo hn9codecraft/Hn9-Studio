@@ -46,6 +46,42 @@ final readonly class VideoBinaryStore
             throw VideoGenerationException::retrievalFailed();
         }
 
+        return $this->store($project, $bytes);
+    }
+
+    /**
+     * Downloads a provider's short-lived HTTPS output URL. The URL itself is
+     * never persisted; only the stored private file is.
+     */
+    public function retrieveUrlAndStore(Project $project, string $url, int $timeoutSeconds = 120): StoredVideo
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https' || ($parts['host'] ?? '') === '') {
+            throw VideoGenerationException::retrievalFailed('The provider returned an unsupported download address.');
+        }
+
+        try {
+            $response = $this->http->timeout(max(10, $timeoutSeconds))
+                ->withOptions(['allow_redirects' => ['max' => 3, 'protocols' => ['https']]])
+                ->get($url);
+        } catch (Throwable) {
+            throw VideoGenerationException::retrievalFailed('The finished video could not be downloaded.');
+        }
+
+        if (! $response->successful()) {
+            throw VideoGenerationException::retrievalFailed('The finished video could not be downloaded.');
+        }
+
+        $bytes = $response->body();
+        if ($bytes === '' || strlen($bytes) > self::MAX_BYTES) {
+            throw VideoGenerationException::retrievalFailed('The finished video was empty or too large.');
+        }
+
+        return $this->store($project, $bytes);
+    }
+
+    private function store(Project $project, string $bytes): StoredVideo
+    {
         $mime = $this->detectMime($bytes);
         $extension = $this->extensionFor($mime);
         $path = $project->uuid.'/'.Str::uuid()->toString().'.'.$extension;

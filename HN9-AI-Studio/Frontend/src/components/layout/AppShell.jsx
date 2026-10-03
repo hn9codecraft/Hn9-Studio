@@ -9,7 +9,7 @@ const TITLES = {
   '/projects/new': 'New Project',
   '/studio': 'Creative Production Studio',
   '/generations': 'Generations',
-  '/providers': 'Providers',
+  '/providers': 'AI services',
   '/settings': 'Settings',
 };
 

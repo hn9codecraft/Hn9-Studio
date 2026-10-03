@@ -9,12 +9,15 @@ use App\Models\User;
 use App\Story\Models\StoryFinalRender;
 use App\Story\Models\StoryReel;
 use App\Story\Models\StoryScene;
+use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StorySceneVersion;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Models\StoryWorkspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use App\Story\Media\StoryMediaToolkit;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\FakeStoryMediaToolkit;
 use Tests\TestCase;
 
 final class StoryRenderApiTest extends TestCase
@@ -26,6 +29,7 @@ final class StoryRenderApiTest extends TestCase
         Storage::fake('videos');
         Storage::fake('voice');
         Http::fake();
+        $media = $this->media();
         [$owner, $project, $reel, $first, $second] = $this->videos();
 
         $placed = $this->actingAs($owner, 'sanctum')
@@ -81,11 +85,16 @@ final class StoryRenderApiTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'video/mp4');
         $bytes = $body->streamedContent();
-        $this->assertStringContainsString('ftyp', $bytes);
-        $this->assertStringContainsString('first-bytes', $bytes);
-        $this->assertStringContainsString('second-bytes', $bytes);
-        $this->assertStringContainsString('dissolve', $bytes);
+        $this->assertSame('built:first-bytes|second-bytes|', $bytes);
         $this->assertSame($bytes, Storage::disk('videos')->get($path));
+        $this->assertCount(1, $media->builds);
+        $build = $media->builds[0];
+        $this->assertSame($path, $build['output']);
+        $this->assertSame([], $build['overlays']);
+        $this->assertCount(2, $build['segments']);
+        [$one, $two] = $build['segments'];
+        $this->assertSame(['story/first.mp4', 0.5, 6.0, 'cut'], [$one->path, $one->inSeconds, $one->outSeconds, $one->transition]);
+        $this->assertSame(['story/second.mp4', 'dissolve', 0.4], [$two->path, $two->transition, $two->transitionSeconds]);
         $this->assertSame('first-bytes', Storage::disk('videos')->get('story/first.mp4'));
         $this->assertSame('second-bytes', Storage::disk('videos')->get('story/second.mp4'));
         $this->assertFalse(Storage::disk('videos')->exists('renders/'.$started->json('data.id').'.partial'));
@@ -154,10 +163,104 @@ final class StoryRenderApiTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_missing_video_builder_fails_honestly_without_a_file(): void
+    {
+        Storage::fake('videos');
+        Http::fake();
+        $this->media(installed: false);
+        [$owner, $project, $reel, $first] = $this->videos();
+        $this->actingAs($owner, 'sanctum')
+            ->postJson($this->timeline($project, $reel).'/clips', [
+                'media_kind' => 'video',
+                'source_id' => $first['version']->uuid,
+            ])
+            ->assertCreated();
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson($this->renders($project, $reel))
+            ->assertStatus(503)
+            ->assertJsonPath('error_code', 'story_media_tools_unavailable');
+
+        $render = StoryFinalRender::query()->firstOrFail();
+        $this->assertSame('failed', $render->status);
+        $this->assertNull($render->path);
+        $this->assertSame('story_media_tools_unavailable', $render->error_code);
+        foreach (Storage::disk('videos')->allFiles() as $file) {
+            $this->assertFalse(str_starts_with($file, 'renders/'), $file);
+        }
+        Http::assertNothingSent();
+    }
+
+    public function test_failed_build_is_recorded_and_can_be_retried(): void
+    {
+        Storage::fake('videos');
+        Http::fake();
+        $media = $this->media(fails: true);
+        [$owner, $project, $reel, $first] = $this->videos();
+        $this->actingAs($owner, 'sanctum')
+            ->postJson($this->timeline($project, $reel).'/clips', [
+                'media_kind' => 'video',
+                'source_id' => $first['version']->uuid,
+            ])
+            ->assertCreated();
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson($this->renders($project, $reel))
+            ->assertStatus(422)
+            ->assertJsonPath('error_code', 'story_media_build_failed');
+
+        $media->fails = false;
+        $this->actingAs($owner, 'sanctum')
+            ->postJson($this->renders($project, $reel))
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'completed');
+
+        $this->assertSame(['failed', 'completed'], StoryFinalRender::query()->orderBy('id')->pluck('status')->all());
+        Http::assertNothingSent();
+    }
+
+    public function test_sound_clips_are_mixed_under_the_scene_they_follow(): void
+    {
+        Storage::fake('videos');
+        Storage::fake('voice');
+        Http::fake();
+        $media = $this->media();
+        [$owner, $project, $reel, $first, $second] = $this->videos();
+        Storage::disk('voice')->put('story/voice.mp3', 'voice-bytes');
+        $audio = StorySceneAudio::query()->create([
+            'story_workspace_id' => $reel->story_workspace_id,
+            'story_scene_id' => $second['scene']->id,
+            'role' => 'narration',
+            'status' => 'completed',
+            'idempotency_key' => 'render-sound-test',
+            'disk' => 'voice',
+            'path' => 'story/voice.mp3',
+            'mime' => 'audio/mpeg',
+        ]);
+        foreach ([['video', $first['version']->uuid], ['video', $second['version']->uuid], ['audio', $audio->uuid]] as [$kind, $id]) {
+            $this->actingAs($owner, 'sanctum')
+                ->postJson($this->timeline($project, $reel).'/clips', ['media_kind' => $kind, 'source_id' => $id])
+                ->assertCreated();
+        }
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson($this->renders($project, $reel))
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'completed');
+
+        $build = $media->builds[0];
+        $this->assertCount(2, $build['segments']);
+        $this->assertCount(1, $build['overlays']);
+        $this->assertSame('story/voice.mp3', $build['overlays'][0]->path);
+        $this->assertGreaterThan(0.0, $build['overlays'][0]->startSeconds);
+        Http::assertNothingSent();
+    }
+
     public function test_non_owner_cannot_read_the_final_file_and_anonymous_is_unauthorized(): void
     {
         Storage::fake('videos');
         Http::fake();
+        $this->media();
         [$owner, $project, $reel, $first] = $this->videos();
         $this->actingAs($owner, 'sanctum')
             ->postJson($this->timeline($project, $reel).'/clips', [
@@ -251,6 +354,14 @@ final class StoryRenderApiTest extends TestCase
         ]);
 
         return ['scene' => $scene, 'version' => $version];
+    }
+
+    private function media(bool $installed = true, bool $fails = false): FakeStoryMediaToolkit
+    {
+        $media = new FakeStoryMediaToolkit($installed, $fails);
+        $this->app->instance(StoryMediaToolkit::class, $media);
+
+        return $media;
     }
 
     private function timeline(Project $project, StoryReel $reel): string

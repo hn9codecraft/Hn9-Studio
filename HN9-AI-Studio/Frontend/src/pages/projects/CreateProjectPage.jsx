@@ -31,11 +31,19 @@ export default function CreateProjectPage() {
       });
       navigate(openStudio ? `/studio/${project.id}` : `/projects/${project.id}`, { replace: true });
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err
-          : new ApiError('Unable to create the project.', { status: 0 }),
-      );
+      if (err instanceof ApiError && err.status === 403) {
+        setError(
+          new ApiError('Your account is not allowed to create projects yet. Ask an administrator to give you access.', {
+            status: 403,
+          }),
+        );
+      } else {
+        setError(
+          err instanceof ApiError
+            ? err
+            : new ApiError('Unable to create the project.', { status: 0 }),
+        );
+      }
     } finally {
       setSubmitting(false);
     }

@@ -16,7 +16,9 @@ use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Models\StoryWorkspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use App\Story\Media\StoryMediaToolkit;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\FakeStoryMediaToolkit;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -31,6 +33,7 @@ final class StoryExportApiTest extends TestCase
         Storage::fake('voice');
         Storage::fake('exports');
         Http::fake();
+        $this->app->instance(StoryMediaToolkit::class, new FakeStoryMediaToolkit);
     }
 
     public function test_export_is_refused_until_the_final_render_is_approved(): void

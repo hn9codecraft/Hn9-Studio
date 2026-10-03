@@ -32,9 +32,26 @@ final class StoryVideoUnitPlanner
             return [$requestedSeconds];
         }
 
-        $unit = max($choices);
-        $count = (int) ceil($requestedSeconds / $unit);
+        sort($choices);
+        $max = max($choices);
+        $count = max(1, (int) ceil($requestedSeconds / $max));
+        $base = intdiv($requestedSeconds, $count);
+        $remainder = $requestedSeconds % $count;
 
-        return array_fill(0, $count, $unit);
+        // Even parts, each rounded up to the nearest length the provider offers.
+        $units = [];
+        for ($index = 0; $index < $count; $index++) {
+            $wanted = $base + ($index < $remainder ? 1 : 0);
+            $pick = $max;
+            foreach ($choices as $choice) {
+                if ($choice >= $wanted) {
+                    $pick = $choice;
+                    break;
+                }
+            }
+            $units[] = $pick;
+        }
+
+        return $units;
     }
 }
