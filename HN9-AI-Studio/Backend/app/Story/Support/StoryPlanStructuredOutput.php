@@ -39,11 +39,11 @@ final class StoryPlanStructuredOutput
             );
         }
 
-        $target = $decoded['scene_duration_target_seconds'] ?? StoryPlanDurationCalculator::UNIT_SECONDS;
+        $target = $decoded['scene_duration_target_seconds'] ?? StoryPlanDurationCalculator::SCENE_TARGET_SECONDS;
         $target = (int) $target;
-        if ($target !== StoryPlanDurationCalculator::UNIT_SECONDS) {
+        if ($target !== StoryPlanDurationCalculator::SCENE_TARGET_SECONDS) {
             throw StoryPlannerException::malformedOutput(
-                'scene_duration_target_seconds must be '.StoryPlanDurationCalculator::UNIT_SECONDS.'.',
+                'scene_duration_target_seconds must be '.StoryPlanDurationCalculator::SCENE_TARGET_SECONDS.'.',
             );
         }
 
@@ -90,7 +90,7 @@ final class StoryPlanStructuredOutput
                 throw StoryPlannerException::malformedOutput("Scene {$sequence} characters must be an array.");
             }
 
-                $dialogue = $scene['dialogue'] ?? [];
+            $dialogue = $scene['dialogue'] ?? [];
             if (! is_array($dialogue)) {
                 throw StoryPlannerException::malformedOutput("Scene {$sequence} dialogue must be an array.");
             }

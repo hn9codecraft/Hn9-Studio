@@ -838,7 +838,7 @@ function SceneEditor({ scene, nextSequence, onClose }) {
                 aria-describedby="scene-field-duration-help"
               />
               <div className="form-text" id="scene-field-duration-help">
-                Most scenes are 30 seconds.
+                A scene can be any length, from 1 second up to an hour.
               </div>
               {storyFieldError(errors, 'duration_seconds') ? (
                 <div className="invalid-feedback d-block">{storyFieldError(errors, 'duration_seconds')}</div>

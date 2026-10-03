@@ -12,6 +12,7 @@ use App\Policies\StoryBiblePolicy;
 use App\Policies\StoryCharacterPolicy;
 use App\Policies\StoryCharacterReferencePolicy;
 use App\Policies\StoryPlanPolicy;
+use App\Policies\StoryProductionPlanPolicy;
 use App\Policies\StoryReelPolicy;
 use App\Policies\StoryScenePolicy;
 use App\Policies\StoryStyleBiblePolicy;
@@ -23,6 +24,7 @@ use App\Story\Models\StoryCharacter;
 use App\Story\Models\StoryCharacterReference;
 use App\Story\Models\StoryExport;
 use App\Story\Models\StoryPlan;
+use App\Story\Models\StoryProductionPlan;
 use App\Story\Models\StoryReel;
 use App\Story\Models\StoryScene;
 use App\Story\Models\StoryStyleBible;
@@ -47,6 +49,7 @@ class AuthServiceProvider extends ServiceProvider
         StoryStyleBible::class => StoryStyleBiblePolicy::class,
         StoryStyleReference::class => StoryStyleReferencePolicy::class,
         StoryPlan::class => StoryPlanPolicy::class,
+        StoryProductionPlan::class => StoryProductionPlanPolicy::class,
         StoryReel::class => StoryReelPolicy::class,
         StoryScene::class => StoryScenePolicy::class,
         StoryExport::class => ExportPolicy::class,

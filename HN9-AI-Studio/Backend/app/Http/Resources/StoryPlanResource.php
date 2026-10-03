@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Story\Models\StoryPlan;
+use App\Story\Support\StoryPlanDurationCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -29,7 +30,7 @@ class StoryPlanResource extends JsonResource
             'requested_duration_seconds' => $this->requested_duration_seconds,
             'duration_unit' => $this->duration_unit,
             'status' => $this->status,
-            'scene_count_estimate' => (int) ceil($this->requested_duration_seconds / 30),
+            'scene_count_estimate' => (int) ceil($this->requested_duration_seconds / StoryPlanDurationCalculator::SCENE_TARGET_SECONDS),
             'current_version' => $current === null ? null : (new StoryPlanVersionResource($current))->resolve(),
             'workspace' => $workspace === null ? null : [
                 'id' => $workspace->uuid,
