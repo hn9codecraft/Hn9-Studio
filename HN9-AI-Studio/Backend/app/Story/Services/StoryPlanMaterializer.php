@@ -16,7 +16,7 @@ use App\Story\Enums\StoryReelStatus;
 use App\Story\Enums\StorySceneStatus;
 use App\Story\Exceptions\StoryException;
 use App\Story\Exceptions\StoryRuntimeException;
-use App\Story\Models\StoryPlanVersion;
+use App\Story\Models\StoryPlan;
 use App\Story\Models\StoryReel;
 use App\Story\Support\StorySceneTimingNormalizer;
 use Illuminate\Support\Facades\DB;
@@ -59,13 +59,7 @@ final readonly class StoryPlanMaterializer implements StoryPlanMaterializerInter
 
         $existing = $this->reels->findBySourcePlanVersionId($workspace, (int) $version->id);
         if ($existing !== null) {
-            return [
-                'reel' => $existing->loadMissing(['scenes', 'sourcePlan', 'sourcePlanVersion', 'workspace.project']),
-                'created' => false,
-                'scene_count' => $existing->scenes
-                    ->where('status', '!=', StorySceneStatus::Archived->value)
-                    ->count(),
-            ];
+            return $this->existingResult($existing);
         }
 
         $planPayload = $version->plan;
@@ -82,6 +76,13 @@ final readonly class StoryPlanMaterializer implements StoryPlanMaterializerInter
 
         try {
             $reel = DB::transaction(function () use ($workspace, $plan, $version, $planPayload, $validatedScenes) {
+                // The story plan row serialises every write to its scenes and production plans.
+                StoryPlan::query()->whereKey($plan->id)->lockForUpdate()->first(['id']);
+                $raced = $this->reels->findBySourcePlanVersionId($workspace, (int) $version->id);
+                if ($raced !== null) {
+                    return $raced;
+                }
+
                 $title = is_string($planPayload['title'] ?? null) && $planPayload['title'] !== ''
                     ? $planPayload['title']
                     : ($plan->title ?: 'Story Reel');
@@ -121,12 +122,31 @@ final readonly class StoryPlanMaterializer implements StoryPlanMaterializerInter
         } catch (\Throwable $e) {
             throw StoryRuntimeException::materializationFailed(
                 'Materialization failed and was rolled back.',
+                $e,
             );
+        }
+
+        if (! $reel->wasRecentlyCreated) {
+            return $this->existingResult($reel);
         }
 
         return [
             'reel' => $reel,
             'created' => true,
+            'scene_count' => $reel->scenes
+                ->where('status', '!=', StorySceneStatus::Archived->value)
+                ->count(),
+        ];
+    }
+
+    /**
+     * @return array{reel: StoryReel, created: false, scene_count: int}
+     */
+    private function existingResult(StoryReel $reel): array
+    {
+        return [
+            'reel' => $reel->loadMissing(['scenes', 'sourcePlan', 'sourcePlanVersion', 'workspace.project']),
+            'created' => false,
             'scene_count' => $reel->scenes
                 ->where('status', '!=', StorySceneStatus::Archived->value)
                 ->count(),

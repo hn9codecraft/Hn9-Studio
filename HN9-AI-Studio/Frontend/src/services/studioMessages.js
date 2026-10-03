@@ -145,6 +145,12 @@ export function friendlyError(error, fallback = 'Something went wrong. Please tr
   if (code === 'story_render_source_missing') return 'A clip’s video file is missing. Swap or remove that clip, then build again.';
   if (code === 'story_already_materialized') return 'Scenes were already created from this plan.';
   if (code === 'story_plan_not_generatable') return 'This plan is already being written or is finished.';
+  if (code === 'story_approval_failed' || code === 'story_production_plan_failed') {
+    return 'We couldn’t prepare this story for production. Nothing was changed.';
+  }
+  if (code.startsWith('story_plan_version_') || code.startsWith('story_production_') || code === 'story_approval_invalid_plan') {
+    return looksTechnical(raw) ? 'This story cannot be prepared for production yet. Plan the story again, then approve it.' : raw;
+  }
   if (code.endsWith('_invalid_image')) return 'That file is not a picture we can read. Try a JPG, PNG or WebP image.';
   if (code.endsWith('_archived')) return 'This was removed, so it can no longer be changed.';
   if (code.endsWith('_not_ready')) return 'The file is not ready yet. Try again in a moment.';

@@ -177,6 +177,9 @@ final readonly class StoryProductionPlanService implements StoryProductionPlanSe
         if ($version->statusEnum() !== StoryPlanVersionStatus::Completed) {
             throw StoryProductionPlanException::sourceNotReady('Only a finished story version can be planned for production.');
         }
+        if (! $version->isApproved()) {
+            throw StoryProductionPlanException::sourceNotReady('Approve this story version before preparing it for production.');
+        }
 
         $reel = StoryReel::query()
             ->where('story_workspace_id', $workspace->id)

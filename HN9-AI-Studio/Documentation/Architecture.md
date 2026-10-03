@@ -78,4 +78,54 @@ Story Plan Version ──► Production Plan ──► Plan Scenes ──► Gen
 - Plans are created by the backend only. The API exposes read-only, owner/admin-scoped endpoints
   (see [API](API.md#production-plans)).
 
+## Story Approval Gate (M11.18.2)
+
+Approval is the gate between story planning and video production. No Production Plan exists
+for a version that has not been approved.
+
+```
+Story Plan Version (completed) ──► Ready for review ──► Approve ──► Scenes + Production Plan + Units
+```
+
+### States
+Planning, review, Production Plan and generation status stay separate:
+- `story_plan_versions.status` is the planner's (`generating`, `completed`, `failed`).
+- Approval is recorded on the version as `approved_at` / `approved_by`. The review status shown
+  to users (`in_progress`, `failed`, `ready_for_review`, `approved`) is derived from both and
+  never stored.
+- Production Plans keep their own `active` / `superseded` status; generation status will live on
+  unit versions (M11.18.5).
+
+### Rules
+1. **One path.** `StoryPlanController::approve` → `StoryPlanApprovalService` →
+   `StoryPlanMaterializer` + `StoryProductionPlanService`. The Production Plan service also
+   refuses unapproved versions, so the gate holds even if another caller is added later.
+2. **Exact version binding.** The plan is built from the approved version's own scenes
+   (`source_plan_version_id`), never from the story's current state. `StoryGenerationUnitCalculator`
+   remains the only place scenes are split into units.
+3. **Eligibility.** The version must belong to the project's story, be `completed`, be the
+   story's latest version, have scenes that pass materializer and Production Plan validation,
+   and not have an archived reel. The owner or an admin approves; others get `403`, foreign
+   identifiers `404`.
+4. **Versions.** Approving version A creates Plan A. Approving a newer version B creates Plan B
+   as the next revision; Plan A, its scenes and its units stay intact as `superseded`. An older
+   version cannot be approved once a newer one exists (`409`). Approving an already-approved
+   version again returns its latest plan, even if superseded, and creates nothing.
+
+### Consistency and concurrency
+- Approval, scene creation, the Production Plan, its scenes and units are written in one
+  transaction. If any step fails, the version stays unapproved and nothing is saved.
+- Approval, the materializer and the Production Plan service all lock the same story plan row,
+  so concurrent approvals queue: the first creates everything, the next sees the approved
+  version and reuses its plan. Unique keys (one reel per source version, one plan per story
+  revision, one current plan per story, one successor per plan) remain the final guard, and
+  deadlocks are retried.
+
+### History
+The project History shows, in plain language and without internal ids: story version ready for
+review, story approved, production plan ready, production plan updated for a new version,
+production plan already prepared (a repeated approval), and approval failed with its reason.
+Failures are recorded after the rollback so they survive it; server logs keep only the driver
+error, never SQL or bound values.
+
 _Diagrams and component details are placeholders — expand as the system is built._

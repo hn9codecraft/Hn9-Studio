@@ -9,6 +9,7 @@ use App\AI\Exceptions\ProviderException;
 use App\AI\Execution\DispatchOptions;
 use App\AI\Requests\TextRequest;
 use App\AI\Responses\TextResponse;
+use App\Contracts\Logging\ActivityLoggerInterface;
 use App\Models\Project;
 use App\Story\Contracts\StoryPlannerServiceInterface;
 use App\Story\Contracts\StoryPlanRepositoryInterface;
@@ -33,6 +34,8 @@ use Throwable;
  */
 final readonly class StoryPlannerService implements StoryPlannerServiceInterface
 {
+    public const EVENT_VERSION_READY = 'story.plan_version.ready';
+
     public function __construct(
         private StoryWorkspaceServiceInterface $workspaces,
         private StoryPlanRepositoryInterface $plans,
@@ -43,6 +46,7 @@ final readonly class StoryPlannerService implements StoryPlannerServiceInterface
         private StoryPlanStructuredOutput $structured,
         private ProviderDispatcherInterface $dispatcher,
         private StoryGenerationAttemptRecorder $attempts,
+        private ActivityLoggerInterface $activity,
     ) {}
 
     public function listForProject(Project $project): Collection
@@ -186,6 +190,10 @@ final readonly class StoryPlannerService implements StoryPlannerServiceInterface
                         'estimated_cost' => $result->estimatedCost,
                     ],
                     'error_message' => null,
+                ]);
+                $this->activity->log(self::EVENT_VERSION_READY, $completed, null, 'Story version ready for review', [
+                    'version' => $completed->version,
+                    'scene_count' => count($normalized['scenes'] ?? []),
                 ]);
 
                 return $this->plans->update($plan, [

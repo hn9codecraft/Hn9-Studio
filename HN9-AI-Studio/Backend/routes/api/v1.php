@@ -281,6 +281,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/plans/{planUuid}/regenerate', [StoryPlanController::class, 'regenerate'])->name('story.projects.plans.regenerate');
     Route::get('story/projects/{uuid}/plans/{planUuid}/versions', [StoryPlanController::class, 'versions'])->name('story.projects.plans.versions');
     Route::post('story/projects/{uuid}/plans/{planUuid}/versions/{versionUuid}/materialize', [StoryReelController::class, 'materialize'])->name('story.projects.plans.versions.materialize');
+    Route::post('story/projects/{uuid}/plans/{planUuid}/versions/{versionUuid}/approve', [StoryPlanController::class, 'approve'])->name('story.projects.plans.versions.approve');
     Route::get('story/projects/{uuid}/production-plans', [StoryProductionPlanController::class, 'index'])->name('story.projects.production-plans.index');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}', [StoryProductionPlanController::class, 'show'])->name('story.projects.production-plans.show');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}', [StoryProductionPlanController::class, 'scene'])->name('story.projects.production-plans.scenes.show');
