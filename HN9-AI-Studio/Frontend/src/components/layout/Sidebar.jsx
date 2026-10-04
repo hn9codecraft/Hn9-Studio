@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import BrandLogo from '../ui/BrandLogo';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: 'bi-grid-1x2' },
@@ -16,11 +17,7 @@ export default function Sidebar() {
   return (
     <aside className="app-sidebar d-flex flex-column">
       <div className="sidebar-brand">
-        <div className="brand-mark">HN9</div>
-        <div>
-          <div className="brand-title">HN9 AI Studio</div>
-          <div className="brand-subtitle">Content production</div>
-        </div>
+        <BrandLogo variant="white" height={44} />
       </div>
 
       <nav className="sidebar-nav flex-grow-1" aria-label="Primary">
