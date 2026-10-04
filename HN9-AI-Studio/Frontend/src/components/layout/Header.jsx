@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import BrandLogo from '../ui/BrandLogo';
 import ThemeToggle from './ThemeToggle';
 
 export default function Header({ title }) {
@@ -29,7 +30,8 @@ export default function Header({ title }) {
           <i className="bi bi-list" aria-hidden="true" />
           <span className="visually-hidden">Open navigation</span>
         </button>
-        <div className="min-w-0">
+        <BrandLogo className="d-lg-none" height={30} />
+        <div className="min-w-0 d-none d-md-block">
           <p className="header-title mb-0" aria-hidden="true">
             {title}
           </p>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from '../components/layout/ThemeToggle';
 import AlertMessage from '../components/ui/AlertMessage';
+import BrandLogo from '../components/ui/BrandLogo';
 import DocumentTitle from '../components/ui/DocumentTitle';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../services/apiClient';
@@ -40,9 +41,9 @@ export default function LoginPage() {
       <div className="login-panel glass-card card border-0">
         <div className="card-body p-4 p-md-5">
           <div className="mb-4">
-            <div className="brand-mark mb-3">HN9</div>
-            <h1 className="login-title mb-1">HN9 AI Studio</h1>
-            <p className="text-secondary mb-0">Sign in with your studio account.</p>
+            <BrandLogo to={null} className="d-inline-flex mb-3" height={56} />
+            <h1 className="login-title mb-1">Sign in</h1>
+            <p className="text-secondary mb-0">Use your studio account.</p>
           </div>
 
           {error ? (
