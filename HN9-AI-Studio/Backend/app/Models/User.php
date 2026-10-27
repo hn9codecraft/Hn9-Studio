@@ -114,6 +114,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Determine whether the account may authenticate. Only `active` users can
+     * sign in or keep using API tokens; any other status (for example
+     * `inactive` or `suspended`) is treated as disabled.
+     */
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    /**
      * Determine whether the user is an administrator.
      */
     public function isAdmin(): bool
