@@ -33,6 +33,11 @@ final readonly class UserService implements UserServiceInterface
     {
         $user = $this->users->update($user, $data);
 
+        // Disabling an account revokes its API tokens immediately.
+        if (array_key_exists('status', $data) && ! $user->isActive()) {
+            $user->tokens()->delete();
+        }
+
         $this->activity->log('user.updated', $user, null, 'User updated');
 
         return $user;
@@ -43,6 +48,8 @@ final readonly class UserService implements UserServiceInterface
         $deleted = $this->users->delete($user);
 
         if ($deleted) {
+            $user->tokens()->delete();
+
             $this->activity->log('user.deleted', $user, null, 'User deleted');
         }
 

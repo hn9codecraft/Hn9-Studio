@@ -66,7 +66,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public infrastructure and authentication endpoints.
 Route::get('health', HealthController::class)->name('health');
-Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
+Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('auth.login');
 Route::post('story/video-callbacks/{jobUuid}/{token}', StoryVideoCallbackController::class)
     ->middleware('throttle:60,1')
     ->where(['jobUuid' => '[0-9a-fA-F-]{36}', 'token' => '[A-Za-z0-9]{40,128}'])
@@ -78,7 +78,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
     Route::get('auth/user', [AuthController::class, 'user'])->name('auth.user');
     Route::patch('auth/profile', [AuthController::class, 'profile'])->name('auth.profile');
-    Route::patch('auth/password', [AuthController::class, 'password'])->name('auth.password');
+    Route::patch('auth/password', [AuthController::class, 'password'])->middleware('throttle:password')->name('auth.password');
 
     // User management
     Route::get('users', [UserController::class, 'index'])->name('users.index');
@@ -99,8 +99,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Project scripts (manual drafts + AI-generated studio scripts)
     Route::get('projects/{uuid}/scripts', [ScriptController::class, 'index'])->name('projects.scripts.index');
     Route::post('projects/{uuid}/scripts', [ScriptController::class, 'store'])->name('projects.scripts.store');
-    Route::post('projects/{uuid}/scripts/generate', [ScriptController::class, 'generate'])->name('projects.scripts.generate');
-    Route::post('projects/{uuid}/scripts/{scriptUuid}/regenerate', [ScriptController::class, 'regenerate'])->name('projects.scripts.regenerate');
+    Route::post('projects/{uuid}/scripts/generate', [ScriptController::class, 'generate'])->middleware('throttle:generation')->name('projects.scripts.generate');
+    Route::post('projects/{uuid}/scripts/{scriptUuid}/regenerate', [ScriptController::class, 'regenerate'])->middleware('throttle:generation')->name('projects.scripts.regenerate');
     Route::get('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'show'])->name('projects.scripts.show');
     Route::patch('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'update'])->name('projects.scripts.update');
     Route::delete('projects/{uuid}/scripts/{scriptUuid}', [ScriptController::class, 'destroy'])->name('projects.scripts.destroy');
@@ -112,8 +112,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Project image requests and real AI image generation
     Route::get('projects/{uuid}/images', [ImageController::class, 'index'])->name('projects.images.index');
     Route::post('projects/{uuid}/images', [ImageController::class, 'store'])->name('projects.images.store');
-    Route::post('projects/{uuid}/images/generate', [ImageController::class, 'generate'])->name('projects.images.generate');
-    Route::post('projects/{uuid}/images/{imageUuid}/regenerate', [ImageController::class, 'regenerate'])->name('projects.images.regenerate');
+    Route::post('projects/{uuid}/images/generate', [ImageController::class, 'generate'])->middleware('throttle:generation')->name('projects.images.generate');
+    Route::post('projects/{uuid}/images/{imageUuid}/regenerate', [ImageController::class, 'regenerate'])->middleware('throttle:generation')->name('projects.images.regenerate');
     Route::get('projects/{uuid}/images/{imageUuid}', [ImageController::class, 'show'])->name('projects.images.show');
     Route::get('projects/{uuid}/images/{imageUuid}/file', [ImageController::class, 'file'])->name('projects.images.file');
     Route::patch('projects/{uuid}/images/{imageUuid}', [ImageController::class, 'update'])->name('projects.images.update');
@@ -126,8 +126,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Project video requests and real AI video generation
     Route::get('projects/{uuid}/videos', [VideoController::class, 'index'])->name('projects.videos.index');
     Route::post('projects/{uuid}/videos', [VideoController::class, 'store'])->name('projects.videos.store');
-    Route::post('projects/{uuid}/videos/generate', [VideoController::class, 'generate'])->name('projects.videos.generate');
-    Route::post('projects/{uuid}/videos/{videoUuid}/regenerate', [VideoController::class, 'regenerate'])->name('projects.videos.regenerate');
+    Route::post('projects/{uuid}/videos/generate', [VideoController::class, 'generate'])->middleware('throttle:generation')->name('projects.videos.generate');
+    Route::post('projects/{uuid}/videos/{videoUuid}/regenerate', [VideoController::class, 'regenerate'])->middleware('throttle:generation')->name('projects.videos.regenerate');
     Route::get('projects/{uuid}/videos/{videoUuid}', [VideoController::class, 'show'])->name('projects.videos.show');
     Route::get('projects/{uuid}/videos/{videoUuid}/status', [VideoController::class, 'status'])->name('projects.videos.status');
     Route::get('projects/{uuid}/videos/{videoUuid}/file', [VideoController::class, 'file'])->name('projects.videos.file');
@@ -163,7 +163,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Brand Brain
     Route::get('brand-brain', [BrandBrainController::class, 'show'])->name('brand-brain.show');
     Route::patch('brand-brain', [BrandBrainController::class, 'update'])->name('brand-brain.update');
-    Route::post('projects/{uuid}/brand-insights', [BrandBrainController::class, 'insights'])->name('brand-brain.insights');
+    Route::post('projects/{uuid}/brand-insights', [BrandBrainController::class, 'insights'])->middleware('throttle:generation')->name('brand-brain.insights');
 
     // Project prompts
     Route::get('projects/{uuid}/prompts', [ProjectPromptController::class, 'index'])->name('projects.prompts.index');
@@ -172,7 +172,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('projects/{uuid}/prompts/{prompt_uuid}', [ProjectPromptController::class, 'destroy'])->name('projects.prompts.destroy');
 
     // Generation endpoints
-    Route::post('projects/{uuid}/generate', [GenerationController::class, 'generate'])->name('projects.generate');
+    Route::post('projects/{uuid}/generate', [GenerationController::class, 'generate'])->middleware('throttle:generation')->name('projects.generate');
     Route::post('projects/{uuid}/generate/preview', [GenerationController::class, 'preview'])->name('projects.generate.preview');
     Route::get('projects/{uuid}/generation-history', [GenerationController::class, 'history'])->name('projects.generation.history');
 
@@ -184,7 +184,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('generated-content/{uuid}/favorite', [GeneratedContentController::class, 'favorite'])->name('generated-content.favorite');
     Route::delete('generated-content/{uuid}/favorite', [GeneratedContentController::class, 'unfavorite'])->name('generated-content.unfavorite');
     Route::post('generated-content/{uuid}/approve', [GeneratedContentController::class, 'approve'])->name('generated-content.approve');
-    Route::post('generated-content/{uuid}/regenerate', [GeneratedContentController::class, 'regenerate'])->name('generated-content.regenerate');
+    Route::post('generated-content/{uuid}/regenerate', [GeneratedContentController::class, 'regenerate'])->middleware('throttle:generation')->name('generated-content.regenerate');
 
     // Generated assets
     Route::get('generated-assets', [GeneratedAssetController::class, 'index'])->name('generated-assets.index');
@@ -201,7 +201,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::patch('providers/{uuid}', [ProviderController::class, 'update'])->name('providers.update');
     Route::post('providers/{uuid}/enable', [ProviderController::class, 'enable'])->name('providers.enable');
     Route::post('providers/{uuid}/disable', [ProviderController::class, 'disable'])->name('providers.disable');
-    Route::post('providers/{uuid}/test', [ProviderController::class, 'test'])->name('providers.test');
+    Route::post('providers/{uuid}/test', [ProviderController::class, 'test'])->middleware('throttle:generation')->name('providers.test');
 
     Route::get('provider-settings', [ProviderController::class, 'settingsIndex'])->name('provider-settings.index');
     Route::get('provider-settings/{uuid}', [ProviderController::class, 'showSetting'])->name('provider-settings.show');
@@ -258,7 +258,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('story/projects/{uuid}/characters/{characterUuid}', [StoryCharacterController::class, 'destroy'])->name('story.projects.characters.destroy');
     Route::get('story/projects/{uuid}/characters/{characterUuid}/references', [StoryCharacterReferenceController::class, 'index'])->name('story.projects.characters.references.index');
     Route::post('story/projects/{uuid}/characters/{characterUuid}/references/upload', [StoryCharacterReferenceController::class, 'upload'])->name('story.projects.characters.references.upload');
-    Route::post('story/projects/{uuid}/characters/{characterUuid}/references/generate', [StoryCharacterReferenceController::class, 'generate'])->name('story.projects.characters.references.generate');
+    Route::post('story/projects/{uuid}/characters/{characterUuid}/references/generate', [StoryCharacterReferenceController::class, 'generate'])->middleware('throttle:generation')->name('story.projects.characters.references.generate');
     Route::get('story/projects/{uuid}/characters/{characterUuid}/references/{referenceUuid}', [StoryCharacterReferenceController::class, 'show'])->name('story.projects.characters.references.show');
     Route::get('story/projects/{uuid}/characters/{characterUuid}/references/{referenceUuid}/file', [StoryCharacterReferenceController::class, 'file'])->name('story.projects.characters.references.file');
     Route::post('story/projects/{uuid}/characters/{characterUuid}/references/{referenceUuid}/submit-review', [StoryCharacterReferenceController::class, 'submitReview'])->name('story.projects.characters.references.submit-review');
@@ -270,7 +270,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::patch('story/projects/{uuid}/style', [StoryStyleBibleController::class, 'update'])->name('story.projects.style.update');
     Route::get('story/projects/{uuid}/style/references', [StoryStyleReferenceController::class, 'index'])->name('story.projects.style.references.index');
     Route::post('story/projects/{uuid}/style/references/upload', [StoryStyleReferenceController::class, 'upload'])->name('story.projects.style.references.upload');
-    Route::post('story/projects/{uuid}/style/references/generate', [StoryStyleReferenceController::class, 'generate'])->name('story.projects.style.references.generate');
+    Route::post('story/projects/{uuid}/style/references/generate', [StoryStyleReferenceController::class, 'generate'])->middleware('throttle:generation')->name('story.projects.style.references.generate');
     Route::get('story/projects/{uuid}/style/references/{referenceUuid}', [StoryStyleReferenceController::class, 'show'])->name('story.projects.style.references.show');
     Route::get('story/projects/{uuid}/style/references/{referenceUuid}/file', [StoryStyleReferenceController::class, 'file'])->name('story.projects.style.references.file');
     Route::post('story/projects/{uuid}/style/references/{referenceUuid}/submit-review', [StoryStyleReferenceController::class, 'submitReview'])->name('story.projects.style.references.submit-review');
@@ -280,15 +280,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('story/projects/{uuid}/plans', [StoryPlanController::class, 'index'])->name('story.projects.plans.index');
     Route::post('story/projects/{uuid}/plans', [StoryPlanController::class, 'store'])->name('story.projects.plans.store');
     Route::get('story/projects/{uuid}/plans/{planUuid}', [StoryPlanController::class, 'show'])->name('story.projects.plans.show');
-    Route::post('story/projects/{uuid}/plans/{planUuid}/generate', [StoryPlanController::class, 'generate'])->name('story.projects.plans.generate');
-    Route::post('story/projects/{uuid}/plans/{planUuid}/regenerate', [StoryPlanController::class, 'regenerate'])->name('story.projects.plans.regenerate');
+    Route::post('story/projects/{uuid}/plans/{planUuid}/generate', [StoryPlanController::class, 'generate'])->middleware('throttle:generation')->name('story.projects.plans.generate');
+    Route::post('story/projects/{uuid}/plans/{planUuid}/regenerate', [StoryPlanController::class, 'regenerate'])->middleware('throttle:generation')->name('story.projects.plans.regenerate');
     Route::get('story/projects/{uuid}/plans/{planUuid}/versions', [StoryPlanController::class, 'versions'])->name('story.projects.plans.versions');
     Route::post('story/projects/{uuid}/plans/{planUuid}/versions/{versionUuid}/materialize', [StoryReelController::class, 'materialize'])->name('story.projects.plans.versions.materialize');
     Route::post('story/projects/{uuid}/plans/{planUuid}/versions/{versionUuid}/approve', [StoryPlanController::class, 'approve'])->name('story.projects.plans.versions.approve');
     Route::get('story/projects/{uuid}/production-plans', [StoryProductionPlanController::class, 'index'])->name('story.projects.production-plans.index');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}', [StoryProductionPlanController::class, 'show'])->name('story.projects.production-plans.show');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}', [StoryProductionPlanController::class, 'scene'])->name('story.projects.production-plans.scenes.show');
-    Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/generate', [StoryProductionUnitGenerationController::class, 'store'])->name('story.projects.production-plans.units.generate');
+    Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/generate', [StoryProductionUnitGenerationController::class, 'store'])->middleware('throttle:generation')->name('story.projects.production-plans.units.generate');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/generations', [StoryProductionUnitGenerationController::class, 'index'])->name('story.projects.production-plans.units.generations.index');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/generations/{jobUuid}', [StoryProductionUnitGenerationController::class, 'show'])->name('story.projects.production-plans.units.generations.show');
     Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/generations/{jobUuid}/cancel', [StoryProductionUnitGenerationController::class, 'cancel'])->name('story.projects.production-plans.units.generations.cancel');
@@ -299,7 +299,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/versions/{versionUuid}/request-changes', [StoryProductionUnitVersionController::class, 'requestChanges'])->name('story.projects.production-plans.units.versions.request-changes');
     Route::post('story/projects/{uuid}/production-plans/{planUuid}/units/{unitUuid}/versions/{versionUuid}/select', [StoryProductionUnitVersionController::class, 'select'])->name('story.projects.production-plans.units.versions.select');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/production', [StorySceneAssemblyController::class, 'workspace'])->name('story.projects.production-plans.scenes.production');
-    Route::post('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemble', [StorySceneAssemblyController::class, 'store'])->name('story.projects.production-plans.scenes.assemble');
+    Route::post('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemble', [StorySceneAssemblyController::class, 'store'])->middleware('throttle:generation')->name('story.projects.production-plans.scenes.assemble');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemblies', [StorySceneAssemblyController::class, 'index'])->name('story.projects.production-plans.scenes.assemblies.index');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemblies/{assemblyUuid}', [StorySceneAssemblyController::class, 'show'])->name('story.projects.production-plans.scenes.assemblies.show');
     Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemblies/{assemblyUuid}/file', [StorySceneAssemblyController::class, 'file'])->name('story.projects.production-plans.scenes.assemblies.file');
@@ -330,15 +330,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/submit-review', [StoryReviewController::class, 'submitScene'])->name('story.projects.reels.scenes.submit-review');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/approve', [StoryReviewController::class, 'approveScene'])->name('story.projects.reels.scenes.approve');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/needs-rework', [StoryReviewController::class, 'reworkScene'])->name('story.projects.reels.scenes.needs-rework');
-    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/regenerate', [StoryReviewController::class, 'regenerateScene'])->name('story.projects.reels.scenes.regenerate');
-    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/edit', [StoryReviewController::class, 'editScene'])->name('story.projects.reels.scenes.versions.edit');
-    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/extend', [StoryReviewController::class, 'extendScene'])->name('story.projects.reels.scenes.versions.extend');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/regenerate', [StoryReviewController::class, 'regenerateScene'])->middleware('throttle:generation')->name('story.projects.reels.scenes.regenerate');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/edit', [StoryReviewController::class, 'editScene'])->middleware('throttle:generation')->name('story.projects.reels.scenes.versions.edit');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/extend', [StoryReviewController::class, 'extendScene'])->middleware('throttle:generation')->name('story.projects.reels.scenes.versions.extend');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}', [StoryReviewController::class, 'versionStatus'])->name('story.projects.reels.scenes.versions.show');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/file', [StoryReviewController::class, 'versionFile'])->name('story.projects.reels.scenes.versions.file');
     Route::get('story/audio/roles', [StoryAudioController::class, 'roles'])->name('story.audio.roles');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/audio', [StoryAudioController::class, 'reelIndex'])->name('story.projects.reels.audio.index');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio', [StoryAudioController::class, 'index'])->name('story.projects.reels.scenes.audio.index');
-    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio', [StoryAudioController::class, 'store'])->name('story.projects.reels.scenes.audio.store');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio', [StoryAudioController::class, 'store'])->middleware('throttle:generation')->name('story.projects.reels.scenes.audio.store');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}', [StoryAudioController::class, 'show'])->name('story.projects.reels.scenes.audio.show');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/file', [StoryAudioController::class, 'file'])->name('story.projects.reels.scenes.audio.file');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/approve', [StoryAudioController::class, 'approve'])->name('story.projects.reels.scenes.audio.approve');
@@ -355,7 +355,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/timeline/clips/{clipUuid}/duplicate', [StoryTimelineController::class, 'duplicate'])->name('story.projects.reels.timeline.clips.duplicate');
     Route::delete('story/projects/{uuid}/reels/{reelUuid}/timeline/clips/{clipUuid}', [StoryTimelineController::class, 'destroy'])->name('story.projects.reels.timeline.clips.destroy');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/renders', [StoryRenderController::class, 'index'])->name('story.projects.reels.renders.index');
-    Route::post('story/projects/{uuid}/reels/{reelUuid}/renders', [StoryRenderController::class, 'store'])->name('story.projects.reels.renders.store');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/renders', [StoryRenderController::class, 'store'])->middleware('throttle:generation')->name('story.projects.reels.renders.store');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}', [StoryRenderController::class, 'show'])->name('story.projects.reels.renders.show');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/file', [StoryRenderController::class, 'file'])->name('story.projects.reels.renders.file');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/reviews', [StoryFinalReviewController::class, 'show'])->name('story.projects.reels.renders.reviews.show');
@@ -371,7 +371,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('story/video/providers', [StoryVideoEngineController::class, 'providers'])->name('story.video.providers');
     Route::post('story/projects/{uuid}/video/validate', [StoryVideoEngineController::class, 'validateCompatibility'])->name('story.projects.video.validate');
     Route::post('story/projects/{uuid}/video/jobs', [StoryVideoEngineController::class, 'prepareJob'])->name('story.projects.video.jobs.store');
-    Route::post('story/projects/{uuid}/video/generate', [StoryVideoEngineController::class, 'generate'])->name('story.projects.video.generate');
+    Route::post('story/projects/{uuid}/video/generate', [StoryVideoEngineController::class, 'generate'])->middleware('throttle:generation')->name('story.projects.video.generate');
     Route::get('story/projects/{uuid}/video/jobs/{jobUuid}', [StoryVideoEngineController::class, 'showJob'])->name('story.projects.video.jobs.show');
     Route::get('story/projects/{uuid}/video/jobs/{jobUuid}/file', [StoryVideoEngineController::class, 'file'])->name('story.projects.video.jobs.file');
 

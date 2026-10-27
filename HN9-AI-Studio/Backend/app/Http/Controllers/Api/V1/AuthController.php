@@ -14,6 +14,7 @@ use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -23,7 +24,9 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if (! $user || ! Hash::check($data['password'], $user->password)) {
+        // Disabled accounts get the same generic answer as bad credentials, so
+        // the response never reveals whether an address is registered.
+        if (! $user || ! Hash::check($data['password'], $user->password) || ! $user->isActive()) {
             return ApiResponse::error('Invalid credentials', 'auth.invalid', 401);
         }
 
@@ -73,6 +76,14 @@ class AuthController extends Controller
 
         $user->password = $validated['new_password'];
         $user->save();
+
+        // A password change ends every other session. The token that made this
+        // request stays valid so the current tab is not signed out.
+        $current = $user->currentAccessToken();
+
+        $user->tokens()
+            ->when($current instanceof PersonalAccessToken, fn ($query) => $query->whereKeyNot($current->getKey()))
+            ->delete();
 
         return ApiResponse::success(['message' => 'Password updated']);
     }

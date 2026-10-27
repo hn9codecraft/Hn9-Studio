@@ -50,7 +50,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // M12: personal access tokens expire after SANCTUM_TOKEN_EXPIRATION minutes
+    // (default 10080 = 7 days). Set it to 0 to disable expiry (not recommended).
+    'expiration' => (int) env('SANCTUM_TOKEN_EXPIRATION', 10080) ?: null,
 
     /*
     |--------------------------------------------------------------------------
