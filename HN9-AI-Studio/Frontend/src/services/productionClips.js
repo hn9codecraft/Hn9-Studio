@@ -1,7 +1,12 @@
 /** Presentation for the scene production workspace. Slots, versions and readiness come from the server. */
 
 export const NOT_CONFIGURED = 'Video generation is not configured yet.';
-export const PARTS_NOT_READY = 'Some video parts are not ready yet.';
+export const PARTS_NOT_READY = 'All clips must have an approved version selected before this scene can be built.';
+export const REGENERATE_TITLE = 'Regenerate this clip?';
+export const REGENERATE_BODY = 'Only this clip will be regenerated. Other clips in this scene will remain unchanged.';
+export const REGENERATE_ACTION = 'Regenerate clip';
+export const REGENERATE_UNIT = 'Regenerate unit';
+export const BUILD_SCENE = 'Build / merge scene';
 export const BUILD_FAILED = "We couldn't build this scene. Please try again.";
 export const GENERATE_FAILED = "We couldn't create this video. You can try again.";
 export const UNSUPPORTED = "This video setup isn't supported by the connected services.";
@@ -26,6 +31,19 @@ export function clipWindow(clip) {
   return `${start}–${end} sec`;
 }
 
+export function unitTitle(clip) {
+  const sequence = Number(clip?.sequence);
+  return Number.isFinite(sequence) && sequence > 0 ? `Unit ${sequence}` : 'Unit';
+}
+
+export function regenerateConfirmTitle(clip) {
+  const seconds = Number(clip?.duration_seconds);
+  if (Number.isFinite(seconds) && seconds > 0) {
+    return `Regenerate this ${seconds}-second clip?`;
+  }
+  return REGENERATE_TITLE;
+}
+
 export function nextClipIntent(versionCount) {
   const count = Number.isFinite(Number(versionCount)) ? Number(versionCount) : 0;
   return `clip-${count + 1}`;
@@ -41,33 +59,53 @@ export function availableModes(connections, pictureCount) {
 
 export function clipState(clip) {
   const versions = Array.isArray(clip?.versions) ? clip.versions : [];
+  const count = versions.length;
   if (clip?.active_generation && isActiveStatus(clip.active_generation.status)) {
     return {
       key: 'generating',
       label: 'Generating',
       detail: 'Generating your video... This can take a little while.',
+      versions: count,
     };
   }
   const selected = versions.find((version) => version.selected);
   if (selected) {
-    return { key: 'selected', label: `${versionName(selected)} — Selected`, version: selected };
+    return {
+      key: 'selected',
+      label: 'Ready',
+      detail: `${versionName(selected)} selected`,
+      version: selected,
+      versions: count,
+    };
   }
   const approved = [...versions].reverse().find((version) => version.approved || version.status === 'approved');
   if (approved) {
-    return { key: 'approved', label: `${versionName(approved)} — Approved`, version: approved };
+    return {
+      key: 'approved',
+      label: 'Approved',
+      detail: `${versionName(approved)} approved`,
+      version: approved,
+      versions: count,
+    };
   }
   const review = versions.find((version) => version.status === 'pending_review');
   if (review) {
-    return { key: 'review', label: `${versionName(review)} — Ready for review`, version: review };
+    return {
+      key: 'review',
+      label: 'Needs review',
+      detail: `${versionName(review)} ready for review`,
+      version: review,
+      versions: count,
+    };
   }
   const changes = versions.find((version) => version.status === 'needs_rework');
   if (changes) {
-    return { key: 'changes', label: 'Changes requested', version: changes };
+    return { key: 'changes', label: 'Changes requested', version: changes, versions: count };
   }
   if (/failed/i.test(String(clip?.message || ''))) {
-    return { key: 'failed', label: 'Generation failed', detail: GENERATE_FAILED };
+    return { key: 'failed', label: 'Generation failed', detail: GENERATE_FAILED, versions: count };
   }
-  return { key: 'empty', label: 'No video yet', detail: clip?.message || 'No video yet' };
+  return { key: 'empty', label: 'No video yet', detail: clip?.message || 'No video yet', versions: count };
 }
 
 export function versionActions(version) {

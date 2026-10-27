@@ -10,13 +10,11 @@ import {
   extendStorySceneVersion,
   getProductionPlan,
   getStorySceneVersionFileUrl,
-  getStoryStyle,
   getStoryVideoFileUrl,
   getStoryVideoJob,
   listProductionPlans,
   listStorySceneVersions,
   markStoryProjectChanged,
-  regenerateStoryScene,
   reorderStoryScenes,
   reworkStoryScene,
   submitStorySceneReview,
@@ -48,12 +46,6 @@ import {
   StepFooter,
   StepHeader,
 } from './StudioUi';
-
-const VIDEO_MODES = [
-  { value: 'text', flag: 'text', label: 'From a description', hint: 'Describe what happens and the video is created from your words.' },
-  { value: 'image', flag: 'image', label: 'From a picture', hint: 'Start the video from one of your approved pictures.' },
-  { value: 'reference', flag: 'reference', label: 'From my character/style', hint: 'Keep your approved character or style pictures consistent.' },
-];
 
 export default function StudioScenesStep({ nav, focusSceneId = null, openPlanner = false }) {
   const { reels, reel, reelId, sceneStatus, connections, selectReel, project, projectId, goTo } = useStudio();
@@ -336,8 +328,7 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
     );
   }
 
-  const canCreateVideo = videoConnected && !videoBusy && review !== 'pending_review' && (!videoReady || review === 'needs_rework');
-  const canChange = videoReady && version && !videoBusy && review !== 'pending_review';
+  const canChange = videoReady && version && !videoBusy && review !== 'pending_review' && !planId;
   if (canChange && connections?.video?.edit) {
     actions.push(
       <button key="change" type="button" className="btn btn-outline-primary btn-sm" disabled={Boolean(busy)} onClick={() => setPanel('change')}>
@@ -453,11 +444,6 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
                   Version history
                 </button>
               ) : null}
-              {canCreateVideo ? (
-                <button type="button" className="dropdown-item" onClick={() => setPanel('video')}>
-                  Earlier scene video
-                </button>
-              ) : null}
               <button
                 type="button"
                 className="dropdown-item"
@@ -472,8 +458,6 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
             </div>
           </details>
         </div>
-
-        {panel === 'video' ? <CreateVideoPanel scene={scene} onClose={() => setPanel(null)} onCreated={() => refresh(['status'])} /> : null}
 
         {panel === 'change' || panel === 'extend' ? (
           <form
@@ -655,137 +639,6 @@ function SceneVersionHistory({ scene, onClose }) {
         </ol>
       ) : null}
     </section>
-  );
-}
-
-function CreateVideoPanel({ scene, onClose, onCreated }) {
-  const { projectId, reelId, connections, characters, bible } = useStudio();
-  const feedback = useFeedback();
-  const modes = VIDEO_MODES.filter((mode) => connections?.video?.[mode.flag]);
-  const [mode, setMode] = useState(modes[0]?.value || 'text');
-  const [prompt, setPrompt] = useState(scene.visual_prompt || scene.story || '');
-  const [referenceId, setReferenceId] = useState('');
-  const [stylePicture, setStylePicture] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const needsPicture = mode !== 'text';
-
-  useEffect(() => {
-    if (!needsPicture) return undefined;
-    let cancelled = false;
-    getStoryStyle(projectId)
-      .then((style) => {
-        if (!cancelled && style?.approved_reference) setStylePicture(style.approved_reference);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [needsPicture, projectId]);
-
-  const pictures = [
-    ...characters.filter((item) => item.approved_reference).map((item) => ({ id: item.approved_reference.id, label: item.name })),
-    ...(stylePicture ? [{ id: stylePicture.id, label: 'Look & feel picture' }] : []),
-  ];
-
-  async function submit(event) {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      await regenerateStoryScene(projectId, reelId, scene.id, {
-        mode,
-        prompt: prompt.trim() || null,
-        referenceId: needsPicture ? referenceId : null,
-      });
-      await onCreated();
-      feedback.success(`Video requested for ${sceneName(scene)}. It can take a few minutes; use “Check progress” to update it.`);
-      onClose();
-    } catch (err) {
-      feedback.error(friendlyError(err, 'The video could not be requested. Please try again.', 'video'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (modes.length === 0) {
-    return <NotConnectedNote area="video" className="mt-3" />;
-  }
-
-  return (
-    <form className="studio-inline-panel" onSubmit={submit}>
-      <h4 className="h6">Create the video for {sceneName(scene)}</h4>
-      <fieldset className="mb-3">
-        <legend className="form-label mb-1">How should it be made?</legend>
-        <div className="studio-choice-grid">
-          {modes.map((option) => (
-            <label key={option.value} className={`studio-choice${mode === option.value ? ' is-selected' : ''}`}>
-              <input
-                type="radio"
-                className="form-check-input"
-                name={`video-mode-${scene.id}`}
-                value={option.value}
-                checked={mode === option.value}
-                onChange={() => setMode(option.value)}
-              />
-              <span>
-                <span className="d-block fw-semibold">{option.label}</span>
-                <span className="small text-secondary">{option.hint}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <label className="form-label" htmlFor={`video-prompt-${scene.id}`}>
-        What should the video show?
-      </label>
-      <textarea
-        id={`video-prompt-${scene.id}`}
-        className="form-control mb-3"
-        rows={3}
-        value={prompt}
-        onChange={(event) => setPrompt(event.target.value)}
-        placeholder="e.g. Maya runs along the cliff at sunset as a whale breaches below."
-      />
-
-      {needsPicture ? (
-        <fieldset className="mb-3">
-          <legend className="form-label mb-1">Which picture?</legend>
-          {pictures.length === 0 ? (
-            <p className="small text-secondary mb-0">
-              No approved pictures yet. Approve a character or look & feel picture in Cast & Look first.
-            </p>
-          ) : (
-            <div className="d-flex flex-wrap gap-2">
-              {pictures.map((picture) => (
-                <label key={picture.id} className={`studio-choice studio-choice--compact${referenceId === picture.id ? ' is-selected' : ''}`}>
-                  <input
-                    type="radio"
-                    className="form-check-input"
-                    name={`video-picture-${scene.id}`}
-                    checked={referenceId === picture.id}
-                    onChange={() => setReferenceId(picture.id)}
-                  />
-                  <span>{picture.label}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </fieldset>
-      ) : null}
-
-      <p className="small text-secondary mb-3">
-        Length: {formatSeconds(scene.duration_seconds)} (from the scene) · Format: {aspectRatioLabel(bible?.aspect_ratio)} (from Story)
-      </p>
-
-      <div className="d-flex gap-2">
-        <BusyButton type="submit" busy={busy} busyLabel="Requesting…" disabled={needsPicture && !referenceId}>
-          Create video
-        </BusyButton>
-        <button type="button" className="btn btn-link" onClick={onClose} disabled={busy}>
-          Cancel
-        </button>
-      </div>
-    </form>
   );
 }
 

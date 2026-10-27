@@ -16,6 +16,7 @@ import { formatDateTime, formatSeconds, friendlyError, isJobActive } from '../..
 import {
   availableModes,
   BUILD_FAILED,
+  BUILD_SCENE,
   clipState,
   clipWindow,
   GENERATE_FAILED,
@@ -23,9 +24,14 @@ import {
   NOT_CONFIGURED,
   PARTS_NOT_READY,
   plainFailure,
+  REGENERATE_ACTION,
+  REGENERATE_BODY,
+  REGENERATE_UNIT,
+  regenerateConfirmTitle,
   sceneHistory,
   sceneSummary,
   soundSummary,
+  unitTitle,
   UNSUPPORTED,
   versionActions,
 } from '../../services/productionClips';
@@ -211,12 +217,10 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
       <div className="d-flex flex-wrap align-items-start justify-content-between gap-2">
         <div>
           <h4 className="h6 mb-1" id={`production-${scene.id}`}>
-            Video production
-          </h4>
-          <p className="mb-0">
             Scene {scene.sequence}
-            {scene.title ? ` · ${scene.title}` : ''} · {formatSeconds(duration)}
-          </p>
+            {scene.title ? ` · ${scene.title}` : ''}
+          </h4>
+          <p className="mb-0">{formatSeconds(duration)} · This scene is made of short clips. You can regenerate one clip without changing the others.</p>
         </div>
         <button type="button" className="btn btn-link btn-sm" onClick={onClose}>
           Close
@@ -277,8 +281,12 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
             busy={busy === 'build'}
             busyLabel="Building…"
             disabled={!summary.ready || assemblyRunning}
+            title={!summary.ready ? PARTS_NOT_READY : undefined}
             onClick={() => {
-              if (!summary.ready) return;
+              if (!summary.ready) {
+                setError(PARTS_NOT_READY);
+                return;
+              }
               run('build', () => assembleProductionScene(projectId, workspace.plan_id, scene.id), (result) => {
                 const status = result?.assembly?.status;
                 if (status === 'failed') return plainFailure(result.assembly?.error_message, BUILD_FAILED);
@@ -287,7 +295,7 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
               });
             }}
           >
-            {summary.current ? 'Rebuild scene' : 'Build scene'}
+            {BUILD_SCENE}
           </BusyButton>
         ) : null}
         <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => goTo('sound', { scene: scene.id })}>
@@ -319,6 +327,11 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
           <span>{NOT_CONFIGURED}</span>
         </p>
       ) : null}
+
+      <div>
+        <h5 className="h6 mb-1">Production clips</h5>
+        <p className="small text-secondary mb-2">Each clip is generated on its own. Regenerating one clip does not change the others.</p>
+      </div>
 
       <div className="d-grid gap-3">
         {(workspace?.clips || []).map((clip) => (
@@ -409,10 +422,14 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
   const [instruction, setInstruction] = useState('');
   const [asking, setAsking] = useState(null);
   const [note, setNote] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const state = clipState(clip);
   const versions = Array.isArray(clip.versions) ? clip.versions : [];
-  const number = String(clip.sequence).padStart(2, '0');
+  const title = unitTitle(clip);
   const windowLabel = clipWindow(clip);
+  const generating = state.key === 'generating';
+  const canGenerate = modes.length > 0 && canApprove && !generating;
+  const regenerating = versions.length > 0;
 
   function generate() {
     const capability = modes.some((item) => item.value === mode) ? mode : modes[0]?.value;
@@ -424,23 +441,45 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
     if (capability === 'reference_to_video' && pictures.length) {
       payload.inputs = pictures.slice(0, 8).map((id) => ({ type: 'reference_image', asset_id: id }));
     }
-    onRun(`generate-${clip.id}`, () => generateProductionUnit(projectId, planId, clip.id, payload), `Clip ${number} is being created.`);
+    onRun(
+      `generate-${clip.id}`,
+      () => generateProductionUnit(projectId, planId, clip.id, payload),
+      regenerating ? `${title} is being regenerated.` : `${title} is being created.`,
+    ).then((ok) => {
+      if (!ok) return;
+      setConfirming(false);
+      setInstruction('');
+    });
   }
 
   return (
     <article className="studio-production-clip" aria-labelledby={`clip-${clip.id}`}>
-      <h5 className="h6 mb-1" id={`clip-${clip.id}`}>
-        Clip {number}
-        <span className="fw-normal text-secondary"> · {windowLabel}</span>
-      </h5>
-      <p className="small mb-2">
-        <StatusBadge tone={state.key === 'failed' ? 'danger' : state.key === 'selected' ? 'success' : state.key === 'generating' ? 'progress' : 'neutral'}>
+      <div className="studio-unit-head">
+        <h5 className="h6 mb-0" id={`clip-${clip.id}`}>
+          {title}
+          <span className="fw-normal text-secondary"> · {windowLabel}</span>
+        </h5>
+        <StatusBadge tone={state.key === 'failed' ? 'danger' : state.key === 'selected' ? 'success' : state.key === 'generating' ? 'progress' : state.key === 'review' ? 'warning' : 'neutral'}>
           {state.label}
         </StatusBadge>
-        {state.detail ? <span className="ms-2">{state.detail}</span> : null}
+      </div>
+      <p className="small mb-2">
+        {state.detail ? <span>{state.detail}</span> : null}
+        {state.versions > 0 ? (
+          <span className="text-secondary">
+            {state.detail ? ' · ' : ''}
+            {state.versions} {state.versions === 1 ? 'version' : 'versions'}
+          </span>
+        ) : null}
       </p>
 
-      {versions.length === 0 && state.key !== 'generating' && modes.length > 0 && canApprove ? (
+      {generating ? (
+        <p className="small mb-2" role="status">
+          {state.detail}
+        </p>
+      ) : null}
+
+      {canGenerate && !regenerating ? (
         <GenerateForm
           clip={clip}
           modes={modes}
@@ -449,12 +488,30 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
           instruction={instruction}
           setInstruction={setInstruction}
           busy={busy === `generate-${clip.id}`}
+          submitLabel="Generate clip"
           onSubmit={generate}
         />
       ) : null}
-      {versions.length > 0 && state.key !== 'generating' && modes.length > 0 && canApprove ? (
-        <details className="mb-2">
-          <summary className="small">Generate another clip version</summary>
+
+      {canGenerate && regenerating && !confirming ? (
+        <div className="studio-production-actions mb-2">
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-sm"
+            disabled={Boolean(busy)}
+            onClick={() => setConfirming(true)}
+          >
+            {REGENERATE_UNIT}
+          </button>
+        </div>
+      ) : null}
+
+      {confirming && canGenerate ? (
+        <div className="studio-unit-confirm mb-2" role="dialog" aria-labelledby={`regen-title-${clip.id}`}>
+          <p className="fw-semibold mb-1" id={`regen-title-${clip.id}`}>
+            {regenerateConfirmTitle(clip)}
+          </p>
+          <p className="small mb-2">{REGENERATE_BODY}</p>
           <GenerateForm
             clip={clip}
             modes={modes}
@@ -463,28 +520,31 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
             instruction={instruction}
             setInstruction={setInstruction}
             busy={busy === `generate-${clip.id}`}
+            submitLabel={REGENERATE_ACTION}
             onSubmit={generate}
+            onCancel={() => setConfirming(false)}
           />
-        </details>
+        </div>
       ) : null}
 
+      {versions.length > 0 ? <h6 className="small text-uppercase text-secondary mb-2">Versions</h6> : null}
       <div className="d-grid gap-2">
         {versions.map((version) => {
           const actions = versionActions(version);
           return (
-            <div key={version.id} className={`border rounded p-2 ${version.selected ? 'border-success' : ''}`}>
+            <div key={version.id} className={`studio-unit-version${version.selected ? ' is-selected' : ''}`}>
               <div className="d-flex flex-wrap align-items-center gap-2">
                 <span className="fw-semibold">{version.label}</span>
                 <StatusBadge tone={version.status === 'approved' ? 'success' : version.status === 'needs_rework' ? 'warning' : 'progress'}>
                   {version.status_label || version.status}
                 </StatusBadge>
-                {version.selected ? <StatusBadge tone="success">Selected for this clip</StatusBadge> : null}
+                {version.selected ? <StatusBadge tone="success">Selected</StatusBadge> : null}
               </div>
               {actions.preview ? (
                 <div className="mt-2">
                   <MediaPreview
                     load={() => getProductionUnitVersionFileUrl(projectId, planId, clip.id, version.id)}
-                    label={`Clip ${number} ${version.label}`}
+                    label={`${title} ${version.label}`}
                   />
                 </div>
               ) : null}
@@ -572,7 +632,7 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
   );
 }
 
-function GenerateForm({ clip, modes, mode, setMode, instruction, setInstruction, busy, onSubmit }) {
+function GenerateForm({ clip, modes, mode, setMode, instruction, setInstruction, busy, onSubmit, submitLabel = 'Generate clip', onCancel = null }) {
   const selected = modes.find((item) => item.value === mode) || modes[0];
   return (
     <form
@@ -618,8 +678,13 @@ function GenerateForm({ clip, modes, mode, setMode, instruction, setInstruction,
       />
       <div className="studio-production-actions mt-2">
         <BusyButton type="submit" className="btn btn-primary btn-sm" busy={busy} busyLabel="Starting…">
-          Generate clip
+          {submitLabel}
         </BusyButton>
+        {onCancel ? (
+          <button type="button" className="btn btn-link btn-sm" onClick={onCancel} disabled={busy}>
+            Cancel
+          </button>
+        ) : null}
       </div>
     </form>
   );

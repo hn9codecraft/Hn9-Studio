@@ -1490,9 +1490,12 @@ small {
   box-shadow: 0 0 0 0.2rem rgba(240, 168, 11, 0.18);
 }
 
-.form-control::placeholder {
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
   color: var(--hn9-muted);
   opacity: 1;
+  font-size: var(--text-sm);
 }
 
 textarea.form-control {
@@ -2425,6 +2428,49 @@ html[data-theme='dark'] .studio-badge--danger {
 
 .studio-production-actions .btn {
   min-height: 2.75rem;
+}
+
+.studio-unit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.studio-unit-confirm {
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--hn9-border);
+  border-radius: var(--radius-md);
+  background: var(--hn9-surface-muted, var(--hn9-surface));
+}
+
+.studio-unit-version {
+  min-width: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--hn9-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.studio-unit-version.is-selected {
+  border-color: var(--hn9-success, #198754);
+}
+
+@media (max-width: 767.98px) {
+  .studio-production-summary {
+    gap: var(--space-2);
+  }
+
+  .studio-unit-head {
+    align-items: flex-start;
+  }
+
+  .studio-production-actions .btn,
+  .studio-scene-actions .btn {
+    flex: 1 1 auto;
+  }
 }
 
 .studio-production video,

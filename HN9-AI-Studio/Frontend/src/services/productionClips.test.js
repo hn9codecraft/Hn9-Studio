@@ -4,6 +4,7 @@ import {
   availableModes,
   boardStatus,
   BUILD_FAILED,
+  BUILD_SCENE,
   clipState,
   clipWindow,
   GENERATE_FAILED,
@@ -12,9 +13,13 @@ import {
   NOT_CONFIGURED,
   PARTS_NOT_READY,
   plainFailure,
+  REGENERATE_BODY,
+  REGENERATE_UNIT,
+  regenerateConfirmTitle,
   sceneHistory,
   sceneSummary,
   soundSummary,
+  unitTitle,
   versionActions,
 } from './productionClips.js';
 
@@ -71,7 +76,7 @@ test('scene summary counts approval and selection from server versions', () => {
   const missing = sceneSummary(clips, []);
   assert.equal(missing.selected, 4);
   assert.equal(missing.ready, false);
-  assert.equal(PARTS_NOT_READY, 'Some video parts are not ready yet.');
+  assert.equal(PARTS_NOT_READY, 'All clips must have an approved version selected before this scene can be built.');
 });
 
 test('an unapproved selected version does not count as ready', () => {
@@ -87,18 +92,22 @@ test('generation, review, approval, selection and failure labels come from serve
   const review = clipState({
     versions: [{ label: 'Version A', status: 'pending_review', approved: false, selected: false }],
   });
-  assert.equal(review.label, 'Version A — Ready for review');
+  assert.equal(review.label, 'Needs review');
+  assert.equal(review.detail, 'Version A ready for review');
   const approved = clipState({
     versions: [{ label: 'Version A', status: 'approved', approved: true, selected: false }],
   });
-  assert.equal(approved.label, 'Version A — Approved');
+  assert.equal(approved.label, 'Approved');
+  assert.equal(approved.detail, 'Version A approved');
   const selected = clipState({
     versions: [
       { label: 'Version A', status: 'approved', approved: true, selected: false },
       { label: 'Version B', status: 'approved', approved: true, selected: true },
     ],
   });
-  assert.equal(selected.label, 'Version B — Selected');
+  assert.equal(selected.label, 'Ready');
+  assert.equal(selected.detail, 'Version B selected');
+  assert.equal(selected.versions, 2);
   assert.equal(clipState({ versions: [{ label: 'Version C', status: 'needs_rework', selected: false }] }).label, 'Changes requested');
 });
 
@@ -124,7 +133,8 @@ test('changing the selected version leaves the other version approved', () => {
   assert.equal(versionActions(after[0]).select, true);
   assert.equal(versionActions(after[1]).select, false);
   assert.equal(after[0].approved, true);
-  assert.equal(clipState({ versions: after }).label, 'Version B — Selected');
+  assert.equal(clipState({ versions: after }).label, 'Ready');
+  assert.equal(clipState({ versions: after }).detail, 'Version B selected');
 });
 
 test('assembly progress, a preserved older version and failure stay distinct', () => {
@@ -173,6 +183,36 @@ test('generation modes stay within what the server says is connected', () => {
   );
   assert.equal(nextClipIntent(0), 'clip-1');
   assert.equal(nextClipIntent(2), 'clip-3');
+  assert.equal(nextClipIntent(8), 'clip-9');
+});
+
+test('unit labels and regenerate copy stay clip-scoped with no regeneration limit', () => {
+  const clips = slots([10, 10, 7]);
+  assert.equal(unitTitle(clips[0]), 'Unit 1');
+  assert.equal(unitTitle(clips[1]), 'Unit 2');
+  assert.equal(unitTitle(clips[2]), 'Unit 3');
+  assert.equal(regenerateConfirmTitle(clips[0]), 'Regenerate this 10-second clip?');
+  assert.equal(regenerateConfirmTitle(clips[2]), 'Regenerate this 7-second clip?');
+  assert.equal(REGENERATE_BODY, 'Only this clip will be regenerated. Other clips in this scene will remain unchanged.');
+  assert.equal(REGENERATE_UNIT, 'Regenerate unit');
+  assert.equal(BUILD_SCENE, 'Build / merge scene');
+  assert.doesNotMatch(REGENERATE_UNIT, /scene|reel|full video|entire/i);
+  assert.doesNotMatch(REGENERATE_BODY, /1 regeneration|regeneration used|left/i);
+});
+
+test('versions for one unit never include another unit', () => {
+  const clips = slots([10, 10, 10]);
+  clips[0].versions = [{ id: 'u1a', label: 'Version A', status: 'approved', approved: true, selected: true, preview_available: true }];
+  clips[1].versions = [
+    { id: 'u2a', label: 'Version A', status: 'approved', approved: true, selected: true, preview_available: true },
+    { id: 'u2b', label: 'Version B', status: 'pending_review', approved: false, selected: false, preview_available: true },
+  ];
+  clips[2].versions = [{ id: 'u3a', label: 'Version A', status: 'approved', approved: true, selected: true, preview_available: true }];
+  assert.deepEqual(clips[1].versions.map((version) => version.id), ['u2a', 'u2b']);
+  assert.equal(clips[0].versions.some((version) => version.id.startsWith('u2')), false);
+  assert.equal(clips[2].versions.some((version) => version.id.startsWith('u2')), false);
+  assert.equal(clipState(clips[1]).versions, 2);
+  assert.equal(clipState(clips[0]).versions, 1);
 });
 
 test('sound and history stay in plain language', () => {
