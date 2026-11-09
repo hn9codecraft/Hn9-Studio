@@ -85,8 +85,7 @@ export default function AnalyticsSection() {
         <div>
           <h2 className="section-title mb-1">Studio analytics</h2>
           <p className="page-lede mb-0">
-            Aggregated from your owned records. Zeros and empty charts are real. Provider usage and cost are listed
-            below.
+            A summary of your projects and the work inside them.
           </p>
         </div>
         <form className="filter-bar" onSubmit={applyRange}>

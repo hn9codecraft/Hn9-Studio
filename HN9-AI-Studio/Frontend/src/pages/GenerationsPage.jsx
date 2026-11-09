@@ -1,15 +1,17 @@
+import { Link } from 'react-router-dom';
 import EmptyState from '../components/ui/EmptyState';
 
 export default function GenerationsPage() {
   return (
-    <>
-      <h1 className="visually-hidden">Generations</h1>
-      <EmptyState
-        headingLevel="h2"
-        icon="bi-stars"
-        title="Generations is not available yet"
-        description="This is a route shell for M7.1. Script, image, and video generation workflows are not implemented in this milestone."
-      />
-    </>
+    <EmptyState
+      headingLevel="h1"
+      icon="bi-slash-circle"
+      title="This page is not available"
+      description="Go back to Creative Studio to keep working on a video."
+    >
+      <Link className="btn btn-primary" to="/studio">
+        Creative Studio
+      </Link>
+    </EmptyState>
   );
 }

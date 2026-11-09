@@ -60,10 +60,9 @@ export default function ProvidersPage() {
     <div className="providers-page">
       <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <h1 className="visually-hidden">Providers</h1>
+          <h1 className="visually-hidden">AI services</h1>
           <p className="page-lede mb-0">
-            Registry records from the database. Enable, disable, and configuration changes are saved through the live
-            API. Secrets stay masked after save.
+            Turn AI services on or off, and update how they are set up. Saved secrets stay hidden.
           </p>
         </div>
       </div>
@@ -87,8 +86,8 @@ export default function ProvidersPage() {
       {!loading && !forbidden && !error && providers.length === 0 ? (
         <EmptyState
           icon="bi-hdd-network"
-          title="No providers in the registry"
-          description="There are no ai_providers rows to manage yet. This page does not invent catalog entries."
+          title="No AI services yet"
+          description="No AI services have been added yet."
         />
       ) : null}
 
@@ -99,7 +98,7 @@ export default function ProvidersPage() {
           ))}
           {meta?.total ? (
             <p className="small text-secondary mb-0">
-              Showing {providers.length} of {meta.total} registry records.
+              Showing {providers.length} of {meta.total} AI service{meta.total === 1 ? '' : 's'}.
             </p>
           ) : null}
         </div>

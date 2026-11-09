@@ -98,7 +98,7 @@ export default function ScriptGenerateForm({ project, parentScript = null, onCan
           <p className="text-secondary mb-0">
             {isVariation
               ? 'Creates a new AI variation. The current script is not overwritten.'
-              : 'Uses the project generation pipeline. Nothing is saved until the provider returns a real result.'}
+              : 'The studio writes a script from your notes. Nothing is saved until it finishes.'}
           </p>
         </div>
       </div>

@@ -17,7 +17,7 @@ export default function AssetList({ projectId, assets, loading, error, meta }) {
         <div>
           <p className="section-kicker mb-1">Asset Studio</p>
           <h2 className="section-title mb-1">Assets</h2>
-          <p className="text-secondary mb-0">Catalog files and outputs for this project. Upload and AI generation are not configured yet.</p>
+          <p className="text-secondary mb-0">Files and finished pieces for this project. Paste a link if you already have a file.</p>
         </div>
         <Link className="btn btn-primary" to={`/projects/${projectId}/assets/new`}>
           <i className="bi bi-plus-lg me-2" aria-hidden="true" />
@@ -35,7 +35,7 @@ export default function AssetList({ projectId, assets, loading, error, meta }) {
         <EmptyState
           icon="bi-folder"
           title="No assets yet"
-          description="Create an asset record to track a file or output for this project. File upload and AI generation are not configured yet."
+          description="Add a file or note for this project. You can paste a link if the file already exists."
         >
           <Link className="btn btn-primary" to={`/projects/${projectId}/assets/new`}>
             New Asset

@@ -53,11 +53,11 @@ export default function ProjectsPage() {
       <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
           <h1 className="visually-hidden">Projects</h1>
-          <p className="page-lede mb-0">Your production workspaces, loaded from the live API.</p>
+          <p className="page-lede mb-0">Your projects. Open one to keep working in Creative Studio.</p>
         </div>
         <Link className="btn btn-primary" to="/projects/new">
           <i className="bi bi-plus-lg me-2" aria-hidden="true" />
-          New Project
+          Create project
         </Link>
       </div>
 
@@ -82,10 +82,10 @@ export default function ProjectsPage() {
         <EmptyState
           icon="bi-folder2-open"
           title="No projects yet"
-          description="Create a project to open a studio workspace. Nothing is generated until later modules are built."
+          description="Create a project and it opens in Creative Studio."
         >
           <Link className="btn btn-primary" to="/projects/new">
-            New Project
+            Create project
           </Link>
         </EmptyState>
       ) : null}

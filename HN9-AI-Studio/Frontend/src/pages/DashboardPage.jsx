@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import ActionCenterSection from '../components/dashboard/ActionCenterSection';
 import AnalyticsSection from '../components/dashboard/AnalyticsSection';
 import DashboardStats from '../components/dashboard/DashboardStats';
@@ -20,6 +21,40 @@ const EMPTY_SUMMARY = {
   recent_projects: [],
   recent_activity: [],
 };
+
+const GETTING_STARTED_STEPS = [
+  {
+    icon: 'bi-pencil-square',
+    title: 'Name the project',
+    description: 'Give it a name and pick what you plan to produce.',
+  },
+  {
+    icon: 'bi-camera-reels',
+    title: 'Land in Creative Studio',
+    description: 'Your new project opens straight in its Creative Studio.',
+  },
+  {
+    icon: 'bi-film',
+    title: 'Move from Story to Final Video',
+    description: 'Work step by step in the studio, from Story through to the Final Video.',
+  },
+];
+
+function hasAnyProjects(summary) {
+  const total = Number(summary?.projects?.total) || 0;
+  const recent = Array.isArray(summary?.recent_projects) ? summary.recent_projects.length : 0;
+
+  return total > 0 || recent > 0;
+}
+
+function CreateProjectButton() {
+  return (
+    <Link className="btn btn-primary" to="/projects/new">
+      <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+      Create project
+    </Link>
+  );
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -58,16 +93,30 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const hasProjects = hasAnyProjects(summary);
+  const showGettingStarted = !loading && !error && !hasProjects;
+  const showStats = !loading && hasProjects;
+
   return (
     <div className="dashboard-page">
       <section className="page-section page-section--flush dashboard-hero glass-card card border-0">
-        <div className="card-body">
-          <p className="section-kicker mb-2">Overview</p>
-          <h1 className="section-title mb-2">Welcome back, {user?.name || 'there'}</h1>
-          <p className="dashboard-hero-copy mb-0">
-            Counts are live from your projects. Zeros are real. The Action Center lists only items that currently need
-            work. Usage and cost below only include work that was actually carried out.
-          </p>
+        <div className="card-body dashboard-hero-body">
+          <div>
+            <p className="section-kicker mb-2">{showGettingStarted ? 'Get started' : 'Overview'}</p>
+            <h1 className="section-title mb-2">
+              {showGettingStarted ? `Welcome, ${user?.name || 'there'}` : `Welcome back, ${user?.name || 'there'}`}
+            </h1>
+            <p className="dashboard-hero-copy mb-0">
+              {showGettingStarted
+                ? 'Your studio is ready. Create your first project and it opens straight in Creative Studio.'
+                : 'Here is what is in your studio right now, including anything that needs your attention.'}
+            </p>
+          </div>
+          {!loading ? (
+            <div className="dashboard-hero-actions">
+              <CreateProjectButton />
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -77,9 +126,33 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      {loading ? <LoadingSpinner label="Loading dashboard…" /> : null}
+      {loading ? <LoadingSpinner label={'Loading dashboard\u2026'} /> : null}
 
-      {!loading ? (
+      {showGettingStarted ? (
+        <section className="page-section" aria-labelledby="dashboard-steps-title">
+          <h2 className="section-title" id="dashboard-steps-title">
+            How it works
+          </h2>
+          <ol className="dashboard-steps">
+            {GETTING_STARTED_STEPS.map((step, index) => (
+              <li className="dashboard-step glass-card card border-0" key={step.title}>
+                <div className="card-body">
+                  <div className="dashboard-step-head">
+                    <span className="dashboard-step-number" aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <i className={`bi ${step.icon} dashboard-step-icon`} aria-hidden="true" />
+                  </div>
+                  <h3 className="card-heading h6 mb-1">{step.title}</h3>
+                  <p className="text-secondary small mb-0">{step.description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
+      {showStats ? (
         <>
           <section className="page-section">
             <h2 className="visually-hidden">Studio totals</h2>

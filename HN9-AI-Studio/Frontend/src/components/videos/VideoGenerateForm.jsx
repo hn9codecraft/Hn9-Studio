@@ -139,8 +139,8 @@ export default function VideoGenerateForm({ project, parentVideo = null }) {
           <h2 className="section-title mt-3 mb-1">{parentVideo ? 'Regenerate video' : 'Generate video'}</h2>
           <p className="text-secondary mb-0">
             {generating
-              ? 'Sending the request to Gemini Veo…'
-              : 'Starts a real Gemini Veo job. Completion is shown only after the provider finishes.'}
+              ? 'Starting your video…'
+              : 'Starts a video from your description. It appears here when it is ready.'}
           </p>
         </div>
       </div>
@@ -253,7 +253,7 @@ export default function VideoGenerateForm({ project, parentVideo = null }) {
                   </option>
                 ))}
               </select>
-              <div className="form-text">Gemini Veo generate models accept 8 seconds.</div>
+              <div className="form-text">Generated videos are 8 seconds.</div>
             </div>
             <div className="col-md-4">
               <label className="form-label" htmlFor="video-gen-resolution">
@@ -278,7 +278,7 @@ export default function VideoGenerateForm({ project, parentVideo = null }) {
           <div className="row g-3 mb-4">
             <div className="col-md-6">
               <label className="form-label" htmlFor="video-gen-provider">
-                Provider
+                Video service
               </label>
               <select
                 id="video-gen-provider"

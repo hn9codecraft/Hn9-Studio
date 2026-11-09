@@ -444,7 +444,7 @@ export default function VideoEditor({ projectId, videoId, creating }) {
           {!creating ? (
             <div className="mb-3" role="status" aria-live="polite">
               <span className={`status-pill ${videoStatusClass(video?.status)}`}>{videoStatusLabel(video?.status)}</span>
-              {inFlight ? <span className="visually-hidden"> Generating. Status updates when the provider reports a change.</span> : null}
+              {inFlight ? <span className="visually-hidden"> Creating the video. This page updates when it is ready.</span> : null}
             </div>
           ) : null}
           <GeneratedVideo projectId={projectId} video={video} />

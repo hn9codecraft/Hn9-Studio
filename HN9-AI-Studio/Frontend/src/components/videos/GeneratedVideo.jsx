@@ -46,7 +46,7 @@ export default function GeneratedVideo({ projectId, video }) {
   if (inFlight) {
     return (
       <p className="text-secondary mb-0" role="status" aria-live="polite">
-        {videoStatusLabel(video.status)}. Waiting for the provider to finish. This page does not show a percentage.
+        {videoStatusLabel(video.status)}. Still creating the video.
       </p>
     );
   }

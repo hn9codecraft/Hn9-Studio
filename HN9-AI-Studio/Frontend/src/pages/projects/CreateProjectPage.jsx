@@ -19,7 +19,6 @@ export default function CreateProjectPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    const openStudio = event.nativeEvent?.submitter?.value !== 'project';
     setSubmitting(true);
     setError(null);
 
@@ -29,7 +28,7 @@ export default function CreateProjectPage() {
         description: values.description.trim(),
         ...(workflows.length > 0 ? { settings: { studio_modules: workflows } } : {}),
       });
-      navigate(openStudio ? `/studio/${project.id}` : `/projects/${project.id}`, { replace: true });
+      navigate(`/studio/${project.id}`, { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setError(
@@ -57,7 +56,7 @@ export default function CreateProjectPage() {
             <i className="bi bi-arrow-left me-1" aria-hidden="true" />
             Back to Projects
           </Link>
-          <h1 className="visually-hidden">New Project</h1>
+          <h1 className="visually-hidden">Create project</h1>
           <p className="page-lede mt-3 mb-0">
             Name your project, choose what you plan to produce, and go straight into its Creative Studio.
           </p>
@@ -75,20 +74,9 @@ export default function CreateProjectPage() {
               creating
               showTypeAndStatus={false}
               actions={
-                <div className="d-flex flex-wrap gap-2">
-                  <button className="btn btn-primary" type="submit" name="intent" value="studio" disabled={submitting}>
-                    {submitting ? 'Creating…' : 'Create and open studio'}
-                  </button>
-                  <button
-                    className="btn btn-outline-primary"
-                    type="submit"
-                    name="intent"
-                    value="project"
-                    disabled={submitting}
-                  >
-                    Create project only
-                  </button>
-                </div>
+                <button className="btn btn-primary" type="submit" disabled={submitting}>
+                  {submitting ? 'Creating\u2026' : 'Create project'}
+                </button>
               }
             >
               <div className="mb-4">

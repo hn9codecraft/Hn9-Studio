@@ -120,8 +120,8 @@ export default function ImageGenerateForm({ project, parentImage = null, basePat
           <h2 className="section-title mt-3 mb-1">{parentImage ? 'Regenerate image' : 'Generate image'}</h2>
           <p className="text-secondary mb-0">
             {generating
-              ? 'Waiting for the provider…'
-              : 'Sends the prompt to a configured image provider. This does not replace an existing image.'}
+              ? 'Creating your picture…'
+              : 'Creates a new picture from your description. An existing picture stays as it is.'}
           </p>
         </div>
       </div>
@@ -218,7 +218,7 @@ export default function ImageGenerateForm({ project, parentImage = null, basePat
             </div>
             <div className="col-md-4">
               <label className="form-label" htmlFor="image-gen-provider">
-                Provider
+                Image service
               </label>
               <select
                 id="image-gen-provider"
@@ -227,7 +227,7 @@ export default function ImageGenerateForm({ project, parentImage = null, basePat
                 onChange={(event) => setValues({ ...values, provider: event.target.value })}
                 disabled={generating}
               >
-                <option value="">Image-capable provider</option>
+                <option value="">Choose a service</option>
                 <option value="openai">OpenAI</option>
                 <option value="gemini">Gemini</option>
               </select>

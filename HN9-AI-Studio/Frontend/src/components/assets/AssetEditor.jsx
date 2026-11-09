@@ -284,12 +284,12 @@ export default function AssetEditor({ projectId, assetId, creating }) {
               placeholder="https://"
             />
             {fieldError(error, 'file_url') ? <div className="invalid-feedback">{fieldError(error, 'file_url')}</div> : null}
-            <div className="form-text">Paste a real URL if you already have a file. This studio does not upload or generate files.</div>
+            <div className="form-text">Paste a link if you already have a file.</div>
           </div>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="asset-mime-type">
-              MIME type <span className="text-secondary fw-normal">(optional)</span>
+              File type <span className="text-secondary fw-normal">(optional)</span>
             </label>
             <input
               id="asset-mime-type"
@@ -325,7 +325,7 @@ export default function AssetEditor({ projectId, assetId, creating }) {
       <div className="card border-0 shadow-sm mt-4">
         <div className="card-body p-4 p-md-5">
           <h3 className="card-heading mb-3">File and output</h3>
-          <AlertMessage variant="warning">File upload and AI generation are not configured yet.</AlertMessage>
+          <AlertMessage variant="warning">Uploading a file from this page is not available. Paste a link instead.</AlertMessage>
           <dl className="row mb-0 mt-4">
             <dt className="col-sm-3">File</dt>
             <dd className="col-sm-9">
@@ -334,10 +334,10 @@ export default function AssetEditor({ projectId, assetId, creating }) {
                   {asset?.file_url || values.file_url}
                 </a>
               ) : (
-                'No file is attached. A real upload or provider can be connected later.'
+                'No file is attached yet.'
               )}
             </dd>
-            <dt className="col-sm-3">MIME type</dt>
+            <dt className="col-sm-3">File type</dt>
             <dd className="col-sm-9">{asset?.mime_type || values.mime_type || '—'}</dd>
           </dl>
         </div>

@@ -53,7 +53,7 @@ export default function ProviderRegistryCard({ provider, onUpdated }) {
 
       const updated = await updateProvider(provider.id, payload);
       replaceProvider(updated);
-      setNotice('Provider registry details saved.');
+      setNotice('AI service details saved.');
     } catch (err) {
       setError(err instanceof ApiError ? err : new ApiError('Unable to save this provider.', { status: 0 }));
     } finally {
@@ -69,7 +69,7 @@ export default function ProviderRegistryCard({ provider, onUpdated }) {
     try {
       const updated = enabled ? await disableProvider(provider.id) : await enableProvider(provider.id);
       replaceProvider(updated);
-      setNotice(enabled ? 'Provider marked inactive in the registry.' : 'Provider marked active in the registry.');
+      setNotice(enabled ? 'AI service turned off.' : 'AI service turned on.');
     } catch (err) {
       setError(err instanceof ApiError ? err : new ApiError('Unable to update provider status.', { status: 0 }));
     } finally {
@@ -127,8 +127,7 @@ export default function ProviderRegistryCard({ provider, onUpdated }) {
         </div>
 
         <p className="small text-secondary mb-3">
-          This is the database registry status, not a live vendor connection check. Runtime adapters still read
-          environment configuration separately.
+          This shows whether the service is turned on here. It does not test the connection to the provider.
         </p>
 
         {notice ? (
@@ -192,7 +191,7 @@ export default function ProviderRegistryCard({ provider, onUpdated }) {
               Capabilities: {formatCapabilities(provider.capabilities)}
             </p>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : 'Save registry details'}
+              {saving ? 'Saving…' : 'Save details'}
             </button>
           </div>
         </form>

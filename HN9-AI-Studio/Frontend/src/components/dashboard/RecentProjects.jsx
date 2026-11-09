@@ -10,10 +10,10 @@ export default function RecentProjects({ projects }) {
       <EmptyState
         icon="bi-folder2-open"
         title="No projects yet"
-        description="Create a project to start counting real studio work on this dashboard."
+        description="Create a project and it opens straight in its Creative Studio."
       >
         <Link className="btn btn-primary" to="/projects/new">
-          New Project
+          Create project
         </Link>
       </EmptyState>
     );

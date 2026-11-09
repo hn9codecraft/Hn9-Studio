@@ -5,7 +5,7 @@ export default function ComingNextPanel({ title }) {
     <EmptyState
       icon="bi-hourglass-split"
       title={`${title} is coming next`}
-      description={`${title} is not part of this milestone. This workspace tab is a placeholder so the studio layout is ready — it does not generate or display fake content.`}
+      description={`${title} is not available on this page. Open the project in Creative Studio to keep working on the video.`}
     />
   );
 }

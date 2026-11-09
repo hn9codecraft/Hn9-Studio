@@ -9,7 +9,7 @@ import { getDashboardActions } from '../../services/dashboardService';
 const EMPTY = { total: 0, limit: 50, items: [] };
 
 const MODULES = [
-  { value: '', label: 'All modules' },
+  { value: '', label: 'All types' },
   { value: 'project', label: 'Project' },
   { value: 'script', label: 'Script' },
   { value: 'image', label: 'Image' },
@@ -76,14 +76,13 @@ export default function ActionCenterSection() {
         <div>
           <h2 className="section-title mb-1">Items that need attention</h2>
           <p className="page-lede mb-0">
-            Built from real project and content statuses. Failed is high, pending or processing is medium, draft is
-            low. Empty means nothing currently needs work.
+            Work that needs a look, such as a failed job or a draft still waiting.
           </p>
         </div>
         <form className="filter-bar" onSubmit={applyFilters}>
           <div>
             <label className="form-label small mb-1" htmlFor="actions-module">
-              Module
+              Type
             </label>
             <select id="actions-module" className="form-select" value={module} onChange={(event) => setModule(event.target.value)}>
               {MODULES.map((option) => (
@@ -107,7 +106,7 @@ export default function ActionCenterSection() {
           </div>
           <div>
             <label className="form-label small mb-1" htmlFor="actions-project">
-              Project UUID
+              Project
             </label>
             <input
               id="actions-project"
@@ -135,7 +134,7 @@ export default function ActionCenterSection() {
         <EmptyState
           icon="bi-check2-circle"
           title="No items need attention right now."
-          description="Failed, pending, processing, and draft studio records will appear here when they exist."
+          description="Anything that failed, is still running, or is still a draft will show up here."
         />
       ) : null}
 
@@ -152,7 +151,7 @@ export default function ActionCenterSection() {
               <thead>
                 <tr>
                   <th scope="col">Priority</th>
-                  <th scope="col">Module</th>
+                  <th scope="col">Type</th>
                   <th scope="col">Item</th>
                   <th scope="col">Status</th>
                   <th scope="col">Project</th>
@@ -165,7 +164,7 @@ export default function ActionCenterSection() {
                     <td data-label="Priority">
                       <span className={`action-priority-badge action-priority-${item.priority}`}>{item.priority}</span>
                     </td>
-                    <td data-label="Module" className="text-capitalize">
+                    <td data-label="Type" className="text-capitalize">
                       {item.module}
                     </td>
                     <td data-label="Item">

@@ -23,7 +23,7 @@ export default function ContentStatusBreakdown({ content, projects }) {
       <EmptyState
         icon="bi-bar-chart"
         title="No analytics data available yet."
-        description="Status counts appear after you create real studio records."
+        description="Status counts appear after you add projects or studio work."
       />
     );
   }

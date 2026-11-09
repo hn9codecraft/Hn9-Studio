@@ -6,7 +6,7 @@ export default function CreationTimeline({ rows }) {
       <EmptyState
         icon="bi-graph-up"
         title="No analytics data available yet."
-        description="The creation timeline only appears after you create real studio records."
+        description="This chart appears after you add projects or studio work."
       />
     );
   }
@@ -20,7 +20,7 @@ export default function CreationTimeline({ rows }) {
     <div className="card border-0 shadow-sm">
       <div className="card-body">
         <h3 className="card-heading mb-3">Creation timeline</h3>
-        <p className="small text-secondary mb-3">Real created_at counts. Days without records are omitted.</p>
+        <p className="small text-secondary mb-3">Days you added something. Quiet days are left out.</p>
         <div className="d-flex flex-wrap gap-3 mb-4 small">
           <Legend color="var(--chart-1)" label="Projects" />
           <Legend color="var(--chart-2)" label="Scripts" />

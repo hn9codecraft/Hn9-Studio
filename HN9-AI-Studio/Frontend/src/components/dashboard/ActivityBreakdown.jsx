@@ -12,7 +12,7 @@ export default function ActivityBreakdown({ activity }) {
       <EmptyState
         icon="bi-clock-history"
         title="No analytics data available yet."
-        description="Activity counts appear after real studio actions are logged."
+        description="Activity appears after you work in a project."
       />
     );
   }

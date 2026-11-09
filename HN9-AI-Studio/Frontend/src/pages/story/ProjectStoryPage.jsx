@@ -102,6 +102,8 @@ function StudioProjectPicker() {
     }
   }
 
+  const showEmptyState = !loading && !error && projects.length === 0 && !query;
+
   return (
     <div className="story-page">
       <div className="page-toolbar d-flex flex-wrap align-items-start justify-content-between gap-3">
@@ -111,9 +113,11 @@ function StudioProjectPicker() {
             Every project has a studio that takes it from story to finished video. Choose a project to open it.
           </p>
         </div>
-        <Link className="btn btn-primary" to="/projects/new">
-          New Project
-        </Link>
+        {showEmptyState ? null : (
+          <Link className="btn btn-primary" to="/projects/new">
+            Create project
+          </Link>
+        )}
       </div>
 
       {error ? (
@@ -148,10 +152,10 @@ function StudioProjectPicker() {
 
       {loading ? <StepSkeleton rows={3} /> : null}
 
-      {!loading && !error && projects.length === 0 && !query ? (
-        <EmptyState icon="bi-camera-reels" title="No projects yet" description="Create a project to get its Creative Studio.">
+      {showEmptyState ? (
+        <EmptyState icon="bi-camera-reels" title="No projects yet" description="Create a project and it opens straight in its Creative Studio.">
           <Link className="btn btn-primary" to="/projects/new">
-            New Project
+            Create project
           </Link>
         </EmptyState>
       ) : null}

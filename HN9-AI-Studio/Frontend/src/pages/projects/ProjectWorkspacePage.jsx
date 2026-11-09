@@ -293,7 +293,7 @@ export default function ProjectWorkspacePage() {
                     <dd className="col-sm-8">
                       {studioWorkflows.length > 0
                         ? studioWorkflows.map(studioWorkflowLabel).join(', ')
-                        : 'All (not narrowed)'}
+                        : 'All steps'}
                     </dd>
                     <dt className="col-sm-4">Slug</dt>
                     <dd className="col-sm-8">

@@ -13,7 +13,7 @@ export default function ActivityList({ projectId, activities, loading, error, me
         <div>
           <p className="section-kicker mb-1">Activity Studio</p>
           <h2 className="section-title mb-1">Activity</h2>
-          <p className="text-secondary mb-0">A timeline of real actions on this project. Nothing here is invented.</p>
+          <p className="text-secondary mb-0">What has happened in this project.</p>
         </div>
       </div>
 

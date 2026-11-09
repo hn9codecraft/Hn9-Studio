@@ -7,7 +7,7 @@ export default function ProjectProductivity({ rows }) {
       <EmptyState
         icon="bi-kanban"
         title="No analytics data available yet."
-        description="Project productivity lists your owned projects and their real studio item counts."
+        description="This list shows how much work sits in each project."
       />
     );
   }

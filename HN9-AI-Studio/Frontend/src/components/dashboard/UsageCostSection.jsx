@@ -15,7 +15,7 @@ const EMPTY_USAGE = {
 
 const EMPTY_COSTS = {
   has_records: false,
-  message: 'Cost data is not available yet. No provider costs have been recorded.',
+  message: 'No costs have been recorded yet.',
   totals: [],
   by_provider: [],
   by_model: [],
@@ -86,8 +86,7 @@ export default function UsageCostSection() {
         <div>
           <h2 className="section-title mb-1">Provider usage and cost</h2>
           <p className="page-lede mb-0">
-            Recorded from real prompt executions. Missing tokens stay unknown. Cost appears only when a provider
-            reported a charge or a configured price exists.
+            What your AI services have used, and any cost that was recorded.
           </p>
         </div>
         <form className="filter-bar" onSubmit={applyFilters}>
@@ -105,7 +104,7 @@ export default function UsageCostSection() {
           </div>
           <div>
             <label className="form-label small mb-1" htmlFor="usage-project">
-              Project UUID
+              Project
             </label>
             <input
               id="usage-project"
@@ -117,14 +116,14 @@ export default function UsageCostSection() {
           </div>
           <div>
             <label className="form-label small mb-1" htmlFor="usage-provider">
-              Provider
+              AI service
             </label>
             <input
               id="usage-provider"
               className="form-control"
               value={provider}
               onChange={(event) => setProvider(event.target.value)}
-              placeholder="e.g. openai"
+              placeholder="Optional"
             />
           </div>
           <button className="btn btn-outline-primary" type="submit">
@@ -165,7 +164,7 @@ function UsagePanel({ usage }) {
         <EmptyState
           icon="bi-cpu"
           title="No usage has been recorded yet."
-          description="Usage appears after a real provider execution writes tokens onto a prompt execution."
+          description="Usage appears after an AI service does work for you."
         />
       </div>
     );
@@ -182,11 +181,11 @@ function UsagePanel({ usage }) {
       </div>
       <p className="small text-secondary mt-3 mb-0">
         {usage.tokens.operations_without_tokens === 1
-          ? '1 operation had no token data from the provider.'
-          : `${usage.tokens.operations_without_tokens} operations had no token data from the provider.`}
+          ? '1 job came back without a usage count.'
+          : `${usage.tokens.operations_without_tokens} jobs came back without a usage count.`}
       </p>
       <div className="equal-card-row mt-3">
-        <BreakdownCard title="By provider" rows={usage.by_provider} labelKey="provider" valueKey="operations" />
+        <BreakdownCard title="By AI service" rows={usage.by_provider} labelKey="provider" valueKey="operations" />
         <BreakdownCard title="By model" rows={usage.by_model} labelKey="model" valueKey="operations" />
       </div>
       <div className="mt-3">
@@ -219,7 +218,7 @@ function CostPanel({ costs }) {
         ))}
       </div>
       <div className="equal-card-row mt-3">
-        <BreakdownCard title="Cost by provider" rows={costs.by_provider} labelKey="provider" valueKey="amount" />
+        <BreakdownCard title="Cost by AI service" rows={costs.by_provider} labelKey="provider" valueKey="amount" />
         <BreakdownCard title="Cost by model" rows={costs.by_model} labelKey="model" valueKey="amount" />
       </div>
       <div className="mt-3">

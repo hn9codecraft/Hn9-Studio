@@ -6,9 +6,9 @@ import Sidebar from './Sidebar';
 const TITLES = {
   '/dashboard': 'Dashboard',
   '/projects': 'Projects',
-  '/projects/new': 'New Project',
+  '/projects/new': 'Create project',
   '/studio': 'Creative Production Studio',
-  '/generations': 'Generations',
+  '/generations': 'This page is not available',
   '/providers': 'AI services',
   '/settings': 'Settings',
 };

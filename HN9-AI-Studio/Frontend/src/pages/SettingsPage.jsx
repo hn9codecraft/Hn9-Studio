@@ -122,8 +122,7 @@ export default function SettingsPage() {
       <div className="page-toolbar">
         <h1 className="visually-hidden">Settings</h1>
         <p className="page-lede mb-0">
-          Profile and password are stored on your user record. Application-wide settings and notification preferences
-          are not available because those services have no persistence layer.
+          Update your name and password. Email and role stay with your account.
         </p>
       </div>
 
@@ -180,7 +179,7 @@ export default function SettingsPage() {
                       Role
                     </label>
                     <input id="account-role" className="form-control" value={profile.role || user?.role || ''} disabled />
-                    <div className="form-text">Roles are not editable. There is no role catalog API.</div>
+                    <div className="form-text">Your role is set for this account and cannot be changed here.</div>
                   </div>
                   <div className="row g-3 mb-4">
                     <div className="col-md-6">

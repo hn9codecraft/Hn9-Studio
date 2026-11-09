@@ -82,7 +82,7 @@ export function generationErrorMessage(error) {
   }
 
   if (error.errorCode === 'ai_provider_not_configured' || error.context?.reason === 'not_configured') {
-    return 'AI generation is unavailable because no provider credentials are configured. Enable a text provider and add its runtime API key. No script was created.';
+    return 'Script writing is not connected yet. No script was created.';
   }
 
   if (error.errorCode === 'generation_project_not_editable') {
@@ -90,7 +90,7 @@ export function generationErrorMessage(error) {
   }
 
   if (error.errorCode === 'ai_all_providers_failed' || error.errorCode === 'ai_provider_timeout') {
-    return error.message || 'The AI provider failed. No script was created.';
+    return error.message || 'The writing service could not finish. No script was created.';
   }
 
   if (error.status === 401) {

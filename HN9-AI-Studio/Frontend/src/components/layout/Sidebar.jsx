@@ -4,10 +4,10 @@ import BrandLogo from '../ui/BrandLogo';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: 'bi-grid-1x2' },
-  { to: '/projects', label: 'Projects', icon: 'bi-folder2-open' },
   { to: '/studio', label: 'Creative Studio', icon: 'bi-camera-reels' },
-  { to: '/providers', label: 'AI services', icon: 'bi-hdd-network', adminOnly: true },
+  { to: '/projects', label: 'Projects', icon: 'bi-folder2-open' },
   { to: '/settings', label: 'Settings', icon: 'bi-gear' },
+  { to: '/providers', label: 'AI services', icon: 'bi-hdd-network', adminOnly: true },
 ];
 
 export default function Sidebar() {

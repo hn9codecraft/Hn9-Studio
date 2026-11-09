@@ -40,7 +40,7 @@ export default function ScriptList({ projectId, scripts, loading, error, meta })
         <EmptyState
           icon="bi-file-text"
           title="No scripts yet"
-          description="Create a manual draft or generate a script with a configured AI provider."
+          description="Write a script yourself, or ask the studio to draft one."
         >
           <div className="d-flex flex-wrap justify-content-center gap-2">
             <Link className="btn btn-outline-primary" to={`/projects/${projectId}/scripts/generate`}>
