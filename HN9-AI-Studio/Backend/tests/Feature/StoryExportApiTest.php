@@ -12,6 +12,7 @@ use App\Story\Models\StoryReel;
 use App\Story\Models\StoryScene;
 use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StorySceneVersion;
+use App\Story\Models\StorySubtitleTrack;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Models\StoryWorkspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -198,6 +199,74 @@ final class StoryExportApiTest extends TestCase
         $this->postJson($this->reelUrl($project, $reel).'/renders/'.$missing.'/exports')->assertUnauthorized();
         $this->getJson($this->reelUrl($project, $reel).'/exports/'.$missing)->assertUnauthorized();
         $this->get($this->reelUrl($project, $reel).'/exports/'.$missing.'/download', ['Accept' => 'application/json'])->assertUnauthorized();
+        Http::assertNothingSent();
+    }
+
+    public function test_export_includes_the_latest_subtitle_files_without_disk_paths(): void
+    {
+        [$owner, $project, $reel, $first, $second] = $this->videos();
+        $render = $this->render($owner, $project, $reel, [$first, $second]);
+        $this->approve($owner, $project, $reel, $render);
+        $stored = StoryFinalRender::query()->where('uuid', $render)->firstOrFail();
+        $older = 'subtitles/older-'.$stored->id.'.srt';
+        $srt = 'subtitles/'.$stored->uuid.'.srt';
+        $vtt = 'subtitles/'.$stored->uuid.'.vtt';
+        Storage::disk('exports')->put($older, "1\n00:00:00,000 --> 00:00:01,000\nolder\n");
+        Storage::disk('exports')->put($srt, "1\n00:00:00,000 --> 00:00:01,000\nHello\n");
+        Storage::disk('exports')->put($vtt, "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello\n");
+        $row = [
+            'story_workspace_id' => (int) $reel->story_workspace_id,
+            'story_reel_id' => $reel->id,
+            'language' => 'en',
+            'timing_mode' => 'timestamps',
+            'cue_count' => 1,
+            'cues' => [['start_ms' => 0, 'end_ms' => 1000, 'text' => 'Hello']],
+            'disk' => 'exports',
+        ];
+        StorySubtitleTrack::query()->create($row + [
+            'source_render_id' => $stored->id,
+            'cues_hash' => hash('sha256', 'older'),
+            'srt_path' => $older,
+            'vtt_path' => '',
+        ]);
+        StorySubtitleTrack::query()->create($row + [
+            'source_render_id' => $stored->id,
+            'cues_hash' => hash('sha256', 'latest'),
+            'srt_path' => $srt,
+            'vtt_path' => $vtt,
+        ]);
+
+        $export = $this->actingAs($owner, 'sanctum')
+            ->postJson($this->renderUrl($project, $reel, $render).'/exports')
+            ->assertCreated()
+            ->json('data.id');
+        $bytes = $this->actingAs($owner, 'sanctum')
+            ->get($this->reelUrl($project, $reel).'/exports/'.$export.'/download')
+            ->assertOk()
+            ->streamedContent();
+        $zipPath = tempnam(sys_get_temp_dir(), 'hn9-export-');
+        file_put_contents((string) $zipPath, $bytes);
+        $zip = new ZipArchive;
+        $zip->open((string) $zipPath);
+        $names = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $names[] = (string) $zip->getNameIndex($i);
+        }
+        $storedExport = StoryExport::query()->where('uuid', $export)->firstOrFail();
+        $root = str_replace('-story-export.zip', '', (string) $storedExport->filename);
+        $this->assertContains($root.'/subtitles/subtitles.srt', $names);
+        $this->assertContains($root.'/subtitles/subtitles.vtt', $names);
+        $this->assertStringContainsString('Hello', (string) $zip->getFromName($root.'/subtitles/subtitles.srt'));
+        $this->assertStringNotContainsString('older', (string) $zip->getFromName($root.'/subtitles/subtitles.srt'));
+        $metadata = (string) $zip->getFromName($root.'/metadata/story.json');
+        $this->assertStringContainsString('subtitles/subtitles.srt', $metadata);
+        $this->assertStringNotContainsString($srt, $metadata);
+        foreach ($names as $name) {
+            $this->assertStringNotContainsString(':', $name);
+            $this->assertStringNotContainsString('..', $name);
+        }
+        $zip->close();
+        @unlink((string) $zipPath);
         Http::assertNothingSent();
     }
 

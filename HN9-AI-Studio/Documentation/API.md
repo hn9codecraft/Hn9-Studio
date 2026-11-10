@@ -5,7 +5,7 @@
 ## Conventions
 - Base URL: `/api/v1`
 - Format: JSON request/response.
-- Auth: Bearer token (to be defined).
+- Auth: Sanctum bearer token. Authenticated routes use `auth:sanctum`. A missing token returns `401`.
 
 ## Planned Endpoints
 
@@ -305,7 +305,42 @@ being made, `active_generation` with `id` and `status` only. Versions omit provi
 Paths, commands and operation ids are not included. Generate, review and build stay on their
 existing routes.
 
-## Request / Response Schemas
-_To be defined. Reference the JSON templates under `/Brand` and `/Agents`._
+## Story routes added in M13–M19
 
-_This is a placeholder — replace with the actual OpenAPI/spec once the backend exists._
+Names below are the route names without the `api.v1.` prefix. All of them sit inside `auth:sanctum`. Paid generation uses `throttle:generation`. The other listed throttles are per minute.
+
+| Feature | Method and path | Name | Throttle |
+| --- | --- | --- | --- |
+| M13 estimate | `POST story/projects/{uuid}/cost/estimate` | `story.projects.cost.estimate` | 60 |
+| M13 summary | `GET story/projects/{uuid}/cost/summary` | `story.projects.cost.summary` | — |
+| M13 budget | `PATCH story/projects/{uuid}/budget` | `story.projects.budget.update` | — |
+| M14 keys | `PUT provider-credentials/{slug}` | `provider-credentials.update` | 10 |
+| M14 test | `POST provider-credentials/{slug}/test` | `provider-credentials.test` | generation |
+| M15 templates | `GET story/templates` | `story.templates.index` | — |
+| M15 estimate | `POST story/projects/{uuid}/quick-start/estimate` | `story.projects.quick-start.estimate` | 60 |
+| M15 apply | `POST story/projects/{uuid}/quick-start` | `story.projects.quick-start.store` | generation |
+| M16 timing | `GET …/production-plans/{plan}/voice-timing` | `story.projects.production-plans.voice-timing.show` | 60 |
+| M16 apply | `POST …/voice-timing/apply` | `story.projects.production-plans.voice-timing.apply` | 30 |
+| M16 list | `GET …/renders/{render}/subtitles` | `story.projects.reels.renders.subtitles.index` | 60 |
+| M16 create | `POST …/renders/{render}/subtitles` | `story.projects.reels.renders.subtitles.store` | 30 |
+| M16 file | `GET …/subtitles/{track}/file` | `story.projects.reels.renders.subtitles.file` | 60 |
+| M16 burn | `POST …/subtitles/{track}/burn` | `story.projects.reels.renders.subtitles.burn` | generation |
+| M17 lock | `POST …/characters/{character}/lock` | `story.projects.characters.lock` | 30 |
+| M17 unlock | `DELETE …/characters/{character}/lock` | `story.projects.characters.unlock` | 30 |
+| M17 locks | `GET story/projects/{uuid}/character-locks` | `story.projects.character-locks.index` | 60 |
+| M17 preview | `POST …/units/{unit}/prompt-preview` | `story.projects.production-plans.units.prompt-preview` | 60 |
+| M18 attempts | `GET …/units/{unit}/attempts` | `story.projects.production-plans.units.attempts` | 60 |
+| M18 retry | `POST …/units/{unit}/retry` | `story.projects.production-plans.units.retry` | generation |
+| M18 bulk preview | `POST story/projects/{uuid}/bulk-approve/preview` | `story.projects.bulk-approve.preview` | 60 |
+| M18 bulk approve | `POST story/projects/{uuid}/bulk-approve` | `story.projects.bulk-approve.store` | 30 |
+| M18 progress | `GET story/projects/{uuid}/progress` | `story.projects.progress` | 120 |
+| M19 versions | `GET …/scenes/{scene}/versions` | `story.projects.production-plans.scenes.versions.index` | 60 |
+| M19 restore | `POST …/assemblies/{assembly}/restore` | `story.projects.production-plans.scenes.assemblies.restore` | 60 |
+| M19 languages | `GET story/voice-languages` | `story.voice-languages` | — |
+| M19 bell | `POST notifications/read-all` | `notifications.read-all` | — |
+
+`tests/Feature/StoryRouteSmokeTest.php` checks these names, `auth:sanctum`, and the throttle. An anonymous call returns `401`.
+
+## Request / Response Schemas
+
+Story request and response fields are covered by the feature tests under `Backend/tests/Feature`. The planned content, agent, and brand rows at the top of this file are not implemented routes.

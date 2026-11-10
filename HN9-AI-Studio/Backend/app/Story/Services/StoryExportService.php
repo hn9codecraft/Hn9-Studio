@@ -15,6 +15,7 @@ use App\Story\Models\StoryExport;
 use App\Story\Models\StoryFinalRender;
 use App\Story\Models\StoryReel;
 use App\Story\Models\StorySceneVersion;
+use App\Story\Models\StorySubtitleTrack;
 use App\Support\StorageHelper;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -224,6 +225,8 @@ final class StoryExportService
                 }
             }
 
+            $subtitleFiles = $this->subtitles($zip, $root, $render);
+
             $manifest = [
                 'project' => [
                     'id' => $project->uuid,
@@ -247,9 +250,11 @@ final class StoryExportService
                 ],
                 'scenes' => array_values($scenes),
                 'media' => $media,
+                'subtitles' => $subtitleFiles,
                 'counts' => [
                     'scenes' => count($scenes),
                     'media' => count($media),
+                    'subtitles' => count($subtitleFiles),
                 ],
             ];
 
@@ -353,9 +358,46 @@ final class StoryExportService
             'Final render: final/final-render.mp4',
             'Scenes: '.(string) ($manifest['counts']['scenes'] ?? 0),
             'Media files: '.(string) ($manifest['counts']['media'] ?? 0),
+            'Subtitles: '.(string) ($manifest['counts']['subtitles'] ?? 0),
             '',
             'Metadata: metadata/story.json',
         ])."\n";
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function subtitles(ZipArchive $zip, string $root, StoryFinalRender $render): array
+    {
+        $track = StorySubtitleTrack::query()
+            ->where('source_render_id', $render->id)
+            ->orWhere('burned_render_id', $render->id)
+            ->orderByDesc('id')
+            ->first();
+        if (! $track instanceof StorySubtitleTrack) {
+            return [];
+        }
+
+        $files = [];
+        foreach (['srt' => (string) $track->srt_path, 'vtt' => (string) $track->vtt_path] as $extension => $path) {
+            if (! $this->subtitleReadable((string) $track->disk, $path)) {
+                continue;
+            }
+            $name = 'subtitles/subtitles.'.$extension;
+            $this->addString($zip, $root.'/'.$name, (string) Storage::disk((string) $track->disk)->get($path));
+            $files[] = $name;
+        }
+
+        return $files;
+    }
+
+    private function subtitleReadable(string $disk, string $path): bool
+    {
+        if ($disk === '' || $path === '' || str_contains($path, '..') || str_contains($path, '://') || str_contains($path, '\\')) {
+            return false;
+        }
+
+        return Storage::disk($disk)->exists($path);
     }
 
     private function packagePath(string $root, string $entry): string
