@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\V1\StoryExportController;
 use App\Http\Controllers\Api\V1\StoryFinalReviewController;
 use App\Http\Controllers\Api\V1\StoryHistoryController;
 use App\Http\Controllers\Api\V1\StoryPlanController;
+use App\Http\Controllers\Api\V1\StoryQuickStartController;
 use App\Http\Controllers\Api\V1\StoryProductionPlanController;
 use App\Http\Controllers\Api\V1\StoryProductionUnitGenerationController;
 use App\Http\Controllers\Api\V1\StoryProductionUnitVersionController;
@@ -286,6 +287,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/style/references/{referenceUuid}/approve', [StoryStyleReferenceController::class, 'approve'])->name('story.projects.style.references.approve');
     Route::post('story/projects/{uuid}/style/references/{referenceUuid}/reject', [StoryStyleReferenceController::class, 'reject'])->name('story.projects.style.references.reject');
     Route::post('story/projects/{uuid}/style/references/{referenceUuid}/archive', [StoryStyleReferenceController::class, 'archive'])->name('story.projects.style.references.archive');
+    Route::get('story/templates', [StoryQuickStartController::class, 'templates'])->name('story.templates.index');
+    Route::post('story/projects/{uuid}/quick-start/estimate', [StoryQuickStartController::class, 'estimate'])->middleware('throttle:60,1')->name('story.projects.quick-start.estimate');
+    Route::post('story/projects/{uuid}/quick-start', [StoryQuickStartController::class, 'store'])->middleware('throttle:generation')->name('story.projects.quick-start.store');
     Route::get('story/projects/{uuid}/plans', [StoryPlanController::class, 'index'])->name('story.projects.plans.index');
     Route::post('story/projects/{uuid}/plans', [StoryPlanController::class, 'store'])->name('story.projects.plans.store');
     Route::get('story/projects/{uuid}/plans/{planUuid}', [StoryPlanController::class, 'show'])->name('story.projects.plans.show');

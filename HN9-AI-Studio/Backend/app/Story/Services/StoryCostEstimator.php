@@ -38,6 +38,7 @@ final readonly class StoryCostEstimator
             'audio' => $this->audio($params),
             'reference_image' => $this->image($params),
             'plan_generate' => $this->plan($params),
+            'production_preview' => $this->productionPreviewTotal($project, $params),
             default => throw StoryException::notFound('Cost estimate'),
         };
     }
@@ -110,6 +111,61 @@ final readonly class StoryCostEstimator
         $rate = is_numeric($rate) ? (float) $rate : null;
 
         return $this->price('reference_image', 'image.default', null, 'images', (float) $count, $rate, false);
+    }
+
+    /**
+     * Rough full-video price. It is informational, is not stored as spend, and never blocks.
+     *
+     * @return array<string, mixed>
+     */
+    public function productionPreview(Project $project, int $seconds): array
+    {
+        $seconds = max(0, $seconds);
+        $video = $this->video($project, 'production_preview', StoryVideoCapability::TextToVideo, (float) $seconds, false);
+        $voice = $this->price(
+            'production_preview',
+            'audio.elevenlabs',
+            null,
+            'characters',
+            (float) ($seconds * 15),
+            $this->audioRate(),
+            $this->audioConnected(),
+        );
+        $available = $video->available && $voice->available;
+        $total = $available ? round((float) $video->amountUsd + (float) $voice->amountUsd, 4) : null;
+
+        return [
+            'label' => 'rough full-video estimate',
+            'seconds' => $seconds,
+            'video' => $video->toArray(),
+            'voice' => $voice->toArray(),
+            'total_usd' => $total,
+            'available' => $available,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     */
+    private function productionPreviewTotal(Project $project, array $params): StoryCostEstimate
+    {
+        $preview = $this->productionPreview($project, (int) ($params['seconds'] ?? 0));
+        $video = is_array($preview['video'] ?? null) ? $preview['video'] : [];
+
+        return new StoryCostEstimate(
+            kind: 'production_preview',
+            providerKey: is_string($video['provider_key'] ?? null) ? $video['provider_key'] : null,
+            modelKey: is_string($video['model_key'] ?? null) ? $video['model_key'] : null,
+            units: 'seconds',
+            quantity: (float) ($preview['seconds'] ?? 0),
+            rateUsd: is_numeric($video['rate_usd'] ?? null) ? (float) $video['rate_usd'] : null,
+            amountUsd: is_numeric($preview['total_usd'] ?? null) ? (float) $preview['total_usd'] : null,
+            amountUsdHigh: null,
+            amountDisplay: null,
+            displayCurrency: (string) config('story_cost.display_currency', 'INR'),
+            available: (bool) ($preview['available'] ?? false),
+            providerConnected: (bool) ($video['provider_connected'] ?? false),
+        );
     }
 
     /**

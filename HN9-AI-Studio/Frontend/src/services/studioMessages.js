@@ -166,7 +166,18 @@ export function friendlyError(error, fallback = 'Something went wrong. Please tr
   if (status === 429) return 'Too many requests in a short time. Wait a moment, then try again.';
 
   if (code === 'story_budget_exceeded') {
-    return 'This would go over the project budget, so nothing was sent.';
+    return error.context?.drafts_saved
+      ? 'Draft saved. This would go over the project budget, so the plan was not generated.'
+      : 'This would go over the project budget, so nothing was sent.';
+  }
+  if (code === 'story_quick_start_conflict') {
+    return 'This project already has story details. Confirm to add a new draft without removing them.';
+  }
+  if (code === 'story_quick_start_in_progress') {
+    return 'A quick start is already running for this project. Wait for it to finish.';
+  }
+  if (code === 'story_template_not_found') {
+    return 'That story template is not available.';
   }
 
   if (code === 'INVALID_INPUT' || status === 422) {
