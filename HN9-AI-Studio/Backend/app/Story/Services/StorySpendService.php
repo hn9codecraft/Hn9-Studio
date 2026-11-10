@@ -7,6 +7,8 @@ namespace App\Story\Services;
 use App\Enums\CostSource;
 use App\Models\Project;
 use App\Story\Enums\StoryVideoJobStatus;
+use App\Story\Models\StoryCharacterReference;
+use App\Story\Models\StoryStyleReference;
 use App\Story\Models\StoryUsageLedgerEntry;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Models\StoryWorkspace;
@@ -79,6 +81,24 @@ final readonly class StorySpendService
             }
         }
 
+        $pictures = $this->generatedPictures($workspace->id);
+        $imageRate = config('story_cost.image.default');
+        $imageRate = is_numeric($imageRate) ? (float) $imageRate : null;
+        if ($pictures > 0 && $imageRate === null) {
+            $unavailable += $pictures;
+        } elseif ($pictures > 0) {
+            $pictureCost = round($pictures * $imageRate, 4);
+            $estimated += $pictureCost;
+            $groups['image.default|reference_image'] = [
+                'provider_key' => 'image.default',
+                'label' => $this->label('image.default'),
+                'capability' => 'reference_image',
+                'jobs' => $pictures,
+                'reported_usd' => 0.0,
+                'estimated_usd' => $pictureCost,
+            ];
+        }
+
         $reported = round($reported, 4);
         $estimated = round($estimated, 4);
         $total = round($reported + $estimated, 4);
@@ -138,6 +158,24 @@ final readonly class StorySpendService
         }
 
         return $sums;
+    }
+
+    private function generatedPictures(int $workspaceId): int
+    {
+        $characters = StoryCharacterReference::query()
+            ->where('source', 'generated')
+            ->whereHas('character', static function ($query) use ($workspaceId): void {
+                $query->where('story_workspace_id', $workspaceId);
+            })
+            ->count();
+        $styles = StoryStyleReference::query()
+            ->where('source', 'generated')
+            ->whereHas('styleBible', static function ($query) use ($workspaceId): void {
+                $query->where('story_workspace_id', $workspaceId);
+            })
+            ->count();
+
+        return $characters + $styles;
     }
 
     private function reached(StoryVideoGenerationJob $job): bool

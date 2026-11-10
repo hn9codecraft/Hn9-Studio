@@ -1,6 +1,6 @@
 ﻿# Documentation
 
-Central project documentation: roadmap, architecture, API, workflows and standards.
+Central project documentation: architecture, API, workflows and standards. The living roadmap is [../ROADMAP.md](../ROADMAP.md). Setup is in [../README.md](../README.md).
 
 ## Purpose
 This folder is part of the **HN9 AI Studio** project structure. See the description above for its specific role.

@@ -10,8 +10,12 @@ use App\Story\Contracts\StoryCapabilityRouterInterface;
 use App\Story\Contracts\StoryProductionPlanServiceInterface;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Enums\StoryVideoJobStatus;
+use App\Story\Enums\StoryCharacterReferenceSource;
 use App\Story\Models\StoryCharacter;
+use App\Story\Models\StoryCharacterReference;
 use App\Story\Models\StorySceneVersion;
+use App\Story\Models\StoryStyleBible;
+use App\Story\Models\StoryStyleReference;
 use App\Story\Models\StoryUsageLedgerEntry;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Models\StoryWorkspace;
@@ -236,6 +240,40 @@ final class StoryCostBudgetTest extends TestCase
         $providers = collect($summary['by_provider'])->keyBy('provider_key');
         $this->assertEqualsWithDelta(2.5, $providers['video.runway']['reported_usd'], 0.0001);
         $this->assertEqualsWithDelta(1.5, $providers['video.luma']['estimated_usd'], 0.0001);
+    }
+
+    public function test_summary_prices_generated_reference_pictures_and_skips_uploads(): void
+    {
+        $f = $this->productionFixture([10]);
+        $character = StoryCharacter::factory()->create(['story_workspace_id' => $f['workspace']->id]);
+        StoryCharacterReference::factory()->create([
+            'story_character_id' => $character->id,
+            'source' => StoryCharacterReferenceSource::Uploaded->value,
+        ]);
+        StoryCharacterReference::factory()->create([
+            'story_character_id' => $character->id,
+            'source' => StoryCharacterReferenceSource::Generated->value,
+            'version' => 2,
+        ]);
+        $bible = StoryStyleBible::factory()->create(['story_workspace_id' => $f['workspace']->id]);
+        StoryStyleReference::factory()->create([
+            'story_style_bible_id' => $bible->id,
+            'source' => 'uploaded',
+        ]);
+
+        config(['story_cost.image.default' => null]);
+        $unpriced = $this->actingAs($f['user'], 'sanctum')->getJson($this->summaryUrl($f))->assertOk()->json('data');
+        $this->assertEqualsWithDelta(0.0, $unpriced['spent_total_usd'], 0.0001);
+        $this->assertSame(1, $unpriced['estimate_unavailable_jobs']);
+
+        config(['story_cost.image.default' => 0.04]);
+        $priced = $this->actingAs($f['user'], 'sanctum')->getJson($this->summaryUrl($f))->assertOk()->json('data');
+        $this->assertEqualsWithDelta(0.04, $priced['spent_estimated_usd'], 0.0001);
+        $this->assertEqualsWithDelta(0.04, $priced['spent_total_usd'], 0.0001);
+        $this->assertSame(0, $priced['estimate_unavailable_jobs']);
+        $images = collect($priced['by_provider'])->firstWhere('capability', 'reference_image');
+        $this->assertSame(1, $images['jobs']);
+        $this->assertEqualsWithDelta(0.04, $images['estimated_usd'], 0.0001);
     }
 
     public function test_budget_validation_and_owner_access(): void
