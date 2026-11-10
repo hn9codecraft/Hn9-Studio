@@ -42,6 +42,16 @@ final class RunwayStoryVideoAdapter extends HttpStoryVideoAdapter
         return self::VENDOR;
     }
 
+    public function maxPromptLength(): ?int
+    {
+        return self::MAX_PROMPT;
+    }
+
+    public function referenceImageLimit(StoryVideoCapability $capability): int
+    {
+        return $capability === StoryVideoCapability::ImageToVideo ? 1 : 0;
+    }
+
     protected function headers(): array
     {
         return ['X-Runway-Version' => (string) ($this->config['api_version'] ?? self::API_VERSION)];

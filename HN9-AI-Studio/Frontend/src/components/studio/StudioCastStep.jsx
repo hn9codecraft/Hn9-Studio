@@ -28,6 +28,9 @@ import { friendlyError } from '../../services/studioMessages';
 import { useFeedback, useStudio } from './StudioContext';
 import StudioReferencePictures from './StudioReferencePictures';
 import { BusyButton, StatusBadge, StepFooter, StepHeader, StepSkeleton, StoredPicture } from './StudioUi';
+import CharacterLockControl from './CharacterLockControl';
+
+const LOOK_FIELDS = ['name', 'appearance', 'face_description', 'hair', 'clothing', 'special_details'];
 
 const CHARACTER_FIELDS = [
   'name',
@@ -143,7 +146,9 @@ export default function StudioCastStep({ nav }) {
                         <span className="small text-secondary d-block studio-clamp">{item.short_description}</span>
                       ) : null}
                       <span className="mt-2 d-inline-block">
-                        {item.approved_reference ? (
+                        {item.lock ? (
+                          <StatusBadge tone="success">Locked</StatusBadge>
+                        ) : item.approved_reference ? (
                           <StatusBadge tone="success">Ready</StatusBadge>
                         ) : (
                           <StatusBadge tone="warning">Needs a picture</StatusBadge>
@@ -151,6 +156,7 @@ export default function StudioCastStep({ nav }) {
                       </span>
                     </span>
                   </button>
+                  <CharacterLockControl character={item} />
                 </li>
               ))}
             </ul>
@@ -240,6 +246,7 @@ function CharacterEditor({ character, onOpen, onClose }) {
   function input(name, label, { placeholder = '', textarea = false, required = false } = {}) {
     const id = `character-${name}`;
     const error = storyFieldError(errors, name);
+    const readOnly = Boolean(character?.lock) && LOOK_FIELDS.includes(name);
     const Input = textarea ? 'textarea' : 'input';
     return (
       <div>
@@ -260,9 +267,11 @@ function CharacterEditor({ character, onOpen, onClose }) {
           placeholder={placeholder}
           onChange={(event) => setValues((current) => ({ ...current, [name]: event.target.value }))}
           disabled={saving}
+          readOnly={readOnly}
           aria-required={required || undefined}
           autoFocus={name === 'name' && isNew}
         />
+        {readOnly ? <div className="form-text">Unlock this character to change its look.</div> : null}
         {error ? <div className="invalid-feedback d-block">{error}</div> : null}
       </div>
     );
@@ -288,6 +297,7 @@ function CharacterEditor({ character, onOpen, onClose }) {
           <form className="card border-0 glass-card" onSubmit={save} noValidate>
             <div className="card-body d-grid gap-3">
               {input('name', 'Name', { placeholder: 'e.g. Maya', required: true })}
+              {!isNew ? <CharacterLockControl character={character} /> : null}
               {input('short_description', 'Who are they?', {
                 textarea: true,
                 placeholder: 'e.g. The lighthouse keeper’s curious 10-year-old daughter',
@@ -343,7 +353,7 @@ function CharacterEditor({ character, onOpen, onClose }) {
 
         {!isNew ? (
           <div className="col-lg-6">
-            <section className="card border-0 glass-card" aria-labelledby="character-pictures-heading">
+            <section className="card border-0 glass-card" id="character-references" aria-labelledby="character-pictures-heading">
               <div className="card-body">
                 <h3 className="h6 mb-1" id="character-pictures-heading">
                   Pictures of {character.name}

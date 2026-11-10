@@ -18,6 +18,7 @@ import {
   markStoryProjectChanged,
   reorderStoryScenes,
   reworkStoryScene,
+  regenerateStoryScene,
   submitStorySceneReview,
   updateStoryScene,
 } from '../../services/storyService';
@@ -34,6 +35,8 @@ import {
   SOUND_ROLES,
 } from '../../services/studioMessages';
 import { CostConfirm } from './CostEstimate';
+import PromptPreviewModal from './PromptPreviewModal';
+import { previewSceneRegenerate } from '../../services/storyPromptPreviewService';
 import { useFeedback, useStudio } from './StudioContext';
 import { boardStatus } from '../../services/productionClips';
 import SceneProduction from './SceneProduction';
@@ -209,6 +212,7 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
   const [quote, setQuote] = useState(null);
+  const [regenerating, setRegenerating] = useState(false);
   const version = status?.version || null;
   const video = status?.video || null;
   const sounds = (status?.sounds || []).filter((sound) => sound.has_file);
@@ -364,6 +368,13 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
       </button>,
     );
   }
+  if (!planId && videoConnected && !videoBusy && canApprove) {
+    actions.push(
+      <button key="regenerate" type="button" className="btn btn-outline-primary btn-sm" disabled={Boolean(busy)} onClick={() => setRegenerating(true)}>
+        Regenerate scene
+      </button>,
+    );
+  }
 
   return (
     <li id={`scene-${scene.id}`} className={`studio-scene-card card border-0 glass-card${highlighted ? ' is-highlighted' : ''}`}>
@@ -387,6 +398,24 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
         </div>
 
         {scene.story ? <p className="small mb-2 mt-2 studio-clamp">{scene.story}</p> : null}
+        {regenerating ? (
+          <PromptPreviewModal
+            title={`Regenerate ${name}`}
+            load={() => previewSceneRegenerate(projectId, reelId, scene.id, { mode: 'text' })}
+            allowEdit={false}
+            busy={busy === 'regenerate'}
+            onCancel={() => setRegenerating(false)}
+            onGenerate={(preview) =>
+              act(
+                'regenerate',
+                () => regenerateStoryScene(projectId, reelId, scene.id, { mode: 'text', prompt: preview?.prompt?.base, previewHash: preview?.preview_hash }),
+                `${name} is being created again.`,
+              ).then((ok) => {
+                if (ok) setRegenerating(false);
+              })
+            }
+          />
+        ) : null}
 
         <dl className="studio-scene-facts">
           <div>

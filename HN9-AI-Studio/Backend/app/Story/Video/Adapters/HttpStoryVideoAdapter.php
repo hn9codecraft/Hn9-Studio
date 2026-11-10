@@ -72,6 +72,16 @@ abstract class HttpStoryVideoAdapter implements LiveStoryVideoProviderAdapterInt
         return $this->catalog->key();
     }
 
+    public function maxPromptLength(): ?int
+    {
+        return null;
+    }
+
+    public function referenceImageLimit(StoryVideoCapability $capability): int
+    {
+        return 0;
+    }
+
     public function displayName(): string
     {
         return $this->catalog->displayName();

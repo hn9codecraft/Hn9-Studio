@@ -124,6 +124,7 @@ class StoryReviewController extends Controller
             ])],
             'prompt' => ['nullable', 'string', 'max:5000'],
             'reference_id' => ['nullable', 'uuid'],
+            'preview_hash' => ['sometimes', 'nullable', 'string', 'size:64'],
         ]);
 
         return ApiResponse::success($this->reviews->regenerateScene(
@@ -134,6 +135,7 @@ class StoryReviewController extends Controller
             $payload['mode'] ?? StoryReviewService::MODE_TEXT,
             $payload['prompt'] ?? null,
             $payload['reference_id'] ?? null,
+            $payload['preview_hash'] ?? null,
         ), 201);
     }
 

@@ -43,6 +43,20 @@ final class SeedanceStoryVideoAdapter extends HttpStoryVideoAdapter
         return self::VENDOR;
     }
 
+    public function maxPromptLength(): ?int
+    {
+        return null;
+    }
+
+    public function referenceImageLimit(StoryVideoCapability $capability): int
+    {
+        return match ($capability) {
+            StoryVideoCapability::ImageToVideo => 1,
+            StoryVideoCapability::ReferenceToVideo => self::MAX_REFERENCE_IMAGES,
+            default => 0,
+        };
+    }
+
     /**
      * @return array{id: string, model?: string|null}
      */

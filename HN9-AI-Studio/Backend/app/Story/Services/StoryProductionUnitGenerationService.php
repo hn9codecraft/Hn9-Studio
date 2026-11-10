@@ -20,14 +20,19 @@ use App\Story\Enums\StoryVideoErrorCode;
 use App\Story\Enums\StoryVideoInputType;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Exceptions\StoryException;
+use App\Story\Exceptions\StoryPromptPreviewException;
 use App\Story\Exceptions\StoryVideoEngineException;
 use App\Story\Media\StoryMediaException;
 use App\Story\Media\StoryMediaToolkit;
 use App\Story\Models\StoryProductionPlan;
 use App\Story\Models\StoryProductionUnit;
 use App\Story\Models\StoryScene;
+use App\Story\Models\StoryUnitPromptEdit;
 use App\Story\Models\StoryVideoGenerationJob;
+use App\Story\Support\StoryComposedPrompt;
 use App\Story\Support\StoryGenerationUnitCalculator;
+use App\Story\Support\StoryPromptHash;
+use App\Story\Support\StoryVideoPromptComposer;
 use App\Story\Video\StoryVideoAssetResolver;
 use App\Story\Video\StoryVideoGenerationRequest;
 use App\Story\Video\StoryVideoInput;
@@ -88,6 +93,7 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         private StoryMediaToolkit $media,
         private ActivityLoggerInterface $activity,
         private StoryProductionUnitVersionServiceInterface $versions,
+        private StoryVideoPromptComposer $composer,
     ) {}
 
     /**
@@ -125,18 +131,15 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
             return ['job' => $this->continueJob($existing, $unit), 'unit' => $unit, 'created' => false];
         }
 
+        $this->assertPreviewCurrent($project, $planUuid, $unitUuid, $input);
         $this->precheckBudget($project, $planUuid, $unitUuid, $input);
         $this->assertReady($plan, $scene, $unit);
-        $aspect = $this->requestedAspect($input['aspect_ratio'] ?? null);
-        $request = $this->assets->resolve(
-            $project,
-            $this->ownedInputs($project, $this->requestFor($project, $plan, $unit, $scene, $capability, $aspect, $key, $input)),
-        );
-        $decision = $this->orchestrator->route($request);
+        $draft = $this->draft($project, $planUuid, $unitUuid, $input);
+        $decision = $draft['decision'];
         if (! $decision->matched || $decision->providerKey === null) {
             $this->throwRouting($decision);
         }
-        $request = $this->withProvider($request, (string) $decision->providerKey, $decision->modelKey);
+        $request = $draft['request'];
         $resolved = $this->engine->resolve($request);
         if (! $resolved->matched || $resolved->providerKey !== $decision->providerKey) {
             throw StoryVideoEngineException::capabilityNotAvailable(
@@ -159,6 +162,7 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         if ($prepared['created']) {
             $metadata = (array) $job->provider_metadata;
             $metadata['routing_decision'] = $this->orchestrator->snapshot($request, $decision);
+            $metadata['lock_provenance'] = $draft['provenance'];
             $job->forceFill([
                 'provider_metadata' => $metadata,
                 'routing' => $metadata['routing_decision'],
@@ -449,6 +453,160 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
     }
 
     /**
+     * Rejects a paid generate when the preview the user confirmed is no longer the request
+     * the server would send. An idempotent repeat is left to return the existing job.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public function assertPreviewCurrent(Project $project, string $planUuid, string $unitUuid, array $input): void
+    {
+        $hash = $input['preview_hash'] ?? null;
+        if (! is_string($hash) || $hash === '') {
+            return;
+        }
+        [$plan, $unit] = $this->ownedUnit($project, $planUuid, $unitUuid);
+        $key = $this->idempotencyKey($unit, $this->intent($input['intent'] ?? null));
+        if ($this->findIntent($plan, $key) instanceof StoryVideoGenerationJob) {
+            return;
+        }
+
+        $draft = $this->draft($project, $planUuid, $unitUuid, $input);
+        if (strlen($hash) !== 64 || ! hash_equals($draft['preview_hash'], strtolower($hash))) {
+            throw StoryPromptPreviewException::stale();
+        }
+    }
+
+    /**
+     * Read-only composition of the request a generate would send. No job row and no budget guard.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array{request: StoryVideoGenerationRequest, decision: StoryVideoRoutingDecision, composed: StoryComposedPrompt, preview_hash: string, provenance: array<string, mixed>, matched: bool, idempotent: bool}
+     */
+    public function draft(Project $project, string $planUuid, string $unitUuid, array $input): array
+    {
+        [$plan, $unit, $scene] = $this->ownedUnit($project, $planUuid, $unitUuid);
+        $capability = $this->capability($input['capability'] ?? null);
+        $aspect = $this->requestedAspect($input['aspect_ratio'] ?? null);
+        $key = $this->idempotencyKey($unit, $this->intent($input['intent'] ?? null));
+        $idempotent = $this->findIntent($plan, $key) instanceof StoryVideoGenerationJob;
+        $instruction = is_string($input['instruction'] ?? null) ? trim($input['instruction']) : '';
+        $built = $this->ownedInputs($project, $this->requestFor($project, $plan, $unit, $scene, $capability, $aspect, $key, $input));
+        $request = $this->hasRequiredPicture($built) ? $this->assets->resolve($project, $built) : $built;
+        $decision = $this->orchestrator->route($request);
+        $provider = $decision->matched ? $decision->providerKey : null;
+        $model = $decision->matched ? $decision->modelKey : null;
+        if (is_string($provider) && $provider !== '') {
+            $request = $this->withProvider($request, $provider, $model);
+        }
+        $composed = $this->composer->composeUnit(
+            $scene,
+            $unit,
+            $capability,
+            $provider,
+            $request->inputs,
+            $instruction,
+            $project->uuid,
+        );
+        if ($composed->final !== (string) $request->prompt || ! $this->sameInputs($request->inputs, $composed->inputs)) {
+            $request = $this->assets->resolve(
+                $project,
+                $this->ownedInputs($project, $this->withPrompt($request, $composed->final, $composed->inputs)),
+            );
+        }
+        $estimate = app(StoryCostEstimator::class)->estimate($project, 'unit_video', [
+            'plan_uuid' => $planUuid,
+            'unit_uuid' => $unitUuid,
+        ]);
+        $ids = array_map(static fn (StoryVideoInput $row): string => (string) $row->assetId, $request->inputs);
+        $previewHash = StoryPromptHash::make(
+            $provider,
+            $model,
+            $capability->value,
+            (int) $unit->duration_seconds,
+            $aspect,
+            $composed->final,
+            $ids,
+            $estimate,
+        );
+
+        return [
+            'request' => $request,
+            'decision' => $decision,
+            'composed' => $composed,
+            'preview_hash' => $previewHash,
+            'provenance' => [
+                'locks' => $composed->provenanceLocks,
+                'prompt_hash' => $previewHash,
+                'edited' => $composed->edited,
+                'references_sent' => $composed->referencesSent,
+            ],
+            'matched' => $decision->matched && $decision->providerKey !== null,
+            'idempotent' => $idempotent,
+        ];
+    }
+
+    /**
+     * @param  list<StoryVideoInput>  $left
+     * @param  list<StoryVideoInput>  $right
+     */
+    private function sameInputs(array $left, array $right): bool
+    {
+        if (count($left) !== count($right)) {
+            return false;
+        }
+        foreach ($left as $index => $input) {
+            $other = $right[$index];
+            if ($input->type !== $other->type || $input->assetId !== $other->assetId) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function hasRequiredPicture(StoryVideoGenerationRequest $request): bool
+    {
+        if (! in_array($request->capability, [StoryVideoCapability::ImageToVideo, StoryVideoCapability::ReferenceToVideo], true)) {
+            return true;
+        }
+        $needed = $request->capability === StoryVideoCapability::ImageToVideo
+            ? StoryVideoInputType::Image
+            : StoryVideoInputType::ReferenceImage;
+        foreach ($request->inputs as $input) {
+            if ($input->type === $needed) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<StoryVideoInput>  $inputs
+     */
+    private function withPrompt(StoryVideoGenerationRequest $request, string $prompt, array $inputs): StoryVideoGenerationRequest
+    {
+        return new StoryVideoGenerationRequest(
+            capability: $request->capability,
+            workspaceUuid: $request->workspaceUuid,
+            reelUuid: $request->reelUuid,
+            sceneUuid: $request->sceneUuid,
+            prompt: $prompt,
+            negativePrompt: $request->negativePrompt,
+            durationSeconds: $request->durationSeconds,
+            aspectRatio: $request->aspectRatio,
+            resolution: $request->resolution,
+            audioRequested: $request->audioRequested,
+            inputs: $inputs,
+            preferredProvider: $request->preferredProvider,
+            preferredModel: $request->preferredModel,
+            idempotencyKey: $request->idempotencyKey,
+            metadata: $request->metadata,
+            extensions: $request->extensions,
+        );
+    }
+
+    /**
      * @param  array<string, mixed>  $input
      */
     private function requestFor(
@@ -463,12 +621,10 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
     ): StoryVideoGenerationRequest {
         $scene->loadMissing('reel');
         $instruction = is_string($input['instruction'] ?? null) ? trim($input['instruction']) : '';
-        $prompt = trim(implode("\n\n", array_filter([
-            $scene->visual_prompt,
-            $scene->motion_prompt,
-            $scene->story,
-            $instruction !== '' ? 'Instruction: '.$instruction : null,
-        ])));
+        $unit->loadMissing('promptEdit');
+        $prompt = $unit->promptEdit instanceof StoryUnitPromptEdit
+            ? (string) $unit->promptEdit->prompt
+            : $this->composer->automaticBase($scene, $instruction);
 
         return new StoryVideoGenerationRequest(
             capability: $capability,

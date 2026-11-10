@@ -8,11 +8,11 @@ const projectRevisions = new Map();
 
 // Every GET shares in-flight requests; only reads passed a TTL are reused after
 // they settle. Polled job/render/export status reads must stay uncached.
-function storyGet(path, ttlMs = 0) {
+export function storyGet(path, ttlMs = 0) {
   return cachedRequest(`story:${path}`, () => apiRequest(path), { ttlMs });
 }
 
-function storyWrite(path, options) {
+export function storyWrite(path, options) {
   return apiRequest(path, options).finally(() => {
     const match = path.match(/^\/story\/projects\/([^/?]+)/);
     if (match) {
@@ -437,10 +437,10 @@ export function reworkStoryScene(projectId, reelId, sceneId, comment) {
 }
 
 /** Creates a new scene version and requests its video ({ mode, prompt, reference_id, comment }). */
-export function regenerateStoryScene(projectId, reelId, sceneId, { comment = null, mode = 'text', prompt = null, referenceId = null } = {}) {
+export function regenerateStoryScene(projectId, reelId, sceneId, { comment = null, mode = 'text', prompt = null, referenceId = null, previewHash = null } = {}) {
   return storyWrite(`/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/regenerate`, {
     method: 'POST',
-    body: { comment, mode, prompt, reference_id: referenceId },
+    body: { comment, mode, prompt, reference_id: referenceId, preview_hash: previewHash },
   });
 }
 

@@ -35,6 +35,7 @@ class GenerateStoryProductionUnitRequest extends FormRequest
             'inputs' => ['sometimes', 'array', 'max:8'],
             'inputs.*.type' => ['required', 'string', 'max:32'],
             'inputs.*.asset_id' => ['required', 'uuid'],
+            'preview_hash' => ['sometimes', 'nullable', 'string', 'size:64'],
         ];
     }
 }

@@ -412,6 +412,7 @@ final readonly class StoryProductionUnitVersionService implements StoryProductio
     {
         $selected = (int) $unit->selected_version_id === (int) $version->id;
         $status = $version->reviewStatusEnum();
+        $provenance = $this->lockProvenance($version);
 
         return [
             'id' => $version->uuid,
@@ -435,7 +436,20 @@ final readonly class StoryProductionUnitVersionService implements StoryProductio
             'comment' => $version->review_comment,
             'created_at' => $version->created_at?->toIso8601String(),
             'updated_at' => $version->updated_at?->toIso8601String(),
+            'lock_provenance' => $provenance,
+            'lock_status' => \App\Story\Support\StoryLockStatus::forProvenance($provenance),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function lockProvenance(StoryProductionUnitVersion $version): ?array
+    {
+        $job = $version->relationLoaded('job') ? $version->job : $version->job()->first();
+        $stored = $job?->provider_metadata['lock_provenance'] ?? null;
+
+        return is_array($stored) ? $stored : null;
     }
 
     private function letter(int $number): string

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -73,6 +74,12 @@ class StoryCharacter extends Model
     public function approvedReference(): BelongsTo
     {
         return $this->belongsTo(StoryCharacterReference::class, 'approved_reference_id');
+    }
+
+    /** @return HasOne<StoryCharacterLock, $this> */
+    public function activeLock(): HasOne
+    {
+        return $this->hasOne(StoryCharacterLock::class, 'story_character_id');
     }
 
     public function statusEnum(): StoryCharacterStatus

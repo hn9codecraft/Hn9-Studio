@@ -1,6 +1,8 @@
 // Plain-language copy for the Creative Studio. Nothing in here should ever show
 // a status code, an internal id or a raw server message to the person using it.
 
+import { m17Message } from './studioMessagesM17';
+
 export const NOT_CONNECTED = {
   video: 'Video creation is not connected yet. An administrator needs to connect a video service before videos can be made.',
   sound: 'Sound generation is not configured yet. An administrator needs to connect the sound service before scene sound can be made.',
@@ -116,6 +118,9 @@ export function friendlyError(error, fallback = 'Something went wrong. Please tr
   if (code === 'network' || (status === 0 && /fetch|network/i.test(raw))) {
     return 'The studio cannot reach the server. Check your connection, then try again.';
   }
+
+  const m17 = m17Message(error);
+  if (m17) return m17;
 
   if (
     code === 'GENERATION_NOT_ENABLED' ||
