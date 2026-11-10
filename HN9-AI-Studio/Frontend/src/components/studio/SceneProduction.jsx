@@ -14,6 +14,7 @@ import {
   selectProductionUnitVersion,
 } from '../../services/storyService';
 import { formatDateTime, formatSeconds, friendlyError, isJobActive } from '../../services/studioMessages';
+import VersionsDrawer from './VersionsDrawer';
 import { CostConfirm } from './CostEstimate';
 import {
   availableModes,
@@ -81,6 +82,7 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
   const [workspace, setWorkspace] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [versionsOpen, setVersionsOpen] = useState(false);
   const [busy, setBusy] = useState('');
   const [style, setStyle] = useState(null);
   const [history, setHistory] = useState([]);
@@ -224,9 +226,14 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
           </h4>
           <p className="mb-0">{formatSeconds(duration)} · This scene is made of short clips. You can regenerate one clip without changing the others.</p>
         </div>
-        <button type="button" className="btn btn-link btn-sm" onClick={onClose}>
-          Close
-        </button>
+        <div className="d-flex gap-2">
+          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setVersionsOpen(true)}>
+            Versions
+          </button>
+          <button type="button" className="btn btn-link btn-sm" onClick={onClose}>
+            Close
+          </button>
+        </div>
       </div>
 
       <SceneContext scene={scene} styleName={style?.visual_style} pictureCount={pictures.length} />
@@ -257,6 +264,7 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
           {error}
         </p>
       ) : null}
+      <VersionsDrawer open={versionsOpen} onClose={() => setVersionsOpen(false)} projectId={projectId} planId={planId} sceneId={scene.id} />
 
       {!planReady ? <p className="small text-secondary mb-0">Loading clips…</p> : null}
       {planReady && !planId ? <p className="small mb-0">This scene is not in a production plan yet. Approve the story, and the clips will appear here.</p> : null}

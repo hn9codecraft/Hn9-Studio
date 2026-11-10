@@ -25,6 +25,7 @@ class CreateStorySceneAudioRequest extends FormRequest
             'prompt' => ['nullable', 'string', 'max:10000'],
             'version_id' => ['nullable', 'uuid'],
             'voice' => ['nullable', 'string', 'max:100'],
+            'language' => ['nullable', 'in:en,hi,gu'],
         ];
     }
 }

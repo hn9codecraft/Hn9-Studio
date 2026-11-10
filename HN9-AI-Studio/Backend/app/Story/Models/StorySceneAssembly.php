@@ -51,6 +51,7 @@ class StorySceneAssembly extends Model
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'failed_at' => 'datetime',
+            'selected_at' => 'datetime',
         ];
     }
 

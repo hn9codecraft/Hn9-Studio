@@ -86,6 +86,7 @@ class StoryAudioController extends Controller
             isset($payload['version_id']) ? (string) $payload['version_id'] : null,
             isset($payload['voice']) ? (string) $payload['voice'] : null,
             $request->user(),
+            isset($payload['language']) ? (string) $payload['language'] : null,
         );
 
         return ApiResponse::success($result, ($result['created'] ?? true) ? 201 : 200);

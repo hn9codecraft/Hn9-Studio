@@ -229,13 +229,22 @@ final readonly class ElevenLabsStoryAudioAdapter implements LiveStoryVideoProvid
     {
         $this->validate($request);
         $voice = $request->metadata['voice'] ?? null;
+        $language = $request->metadata['story_language_code'] ?? null;
+        $model = $request->metadata['story_model_id'] ?? null;
+        $voiceOverride = $request->metadata['story_voice_id'] ?? null;
+        $options = array_filter([
+            'story_model_id' => is_string($model) && $model !== '' ? $model : null,
+            'story_voice_id' => is_string($voiceOverride) && $voiceOverride !== '' ? $voiceOverride : null,
+        ], static fn ($value): bool => $value !== null);
 
         try {
             $response = $this->dispatcher->voice(
                 new VoiceRequest(
                     input: trim((string) $request->prompt),
                     voice: is_string($voice) && $voice !== '' ? $voice : null,
+                    language: is_string($language) && $language !== '' ? $language : null,
                     format: $this->format(),
+                    options: $options,
                 ),
                 DispatchOptions::only(ElevenLabsConfig::KEY),
             );

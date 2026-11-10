@@ -69,8 +69,8 @@ final class ElevenLabsProvider extends AbstractProvider
 
     public function generateVoice(VoiceRequest $request): VoiceResponse
     {
-        $model = $this->voices->resolve($request->model);
-        $voiceId = $this->voices->resolveVoice($request->voice);
+        $model = $this->explicitOption($request, 'story_model_id') ?? $this->voices->resolve($request->model);
+        $voiceId = $this->explicitOption($request, 'story_voice_id') ?? $this->voices->resolveVoice($request->voice);
         $format = $this->voices->resolveFormat($request->format);
         $characters = $this->tokenCounter->characters($request->input);
 
@@ -281,7 +281,18 @@ final class ElevenLabsProvider extends AbstractProvider
         return array_diff_key(
             $request->options,
             ElevenLabsConfig::VOICE_SETTING_ALIASES,
-            ['voice_settings' => null],
+            ['voice_settings' => null, 'story_model_id' => null, 'story_voice_id' => null],
         );
+    }
+
+    private function explicitOption(VoiceRequest $request, string $key): ?string
+    {
+        $value = $request->options[$key] ?? null;
+        if (! is_string($value)) {
+            return null;
+        }
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
     }
 }

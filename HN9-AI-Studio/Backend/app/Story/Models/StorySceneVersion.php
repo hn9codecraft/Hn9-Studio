@@ -38,6 +38,7 @@ class StorySceneVersion extends Model
         'submitted_at',
         'reviewed_at',
         'reviewed_by',
+        'selected_at',
     ];
 
     protected function casts(): array
@@ -47,6 +48,7 @@ class StorySceneVersion extends Model
             'continuity' => 'array',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'selected_at' => 'datetime',
         ];
     }
 

@@ -90,8 +90,16 @@ final class StorySceneAssemblyService implements StorySceneAssemblyServiceInterf
             ->orderBy('id')
             ->get();
 
+        $selected = $rows
+            ->filter(static fn (StorySceneAssembly $row): bool => $row->isComplete() && $row->selected_at !== null)
+            ->sortByDesc(static fn (StorySceneAssembly $row): string => sprintf('%010d-%010d', $row->selected_at?->getTimestamp() ?? 0, $row->id))
+            ->first();
+        $current = $selected instanceof StorySceneAssembly
+            ? $selected
+            : $rows->last(static fn (StorySceneAssembly $row): bool => $row->isComplete());
+
         return [
-            'current' => $this->presentCurrent($rows->last(static fn (StorySceneAssembly $row): bool => $row->isComplete())),
+            'current' => $this->presentCurrent($current),
             'assemblies' => $rows->map(fn (StorySceneAssembly $row): array => $this->present($row))->values()->all(),
         ];
     }
@@ -370,7 +378,13 @@ final class StorySceneAssemblyService implements StorySceneAssemblyServiceInterf
             'error_code' => null,
             'error_message' => null,
             'completed_at' => now(),
+            'selected_at' => now(),
         ])->save();
+        StorySceneAssembly::query()
+            ->where('story_production_plan_scene_id', $assembly->story_production_plan_scene_id)
+            ->whereKeyNot($assembly->id)
+            ->whereNotNull('selected_at')
+            ->update(['selected_at' => null]);
         $fresh = $assembly->fresh() ?? $assembly;
         $this->log($fresh, $fresh->requester, self::EVENT_COMPLETED, 'Scene video is ready');
         $this->log($fresh, $fresh->requester, self::EVENT_VERSION, 'Scene video version created');

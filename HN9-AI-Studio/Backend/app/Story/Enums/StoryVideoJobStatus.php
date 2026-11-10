@@ -9,6 +9,7 @@ enum StoryVideoJobStatus: string
     case Queued = 'queued';
     case Submitted = 'submitted';
     case Processing = 'processing';
+    case Rendering = 'rendering';
     case Completed = 'completed';
     case Failed = 'failed';
     case Cancelled = 'cancelled';
@@ -21,6 +22,7 @@ enum StoryVideoJobStatus: string
             'queued', 'pending', 'created' => self::Queued,
             'submitted', 'accepted', 'dispatched' => self::Submitted,
             'processing', 'running', 'in_progress', 'generating' => self::Processing,
+            'rendering' => self::Rendering,
             'completed', 'succeeded', 'success', 'done' => self::Completed,
             'failed', 'error', 'errored' => self::Failed,
             'cancelled', 'canceled', 'aborted' => self::Cancelled,

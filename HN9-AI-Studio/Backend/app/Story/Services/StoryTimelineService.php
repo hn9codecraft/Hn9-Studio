@@ -10,6 +10,7 @@ use App\Story\Enums\StoryTimelineTransitionType;
 use App\Story\Exceptions\StoryException;
 use App\Story\Media\StoryMediaToolkit;
 use App\Story\Models\StoryReel;
+use App\Story\Models\StoryScene;
 use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StorySceneAssembly;
 use App\Story\Models\StorySceneVersion;
@@ -165,6 +166,87 @@ final class StoryTimelineService
             'in_ms' => 0,
             'out_ms' => $durationMs,
         ]);
+    }
+
+    /**
+     * Points a scene's timeline video clips at a restored file. Trim and transitions
+     * stay when they still fit the new duration; trim is clamped when it does not.
+     *
+     * @return array{updated: int, trim_adjusted: bool}
+     */
+    public function retargetSceneVideo(
+        StoryScene $scene,
+        ?int $assemblyId,
+        ?int $versionId,
+        string $disk,
+        string $path,
+        int $durationMs,
+    ): array {
+        $reel = $scene->reel;
+        if (! $reel instanceof StoryReel) {
+            return ['updated' => 0, 'trim_adjusted' => false];
+        }
+        $timeline = StoryTimeline::query()->where('story_reel_id', $reel->id)->first();
+        if (! $timeline instanceof StoryTimeline) {
+            return ['updated' => 0, 'trim_adjusted' => false];
+        }
+
+        $clips = StoryTimelineClip::query()
+            ->where('story_timeline_id', $timeline->id)
+            ->where('media_kind', 'video')
+            ->where(function ($query) use ($scene): void {
+                $query->whereHas('sceneVersion', static function ($query) use ($scene): void {
+                    $query->where('story_scene_id', $scene->id);
+                })->orWhereHas('sceneAssembly.planScene', static function ($query) use ($scene): void {
+                    $query->where('story_scene_id', $scene->id);
+                });
+            })
+            ->orderBy('position')
+            ->get();
+
+        $updated = 0;
+        $trimAdjusted = false;
+        $durationMs = max(1, $durationMs);
+        foreach ($clips as $clip) {
+            if (! $clip instanceof StoryTimelineClip) {
+                continue;
+            }
+            $in = max(0, (int) $clip->in_ms);
+            $out = max(0, (int) $clip->out_ms);
+            $adjusted = false;
+            if ($in >= $durationMs || $out > $durationMs || $out <= $in) {
+                $adjusted = true;
+                if ($in >= $durationMs) {
+                    $in = 0;
+                }
+                $out = min($out, $durationMs);
+                if ($out <= $in) {
+                    $in = 0;
+                    $out = $durationMs;
+                }
+            }
+            $sameSource = (int) ($clip->story_scene_assembly_id ?? 0) === (int) ($assemblyId ?? 0)
+                && (int) ($clip->story_scene_version_id ?? 0) === (int) ($versionId ?? 0)
+                && $clip->disk === $disk
+                && $clip->path === $path
+                && (int) $clip->in_ms === $in
+                && (int) $clip->out_ms === $out;
+            if ($sameSource) {
+                continue;
+            }
+            $clip->forceFill([
+                'story_scene_version_id' => $versionId,
+                'story_scene_assembly_id' => $assemblyId,
+                'disk' => $disk,
+                'path' => $path,
+                'in_ms' => $in,
+                'out_ms' => $out,
+            ])->save();
+            $updated++;
+            $trimAdjusted = $trimAdjusted || $adjusted;
+        }
+
+        return ['updated' => $updated, 'trim_adjusted' => $trimAdjusted];
     }
 
     /**
