@@ -26,6 +26,9 @@ import {
 import { CostConfirm } from './CostEstimate';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, MediaPreview, NotConnectedNote, reviewTone, StatusBadge, StepFooter, StepHeader, StepSkeleton } from './StudioUi';
+// --- M16 begin ---
+import VoiceTimingPanel from './VoiceTimingPanel';
+// --- M16 end ---
 
 function defaultPrompt(role, scene, bible) {
   if (role === 'narration') return scene.narration || '';
@@ -120,6 +123,9 @@ export default function StudioSoundStep({ nav, focusSceneId = null }) {
         </ol>
       )}
 
+      {/* --- M16 begin --- */}
+      <VoiceTimingPanel />
+      {/* --- M16 end --- */}
       <StepFooter prev={nav.prev} next={nav.next} onNavigate={nav.onNavigate} />
     </div>
   );

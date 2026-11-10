@@ -236,6 +236,9 @@ final readonly class ElevenLabsStoryAudioAdapter implements LiveStoryVideoProvid
                     input: trim((string) $request->prompt),
                     voice: is_string($voice) && $voice !== '' ? $voice : null,
                     format: $this->format(),
+                    // --- M16 begin ---
+                    options: $this->m16TimestampOptions(),
+                    // --- M16 end ---
                 ),
                 DispatchOptions::only(ElevenLabsConfig::KEY),
             );
@@ -258,6 +261,10 @@ final readonly class ElevenLabsStoryAudioAdapter implements LiveStoryVideoProvid
                 'The sound was created but could not be saved. Try again.',
             );
         }
+
+        // --- M16 begin ---
+        $this->m16StoreAlignment($operationId, $response);
+        // --- M16 end ---
 
         return new StoryVideoSubmission(
             operationId: $operationId,
@@ -494,4 +501,30 @@ final readonly class ElevenLabsStoryAudioAdapter implements LiveStoryVideoProvid
     {
         return ElevenLabsConfig::fromProviderConfig($this->configs->resolve(ElevenLabsConfig::KEY));
     }
+
+    // --- M16 begin ---
+    /**
+     * @return array<string, bool>
+     */
+    private function m16TimestampOptions(): array
+    {
+        return config('story_subtitles.timestamps_enabled') ? ['with_timestamps' => true] : [];
+    }
+
+    private function m16StoreAlignment(string $operationId, mixed $response): void
+    {
+        $alignment = is_object($response) && isset($response->raw['alignment']) && is_array($response->raw['alignment'])
+            ? $response->raw['alignment']
+            : null;
+        if ($alignment === null) {
+            return;
+        }
+        $payload = [
+            'characters' => array_values(array_map('strval', (array) ($alignment['characters'] ?? []))),
+            'character_start_times_seconds' => array_values((array) ($alignment['character_start_times_seconds'] ?? [])),
+            'character_end_times_seconds' => array_values((array) ($alignment['character_end_times_seconds'] ?? [])),
+        ];
+        Storage::disk(self::DISK)->put('alignments/'.$operationId.'.json', json_encode($payload, JSON_THROW_ON_ERROR));
+    }
+    // --- M16 end ---
 }
