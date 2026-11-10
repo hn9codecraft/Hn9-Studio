@@ -32,7 +32,16 @@ class StoryWorkspace extends Model
     protected $fillable = [
         'project_id',
         'status',
+        'budget_amount',
+        'budget_currency',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'budget_amount' => 'decimal:2',
+        ];
+    }
 
     protected static function newFactory(): StoryWorkspaceFactory
     {

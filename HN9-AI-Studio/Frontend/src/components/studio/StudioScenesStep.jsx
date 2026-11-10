@@ -7,6 +7,7 @@ import {
   createStoryScene,
   duplicateStoryScene,
   editStorySceneVersion,
+  estimateStoryCost,
   extendStorySceneVersion,
   getProductionPlan,
   getStorySceneVersionFileUrl,
@@ -32,6 +33,7 @@ import {
   sortedScenes,
   SOUND_ROLES,
 } from '../../services/studioMessages';
+import { CostConfirm } from './CostEstimate';
 import { useFeedback, useStudio } from './StudioContext';
 import { boardStatus } from '../../services/productionClips';
 import SceneProduction from './SceneProduction';
@@ -206,6 +208,7 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
   const [panel, setPanel] = useState(null);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
+  const [quote, setQuote] = useState(null);
   const version = status?.version || null;
   const video = status?.video || null;
   const sounds = (status?.sounds || []).filter((sound) => sound.has_file);
@@ -231,6 +234,22 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
     } finally {
       setBusy('');
     }
+  }
+
+  function sendRevision() {
+    const instruction = note.trim();
+    const extend = panel === 'extend';
+    setQuote(null);
+    act(
+      panel,
+      () =>
+        extend
+          ? extendStorySceneVersion(projectId, reelId, scene.id, version.id, instruction)
+          : editStorySceneVersion(projectId, reelId, scene.id, version.id, instruction),
+      extend
+        ? `${name}: a longer version is being created. It appears here as a new version when ready.`
+        : `${name}: the changed version is being created. It appears here as a new version when ready.`,
+    ).then((ok) => ok && markStoryProjectChanged(projectId));
   }
 
   async function structural(key, action, success) {
@@ -466,16 +485,17 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
               event.preventDefault();
               const instruction = note.trim();
               const extend = panel === 'extend';
-              act(
-                panel,
-                () =>
-                  extend
-                    ? extendStorySceneVersion(projectId, reelId, scene.id, version.id, instruction)
-                    : editStorySceneVersion(projectId, reelId, scene.id, version.id, instruction),
-                extend
-                  ? `${name}: a longer version is being created. It appears here as a new version when ready.`
-                  : `${name}: the changed version is being created. It appears here as a new version when ready.`,
-              ).then((ok) => ok && markStoryProjectChanged(projectId));
+              if (!quote) {
+                estimateStoryCost(projectId, {
+                  kind: extend ? 'scene_extend' : 'scene_edit',
+                  version_uuid: version.id,
+                  seconds: extend ? 8 : undefined,
+                })
+                  .then((estimate) => setQuote(estimate))
+                  .catch(() => setQuote({ available: false }));
+                return;
+              }
+              sendRevision();
             }}
           >
             <label className="form-label" htmlFor={`${panel}-${scene.id}`}>
@@ -495,13 +515,24 @@ function SceneCard({ scene, status, planScene, planId, planReady, isFirst, isLas
               The current version stays as it is. A new version is created, and you can compare them in Version history.
             </div>
             <div className="d-flex gap-2 mt-2">
-              <BusyButton type="submit" className="btn btn-primary btn-sm" busy={busy === panel} busyLabel="Sending…" disabled={!note.trim()}>
-                {panel === 'extend' ? 'Make it longer' : 'Create changed version'}
-              </BusyButton>
-              <button type="button" className="btn btn-link btn-sm" onClick={() => setPanel(null)}>
+              {quote ? null : (
+                <BusyButton type="submit" className="btn btn-primary btn-sm" busy={busy === panel} busyLabel="Sending…" disabled={!note.trim()}>
+                  See price
+                </BusyButton>
+              )}
+              <button type="button" className="btn btn-link btn-sm" onClick={() => { setQuote(null); setPanel(null); }}>
                 Cancel
               </button>
             </div>
+            {quote ? (
+              <CostConfirm
+                estimate={quote}
+                busy={busy === panel}
+                confirmLabel={panel === 'extend' ? 'Make it longer' : 'Create changed version'}
+                onConfirm={sendRevision}
+                onCancel={() => setQuote(null)}
+              />
+            ) : null}
           </form>
         ) : null}
 

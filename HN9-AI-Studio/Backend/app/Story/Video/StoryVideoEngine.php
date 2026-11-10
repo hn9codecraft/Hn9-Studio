@@ -17,6 +17,9 @@ use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Exceptions\StoryException;
 use App\Story\Exceptions\StoryVideoEngineException;
 use App\Story\Models\StoryVideoGenerationJob;
+use App\Story\Models\StoryWorkspace;
+use App\Story\Services\StoryBudgetGuard;
+use App\Story\Services\StoryCostEstimator;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -213,8 +216,27 @@ final readonly class StoryVideoEngine implements StoryVideoEngineInterface
             }
         }
 
-        $job = DB::transaction(function () use ($workspace, $request, $routing, $reelId, $sceneId) {
-            return StoryVideoGenerationJob::query()->create([
+        return DB::transaction(function () use ($project, $workspace, $request, $routing, $reelId, $sceneId) {
+            StoryWorkspace::query()->whereKey($workspace->id)->lockForUpdate()->first();
+            if ($request->idempotencyKey !== null && $request->idempotencyKey !== '') {
+                $existing = StoryVideoGenerationJob::query()
+                    ->where('story_workspace_id', $workspace->id)
+                    ->where('idempotency_key', $request->idempotencyKey)
+                    ->first();
+                if ($existing !== null) {
+                    return ['job' => $existing, 'created' => false];
+                }
+            }
+
+            $estimate = app(StoryCostEstimator::class)->fromJobRequest(
+                $request,
+                (string) $routing->providerKey,
+                $routing->modelKey,
+                true,
+            );
+            app(StoryBudgetGuard::class)->assertWithinBudget($project, $estimate);
+
+            $job = StoryVideoGenerationJob::query()->create([
                 'story_workspace_id' => $workspace->id,
                 'story_reel_id' => $reelId,
                 'story_scene_id' => $sceneId,
@@ -229,13 +251,14 @@ final readonly class StoryVideoEngine implements StoryVideoEngineInterface
                 'routing' => $routing->toArray(),
                 'provider_metadata' => [
                     'timeout_policy' => $this->timeouts->toArray(),
+                    'cost_estimate' => $estimate->forJob(),
                 ],
                 'retry_count' => 0,
                 'timed_out' => false,
             ]);
-        });
 
-        return ['job' => $job, 'created' => true];
+            return ['job' => $job, 'created' => true];
+        });
     }
 
     public function execute(StoryVideoCapability $capability, array $input = []): never

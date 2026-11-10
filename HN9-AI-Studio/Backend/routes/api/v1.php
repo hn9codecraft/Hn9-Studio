@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\StoryCharacterController;
 use App\Http\Controllers\Api\V1\StoryCharacterReferenceController;
 use App\Http\Controllers\Api\V1\StoryContinuityController;
 use App\Http\Controllers\Api\V1\StoryController;
+use App\Http\Controllers\Api\V1\StoryCostController;
 use App\Http\Controllers\Api\V1\StoryExportController;
 use App\Http\Controllers\Api\V1\StoryFinalReviewController;
 use App\Http\Controllers\Api\V1\StoryHistoryController;
@@ -248,6 +249,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('story', [StoryController::class, 'entry'])->name('story.entry');
     Route::get('story/projects', [StoryController::class, 'projects'])->name('story.projects.index');
     Route::get('story/projects/{uuid}', [StoryController::class, 'show'])->name('story.projects.show');
+    Route::post('story/projects/{uuid}/cost/estimate', [StoryCostController::class, 'estimate'])->middleware('throttle:60,1')->name('story.projects.cost.estimate');
+    Route::get('story/projects/{uuid}/cost/summary', [StoryCostController::class, 'summary'])->name('story.projects.cost.summary');
+    Route::patch('story/projects/{uuid}/budget', [StoryCostController::class, 'updateBudget'])->name('story.projects.budget.update');
     Route::get('story/projects/{uuid}/bible', [StoryBibleController::class, 'show'])->name('story.projects.bible.show');
     Route::post('story/projects/{uuid}/bible', [StoryBibleController::class, 'store'])->name('story.projects.bible.store');
     Route::patch('story/projects/{uuid}/bible', [StoryBibleController::class, 'update'])->name('story.projects.bible.update');

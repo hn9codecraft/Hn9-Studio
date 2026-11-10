@@ -128,6 +128,12 @@ final readonly class StoryPlannerService implements StoryPlannerServiceInterface
         $previous = $plan->currentVersion;
         $assembled = $this->context->assemble($project, $plan, $previous);
         $promptParts = $this->prompts->build($assembled, $durationPlan, $instruction);
+        app(StoryBudgetGuard::class)->assertWithinBudget(
+            $project,
+            app(StoryCostEstimator::class)->estimate($project, 'plan_generate', [
+                'text' => (string) ($promptParts['prompt'] ?? ''),
+            ]),
+        );
 
         $version = $this->versions->create($plan, [
             'version' => $this->versions->nextVersion($plan),

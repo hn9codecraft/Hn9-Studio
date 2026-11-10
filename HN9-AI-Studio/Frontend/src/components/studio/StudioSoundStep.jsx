@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   approveStorySceneAudio,
   createStorySceneAudio,
+  estimateStoryCost,
   getStorySceneAudio,
   getStorySceneAudioFileUrl,
   listStoryReelAudio,
@@ -22,6 +23,7 @@ import {
   soundFailure,
   soundState,
 } from '../../services/studioMessages';
+import { CostConfirm } from './CostEstimate';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, MediaPreview, NotConnectedNote, reviewTone, StatusBadge, StepFooter, StepHeader, StepSkeleton } from './StudioUi';
 
@@ -165,6 +167,7 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
   const [comment, setComment] = useState('');
   const [showVersions, setShowVersions] = useState(false);
   const [busy, setBusy] = useState('');
+  const [quote, setQuote] = useState(null);
   const voices = connections?.sound?.voices || [];
   const latest = versions[0] || null;
   const inVideo = versions.find((item) => item.selected) || null;
@@ -204,6 +207,13 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
   function generate() {
     const body = { prompt: prompt.trim() };
     if (voices.length > 0 && voice) body.voice = voice;
+    if (!quote) {
+      estimateStoryCost(projectId, { kind: 'audio', text: body.prompt })
+        .then((estimate) => setQuote(estimate))
+        .catch(() => setQuote({ available: false }));
+      return;
+    }
+    setQuote(null);
     run(
       'generate',
       () =>
@@ -320,7 +330,7 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
           <label className="form-label" htmlFor={inputId}>
             What should be said?
           </label>
-          <textarea id={inputId} className="form-control" rows={2} value={prompt} onChange={(event) => setPrompt(event.target.value)} required />
+          <textarea id={inputId} className="form-control" rows={2} value={prompt} onChange={(event) => { setPrompt(event.target.value); setQuote(null); }} required />
           {voices.length > 1 ? (
             <div className="mt-2">
               <label className="form-label" htmlFor={`${inputId}-voice`}>
@@ -336,13 +346,16 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
             </div>
           ) : null}
           <div className="d-flex flex-wrap gap-2 mt-2">
-            <BusyButton type="submit" className="btn btn-primary btn-sm" busy={busy === 'generate'} busyLabel="Generating sound…" disabled={!prompt.trim()}>
-              {source ? 'Make new version' : `Create ${role.label.toLowerCase()}`}
-            </BusyButton>
-            <button type="button" className="btn btn-link btn-sm" onClick={() => setPanel('')}>
+            {quote ? null : (
+              <BusyButton type="submit" className="btn btn-primary btn-sm" busy={busy === 'generate'} busyLabel="Generating sound…" disabled={!prompt.trim()}>
+                See price
+              </BusyButton>
+            )}
+            <button type="button" className="btn btn-link btn-sm" onClick={() => { setQuote(null); setPanel(''); }}>
               Cancel
             </button>
           </div>
+          {quote ? <CostConfirm estimate={quote} busy={busy === 'generate'} onConfirm={generate} onCancel={() => setQuote(null)} /> : null}
         </form>
       ) : null}
 

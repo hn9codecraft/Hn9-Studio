@@ -105,7 +105,6 @@ final readonly class StoryAudioService
         ?string $voice = null,
         ?User $actor = null,
     ): array {
-        $this->dispatch->assertLive($project, StoryVideoCapability::Audio, $reelUuid, $sceneUuid);
         $this->assertRole($role);
 
         $scene = $this->scenes->getForProjectReel($project, $reelUuid, $sceneUuid);
@@ -115,6 +114,11 @@ final readonly class StoryAudioService
             : $this->latestSceneVersion($scene);
 
         $prompt = $this->spokenText($scene, $role, $prompt);
+        app(StoryBudgetGuard::class)->assertWithinBudget(
+            $project,
+            app(StoryCostEstimator::class)->estimate($project, 'audio', ['text' => $prompt]),
+        );
+        $this->dispatch->assertLive($project, StoryVideoCapability::Audio, $reelUuid, $sceneUuid);
         $voice = $this->voice($voice);
         $key = 'audio:'.$scene->uuid.':'.$role->value.':'.hash('sha256', $prompt).($voice === null ? '' : ':'.$voice);
 
@@ -365,6 +369,11 @@ final readonly class StoryAudioService
         if ($existing instanceof StorySceneAudio) {
             return $this->payload($this->syncFromJob($project, $existing), false);
         }
+
+        app(StoryBudgetGuard::class)->assertWithinBudget(
+            $project,
+            app(StoryCostEstimator::class)->estimate($project, 'audio', ['text' => $prompt]),
+        );
 
         try {
             $audio = DB::transaction(function () use ($workspaceId, $scene, $role, $prompt, $key, $version, $parent): StorySceneAudio {
