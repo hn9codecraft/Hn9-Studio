@@ -445,4 +445,104 @@ final class StoryRenderService
 
         return $reel;
     }
+
+    // --- M16 begin ---
+    /**
+     * Burns subtitles into a new copy of a finished render. The source file is not changed.
+     *
+     * @return array<string, mixed>
+     */
+    public function burnSubtitles(Project $project, string $reelUuid, string $renderUuid, string $trackUuid, \App\Models\User $actor): array
+    {
+        $render = $this->find($project, $reelUuid, $renderUuid);
+        if ($render->status !== StoryVideoJobStatus::Completed->value || ! is_string($render->disk) || ! is_string($render->path) || str_contains($render->path, '..')) {
+            throw \App\Story\Exceptions\StorySubtitleException::notReady('The finished video is not ready for subtitles.');
+        }
+        if (! Storage::disk($render->disk)->exists($render->path)) {
+            throw \App\Story\Exceptions\StorySubtitleException::notReady('The finished video is not ready for subtitles.');
+        }
+        $track = \App\Story\Models\StorySubtitleTrack::query()
+            ->where('uuid', $trackUuid)
+            ->where('source_render_id', $render->id)
+            ->first();
+        if (! $track instanceof \App\Story\Models\StorySubtitleTrack) {
+            throw StoryException::notFound('Subtitle track');
+        }
+
+        $lock = \Illuminate\Support\Facades\Cache::lock('story-subtitle-burn:'.$render->story_reel_id, (int) config('story_subtitles.burn.timeout', 900));
+        if (! $lock->get()) {
+            throw \App\Story\Exceptions\StorySubtitleException::burnInProgress();
+        }
+
+        try {
+            $busy = StoryFinalRender::query()
+                ->where('story_reel_id', $render->story_reel_id)
+                ->whereIn('status', [StoryVideoJobStatus::Queued->value, StoryVideoJobStatus::Processing->value])
+                ->exists();
+            if ($busy) {
+                throw \App\Story\Exceptions\StorySubtitleException::renderInProgress();
+            }
+            $fontFile = config('story_subtitles.burn.font_file');
+            if (is_string($fontFile) && $fontFile !== '' && ! is_file($fontFile)) {
+                throw \App\Story\Exceptions\StorySubtitleException::fontMissing();
+            }
+            $media = app(StoryMediaToolkit::class);
+            if (! $media->subtitlesAvailable()) {
+                throw \App\Story\Exceptions\StorySubtitleException::burnUnavailable();
+            }
+
+            $copy = StoryFinalRender::query()->create([
+                'story_timeline_id' => $render->story_timeline_id,
+                'story_reel_id' => $render->story_reel_id,
+                'status' => StoryVideoJobStatus::Queued->value,
+                'timeline_version' => $render->timeline_version,
+                'timeline_snapshot' => $render->timeline_snapshot,
+            ]);
+            $copy->forceFill(['status' => StoryVideoJobStatus::Processing->value])->save();
+
+            try {
+                $srt = (string) Storage::disk($track->disk)->get($track->srt_path);
+                $file = $media->burnSubtitles($render->disk, $render->path, $srt, 'renders/'.$copy->uuid.'.mp4', [
+                    'font_name' => config('story_subtitles.burn.font_name'),
+                    'font_file' => $fontFile,
+                    'font_size' => config('story_subtitles.burn.font_size'),
+                    'margin_v' => config('story_subtitles.burn.margin_v'),
+                    'outline' => config('story_subtitles.burn.outline'),
+                    'crf' => config('story_subtitles.burn.crf'),
+                    'preset' => config('story_subtitles.burn.preset'),
+                    'timeout' => config('story_subtitles.burn.timeout'),
+                ]);
+                $copy->forceFill([
+                    'status' => StoryVideoJobStatus::Completed->value,
+                    'disk' => $file->disk,
+                    'path' => $file->path,
+                    'mime' => $file->mime,
+                    'size_bytes' => $file->size,
+                    'checksum' => $file->checksum,
+                    'error_code' => null,
+                    'error_message' => null,
+                ])->save();
+                $track->forceFill(['burned_render_id' => $copy->id])->save();
+            } catch (Throwable $exception) {
+                $this->discardPartial($copy);
+                $copy->forceFill([
+                    'status' => StoryVideoJobStatus::Failed->value,
+                    'disk' => null,
+                    'path' => null,
+                    'error_code' => 'story_subtitle_burn_failed',
+                    'error_message' => 'The subtitled video could not be built.',
+                ])->save();
+                if ($exception instanceof StoryException && $exception->errorCode() !== 'story_media_build_failed') {
+                    throw $exception;
+                }
+
+                throw new StoryException('The subtitled video could not be built.', 'story_subtitle_burn_failed', 422);
+            }
+
+            return $this->payload($copy->fresh() ?? $copy);
+        } finally {
+            $lock->release();
+        }
+    }
+    // --- M16 end ---
 }

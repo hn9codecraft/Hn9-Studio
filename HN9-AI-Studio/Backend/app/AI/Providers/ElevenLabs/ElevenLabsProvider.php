@@ -75,13 +75,15 @@ final class ElevenLabsProvider extends AbstractProvider
         $characters = $this->tokenCounter->characters($request->input);
 
         $startedAt = hrtime(true);
-        $audio = $this->client->speech(
-            $voiceId,
-            $this->speechPayload($request, $model),
-            ['output_format' => $format],
-        );
+        // --- M16 begin ---
+        $payload = $this->speechPayload($request, $model);
+        $query = ['output_format' => $format];
+        $audio = ($request->options['with_timestamps'] ?? false) === true
+            ? $this->client->speechWithTimestamps($voiceId, $payload, $query)
+            : $this->client->speech($voiceId, $payload, $query);
+        // --- M16 end ---
 
-        return $this->normalizer->voice(
+        $response = $this->normalizer->voice(
             audio: $audio,
             model: $model,
             voiceId: $voiceId,
@@ -90,6 +92,22 @@ final class ElevenLabsProvider extends AbstractProvider
             characters: $characters,
             executionTimeMs: $this->elapsedMilliseconds($startedAt),
         );
+        // --- M16 begin ---
+        // VoiceResponse is readonly, so alignment is carried on a new response.
+        if (isset($audio['alignment']) && is_array($audio['alignment'])) {
+            $response = new VoiceResponse(
+                audio: $response->audio,
+                model: $response->model,
+                voice: $response->voice,
+                format: $response->format,
+                durationSeconds: $response->durationSeconds,
+                usage: $response->usage,
+                raw: [...$response->raw, 'alignment' => $audio['alignment']],
+            );
+        }
+
+        return $response;
+        // --- M16 end ---
     }
 
     public function estimateCost(ProviderRequestDTO $request): float
@@ -282,6 +300,9 @@ final class ElevenLabsProvider extends AbstractProvider
             $request->options,
             ElevenLabsConfig::VOICE_SETTING_ALIASES,
             ['voice_settings' => null, 'story_model_id' => null, 'story_voice_id' => null],
+            // --- M16 begin ---
+            ['with_timestamps' => null],
+            // --- M16 end ---
         );
     }
 

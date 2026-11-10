@@ -54,6 +54,10 @@ use App\Http\Controllers\Api\V1\TraceController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VideoController;
 use App\Http\Controllers\Api\V1\WorkflowRunController;
+// --- M16 begin ---
+use App\Http\Controllers\Api\V1\StorySubtitleController;
+use App\Http\Controllers\Api\V1\StoryVoiceTimingController;
+// --- M16 end ---
 // --- M19 begin ---
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\StoryVersionRestoreController;
@@ -363,6 +367,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/request-changes', [StoryAudioController::class, 'requestChanges'])->name('story.projects.reels.scenes.audio.request-changes');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/rework', [StoryAudioController::class, 'rework'])->name('story.projects.reels.scenes.audio.rework');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/audio/{audioUuid}/select', [StoryAudioController::class, 'select'])->name('story.projects.reels.scenes.audio.select');
+    // --- M16 begin ---
+    Route::get('story/projects/{uuid}/production-plans/{planUuid}/voice-timing', [StoryVoiceTimingController::class, 'show'])->middleware('throttle:60,1')->name('story.projects.production-plans.voice-timing.show');
+    Route::post('story/projects/{uuid}/production-plans/{planUuid}/voice-timing/apply', [StoryVoiceTimingController::class, 'apply'])->middleware('throttle:30,1')->name('story.projects.production-plans.voice-timing.apply');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/subtitles', [StorySubtitleController::class, 'index'])->middleware('throttle:60,1')->name('story.projects.reels.renders.subtitles.index');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/subtitles', [StorySubtitleController::class, 'store'])->middleware('throttle:30,1')->name('story.projects.reels.renders.subtitles.store');
+    Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/subtitles/{trackUuid}/file', [StorySubtitleController::class, 'file'])->middleware('throttle:60,1')->name('story.projects.reels.renders.subtitles.file');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/subtitles/{trackUuid}/burn', [StorySubtitleController::class, 'burn'])->middleware('throttle:generation')->name('story.projects.reels.renders.subtitles.burn');
+    // --- M16 end ---
     Route::get('story/projects/{uuid}/reels/{reelUuid}/timeline', [StoryTimelineController::class, 'show'])->name('story.projects.reels.timeline.show');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/timeline/clips', [StoryTimelineController::class, 'place'])->name('story.projects.reels.timeline.clips.store');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/timeline/reorder', [StoryTimelineController::class, 'reorder'])->name('story.projects.reels.timeline.reorder');

@@ -33,6 +33,9 @@ import {
 import { friendlyErrorM19 } from '../../services/studioMessagesM19';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, jobTone, MediaPreview, reviewTone, StatusBadge, StepFooter, StepHeader, StepSkeleton } from './StudioUi';
+// --- M16 begin ---
+import SubtitlesPanel from './SubtitlesPanel';
+// --- M16 end ---
 
 function renderStatusLabel(status) {
   if (status === 'rendering') return 'Rendering';
@@ -279,6 +282,9 @@ export default function StudioFinalStep({ nav }) {
                   </ul>
                 </details>
               ) : null}
+              {/* --- M16 begin --- */}
+              <SubtitlesPanel />
+              {/* --- M16 end --- */}
             </div>
           </section>
         </>

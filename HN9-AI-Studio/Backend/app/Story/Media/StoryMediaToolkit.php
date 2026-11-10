@@ -370,4 +370,110 @@ class StoryMediaToolkit
 
         return $rounded % 2 === 0 ? $rounded : $rounded + 1;
     }
+
+    // --- M16 begin ---
+    private ?bool $subtitles = null;
+
+    public function subtitlesAvailable(): bool
+    {
+        if ($this->subtitles !== null) {
+            return $this->subtitles;
+        }
+        if (! $this->available()) {
+            return $this->subtitles = false;
+        }
+
+        try {
+            $result = Process::timeout(15)->run([$this->ffmpeg(), '-hide_banner', '-filters']);
+            $this->subtitles = $result->successful() && str_contains($result->output(), 'subtitles');
+        } catch (Throwable) {
+            $this->subtitles = false;
+        }
+
+        return $this->subtitles;
+    }
+
+    /**
+     * @param  array<string, mixed>  $style
+     * @return list<string>
+     */
+    public function subtitleBurnCommand(array $style): array
+    {
+        $font = (string) ($style['font_name'] ?? 'Nirmala UI');
+        if (preg_match('/^[A-Za-z0-9 ._-]+$/', $font) !== 1) {
+            $font = 'Nirmala UI';
+        }
+        $size = (int) ($style['font_size'] ?? 20);
+        $outline = (int) ($style['outline'] ?? 2);
+        $margin = (int) ($style['margin_v'] ?? 24);
+        $filter = "subtitles=subs.srt:fontsdir=fonts:force_style='FontName={$font},FontSize={$size},Outline={$outline},Shadow=0,MarginV={$margin},Alignment=2'";
+
+        return [
+            $this->ffmpeg(), '-hide_banner', '-y', '-i', 'in.mp4',
+            '-vf', $filter,
+            '-c:v', 'libx264', '-preset', (string) ($style['preset'] ?? 'veryfast'), '-crf', (string) ($style['crf'] ?? 20),
+            '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', 'out.mp4',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $style
+     */
+    public function burnSubtitles(string $disk, string $path, string $srtContent, string $outputPath, array $style): StoryMediaFile
+    {
+        if (str_contains($path, '..') || str_contains($path, '://') || str_contains($outputPath, '..')) {
+            throw StoryMediaException::failed('A source file is missing.');
+        }
+        $fontFile = $style['font_file'] ?? null;
+        if (is_string($fontFile) && $fontFile !== '' && ! is_file($fontFile)) {
+            throw new \App\Story\Exceptions\StorySubtitleException(
+                'Set STORY_SUBTITLE_FONT_FILE to a font that supports Gujarati, e.g. C:/Windows/Fonts/Nirmala.ttc or NotoSansGujarati-Regular.ttf',
+                'story_subtitle_font_missing',
+                422,
+            );
+        }
+        if (! Storage::disk($disk)->exists($path)) {
+            throw StoryMediaException::failed('A source file is missing.');
+        }
+
+        $scratch = storage_path('app/story-media/'.Str::uuid()->toString());
+        File::ensureDirectoryExists($scratch.'/fonts');
+        $source = Storage::disk($disk)->path($path);
+        $sourceProbe = $this->probe($source);
+
+        try {
+            File::copy($source, $scratch.'/in.mp4');
+            File::put($scratch.'/subs.srt', $srtContent);
+            if (is_string($fontFile) && $fontFile !== '' && is_file($fontFile)) {
+                File::copy($fontFile, $scratch.'/fonts/'.basename($fontFile));
+            }
+            $command = $this->subtitleBurnCommand($style);
+            $result = Process::path($scratch)->timeout(max(30, (int) ($style['timeout'] ?? 900)))->run($command);
+            $output = $scratch.'/out.mp4';
+            if (! $result->successful() || ! is_file($output) || filesize($output) === 0) {
+                throw StoryMediaException::failed('The subtitled video could not be built.');
+            }
+            $probed = $this->probe($output);
+            if (! $probed['has_video'] || abs($probed['duration'] - $sourceProbe['duration']) > 0.1) {
+                throw StoryMediaException::failed('The subtitled video could not be built.');
+            }
+            $stream = fopen($output, 'rb');
+            if ($stream === false) {
+                throw StoryMediaException::failed('The subtitled video could not be built.');
+            }
+            try {
+                Storage::disk('videos')->put($outputPath, $stream);
+            } finally {
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }
+            $bytes = (string) Storage::disk('videos')->get($outputPath);
+
+            return new StoryMediaFile('videos', $outputPath, 'video/mp4', strlen($bytes), hash('sha256', $bytes), (float) $probed['duration'], (int) $probed['width'], (int) $probed['height'], true, (bool) $probed['has_audio']);
+        } finally {
+            File::deleteDirectory($scratch);
+        }
+    }
+    // --- M16 end ---
 }
