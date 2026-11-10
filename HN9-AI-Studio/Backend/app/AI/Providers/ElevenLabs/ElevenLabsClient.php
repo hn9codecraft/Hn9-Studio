@@ -188,4 +188,58 @@ final readonly class ElevenLabsClient extends AbstractProviderClient
 
         return $value === '' ? null : $value;
     }
+
+    // --- M16 begin ---
+    /**
+     * `POST /text-to-speech/{voice_id}/with-timestamps`. A non-JSON body is
+     * treated as audio with no alignment so older responses still play.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $query
+     * @return array{body: string, content_type: string|null, request_id: string|null, alignment: array<string, mixed>|null}
+     */
+    public function speechWithTimestamps(string $voiceId, array $payload, array $query = []): array
+    {
+        $response = $this->dispatch(fn (PendingRequest $request): Response => $request
+            ->withHeaders(['Accept' => self::ANY_CONTENT])
+            ->withQueryParameters($query)
+            ->post('text-to-speech/'.rawurlencode($voiceId).'/with-timestamps', $payload));
+
+        if ($response->failed()) {
+            $body = $response->json();
+
+            throw $this->failureFor($response, is_array($body) ? $body : null);
+        }
+
+        $raw = $response->body();
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded) || ! array_key_exists('audio_base64', $decoded)) {
+            if ($raw === '') {
+                throw ProviderApiException::forProvider($this->providerKey, 'ElevenLabs returned an empty audio response.');
+            }
+
+            return [
+                'body' => $raw,
+                'content_type' => $this->header($response, 'Content-Type') ?? 'audio/mpeg',
+                'request_id' => $this->header($response, 'request-id'),
+                'alignment' => null,
+            ];
+        }
+
+        $audio = base64_decode((string) $decoded['audio_base64'], true);
+        if ($audio === false || $audio === '') {
+            throw ProviderApiException::forProvider($this->providerKey, 'ElevenLabs returned an invalid provider response.');
+        }
+        $alignment = is_array($decoded['alignment'] ?? null)
+            ? $decoded['alignment']
+            : (is_array($decoded['normalized_alignment'] ?? null) ? $decoded['normalized_alignment'] : null);
+
+        return [
+            'body' => $audio,
+            'content_type' => 'audio/mpeg',
+            'request_id' => $this->header($response, 'request-id'),
+            'alignment' => $alignment,
+        ];
+    }
+    // --- M16 end ---
 }

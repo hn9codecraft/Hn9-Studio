@@ -32,6 +32,9 @@ import {
 } from '../../services/studioMessages';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, jobTone, MediaPreview, reviewTone, StatusBadge, StepFooter, StepHeader, StepSkeleton } from './StudioUi';
+// --- M16 begin ---
+import SubtitlesPanel from './SubtitlesPanel';
+// --- M16 end ---
 
 function clipName(clip) {
   if (!clip.scene_sequence) return clip.media_kind === 'audio' ? 'Sound clip' : 'Video clip';
@@ -239,6 +242,9 @@ export default function StudioFinalStep({ nav }) {
                   </ul>
                 </details>
               ) : null}
+              {/* --- M16 begin --- */}
+              <SubtitlesPanel />
+              {/* --- M16 end --- */}
             </div>
           </section>
         </>
