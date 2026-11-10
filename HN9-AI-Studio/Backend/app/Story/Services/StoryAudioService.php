@@ -22,6 +22,8 @@ use App\Story\Models\StoryScene;
 use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StorySceneVersion;
 use App\Story\Models\StoryVideoGenerationJob;
+use App\Story\Support\StoryVoiceProfile;
+use App\Story\Support\StoryVoiceProfileResolver;
 use App\Story\Video\StoryVideoGenerationRequest;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -104,23 +106,28 @@ final readonly class StoryAudioService
         ?string $versionUuid = null,
         ?string $voice = null,
         ?User $actor = null,
+        ?string $language = null,
     ): array {
         $this->assertRole($role);
 
         $scene = $this->scenes->getForProjectReel($project, $reelUuid, $sceneUuid);
-        $scene->loadMissing('reel.workspace');
+        $scene->loadMissing('reel.workspace.bible');
         $version = $versionUuid !== null
             ? $this->sceneVersion($scene, $versionUuid)
             : $this->latestSceneVersion($scene);
 
         $prompt = $this->spokenText($scene, $role, $prompt);
+        $profile = app(StoryVoiceProfileResolver::class)->resolve(
+            $language,
+            $scene->reel?->workspace?->bible?->language,
+        );
         app(StoryBudgetGuard::class)->assertWithinBudget(
             $project,
             app(StoryCostEstimator::class)->estimate($project, 'audio', ['text' => $prompt]),
         );
         $this->dispatch->assertLive($project, StoryVideoCapability::Audio, $reelUuid, $sceneUuid);
         $voice = $this->voice($voice);
-        $key = 'audio:'.$scene->uuid.':'.$role->value.':'.hash('sha256', $prompt).($voice === null ? '' : ':'.$voice);
+        $key = 'audio:'.$scene->uuid.':'.$role->value.':'.hash('sha256', $prompt).($voice === null ? '' : ':'.$voice).':'.$profile->language.':'.$profile->model;
 
         return $this->generate(
             $project,
@@ -134,6 +141,7 @@ final readonly class StoryAudioService
             $this->latestForRole($scene, $role),
             self::EVENT_VERSION_CREATED,
             $actor,
+            $profile,
         );
     }
 
@@ -363,7 +371,13 @@ final readonly class StoryAudioService
         ?StorySceneAudio $parent,
         string $event,
         ?User $actor,
+        ?StoryVoiceProfile $profile = null,
     ): array {
+        $scene->loadMissing('reel.workspace.bible');
+        $profile ??= app(StoryVoiceProfileResolver::class)->resolve(
+            null,
+            $scene->reel?->workspace?->bible?->language,
+        );
         $workspaceId = (int) $scene->reel->story_workspace_id;
         $existing = $this->byKey($workspaceId, $key);
         if ($existing instanceof StorySceneAudio) {
@@ -376,7 +390,7 @@ final readonly class StoryAudioService
         );
 
         try {
-            $audio = DB::transaction(function () use ($workspaceId, $scene, $role, $prompt, $key, $version, $parent): StorySceneAudio {
+            $audio = DB::transaction(function () use ($workspaceId, $scene, $role, $prompt, $key, $version, $parent, $profile): StorySceneAudio {
                 $next = (int) StorySceneAudio::query()
                     ->where('story_scene_id', $scene->id)
                     ->where('role', $role->value)
@@ -393,6 +407,8 @@ final readonly class StoryAudioService
                     'status' => StoryVideoJobStatus::Queued->value,
                     'review_status' => StoryReviewStatus::Draft->value,
                     'prompt' => $prompt,
+                    'language' => $profile->language,
+                    'voice_model' => $profile->model,
                     'idempotency_key' => $key,
                 ]);
             });
@@ -425,6 +441,9 @@ final readonly class StoryAudioService
                     'voice' => $voice,
                     'scene_title' => $scene->title,
                     'characters' => $this->characters($scene),
+                    'story_model_id' => $profile->model,
+                    'story_language_code' => $profile->sendLanguageCode ? $profile->language : null,
+                    'story_voice_id' => ($voice === null && $profile->voiceSource === 'language') ? $profile->voiceId : null,
                 ], static fn ($value): bool => $value !== null && $value !== '' && $value !== []),
             ));
         } catch (Throwable $exception) {
@@ -746,6 +765,8 @@ final readonly class StoryAudioService
             'reviewed_at' => $audio->reviewed_at?->toIso8601String(),
             'selected' => $audio->isSelected(),
             'prompt' => $audio->prompt,
+            'language' => $audio->language,
+            'voice_model' => $audio->voice_model,
             'scene_id' => $audio->scene?->uuid,
             'version_id' => $audio->version?->uuid,
             'job_id' => $audio->job?->uuid,

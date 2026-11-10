@@ -58,6 +58,11 @@ use App\Http\Controllers\Api\V1\WorkflowRunController;
 use App\Http\Controllers\Api\V1\StorySubtitleController;
 use App\Http\Controllers\Api\V1\StoryVoiceTimingController;
 // --- M16 end ---
+// --- M19 begin ---
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\StoryVersionRestoreController;
+use App\Http\Controllers\Api\V1\StoryVoiceLanguageController;
+// --- M19 end ---
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -383,6 +388,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('story/projects/{uuid}/reels/{reelUuid}/renders', [StoryRenderController::class, 'store'])->middleware('throttle:generation')->name('story.projects.reels.renders.store');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}', [StoryRenderController::class, 'show'])->name('story.projects.reels.renders.show');
     Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/file', [StoryRenderController::class, 'file'])->name('story.projects.reels.renders.file');
+    // --- M19 begin ---
+    Route::get('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/versions', [StoryVersionRestoreController::class, 'index'])->middleware('throttle:60,1')->name('story.projects.production-plans.scenes.versions.index');
+    Route::post('story/projects/{uuid}/production-plans/{planUuid}/scenes/{sceneUuid}/assemblies/{assemblyUuid}/restore', [StoryVersionRestoreController::class, 'restoreAssembly'])->middleware('throttle:60,1')->name('story.projects.production-plans.scenes.assemblies.restore');
+    Route::post('story/projects/{uuid}/reels/{reelUuid}/scenes/{sceneUuid}/versions/{versionUuid}/restore', [StoryVersionRestoreController::class, 'restoreSceneVersion'])->middleware('throttle:60,1')->name('story.projects.reels.scenes.versions.restore');
+    Route::get('story/voice-languages', [StoryVoiceLanguageController::class, 'index'])->name('story.voice-languages');
+    Route::post('notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+    // --- M19 end ---
     Route::get('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/reviews', [StoryFinalReviewController::class, 'show'])->name('story.projects.reels.renders.reviews.show');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/submit-review', [StoryFinalReviewController::class, 'submit'])->name('story.projects.reels.renders.submit-review');
     Route::post('story/projects/{uuid}/reels/{reelUuid}/renders/{renderUuid}/approve', [StoryFinalReviewController::class, 'approve'])->name('story.projects.reels.renders.approve');

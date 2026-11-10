@@ -8,6 +8,7 @@ import {
   getStoryRenderFileUrl,
   getStoryTimeline,
   listStoryRenders,
+  getStoryRender,
   placeStoryTimelineClip,
   reorderStoryTimeline,
   replaceStoryTimelineClip,
@@ -23,18 +24,23 @@ import {
   formatBytes,
   formatDateTime,
   formatTimecode,
-  friendlyError,
   jobStatusLabel,
   msToSeconds,
   reviewStatusLabel,
   sceneName,
   TRANSITIONS,
 } from '../../services/studioMessages';
+import { friendlyErrorM19 } from '../../services/studioMessagesM19';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, jobTone, MediaPreview, reviewTone, StatusBadge, StepFooter, StepHeader, StepSkeleton } from './StudioUi';
 // --- M16 begin ---
 import SubtitlesPanel from './SubtitlesPanel';
 // --- M16 end ---
+
+function renderStatusLabel(status) {
+  if (status === 'rendering') return 'Rendering';
+  return jobStatusLabel(status);
+}
 
 function clipName(clip) {
   if (!clip.scene_sequence) return clip.media_kind === 'audio' ? 'Sound clip' : 'Video clip';
@@ -48,6 +54,7 @@ export default function StudioFinalStep({ nav }) {
   const [timeline, setTimeline] = useState(null);
   const [renders, setRenders] = useState(null);
   const [busy, setBusy] = useState('');
+  const [watching, setWatching] = useState(null);
 
   const load = useCallback(async () => {
     if (!reelId) {
@@ -66,6 +73,33 @@ export default function StudioFinalStep({ nav }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!watching || !reelId) return undefined;
+    let stopped = false;
+    let timer;
+    let delay = 5000;
+    async function tick() {
+      try {
+        const render = await getStoryRender(projectId, reelId, watching);
+        if (stopped) return;
+        if (render?.status === 'completed' || render?.status === 'failed') {
+          setWatching(null);
+          await load();
+          return;
+        }
+      } catch {
+        if (stopped) return;
+      }
+      delay = 15000;
+      timer = window.setTimeout(tick, delay);
+    }
+    timer = window.setTimeout(tick, delay);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [watching, projectId, reelId, load]);
 
   const latest = renders?.[0] || null;
 
@@ -91,7 +125,7 @@ export default function StudioFinalStep({ nav }) {
       after?.(result);
       return result;
     } catch (err) {
-      feedback.error(friendlyError(err, 'That did not work. Please try again.'));
+      feedback.error(friendlyErrorM19(err, 'That did not work. Please try again.'));
       return null;
     } finally {
       setBusy('');
@@ -103,6 +137,7 @@ export default function StudioFinalStep({ nav }) {
   const onTimeline = new Set(clips.filter((clip) => clip.media_kind === 'video').map((clip) => clip.scene_id));
   const missing = approvedVersions.filter((item) => !onTimeline.has(item.scene_id));
   const totalMs = clips.reduce((sum, clip) => sum + Math.max(0, clip.out_ms - clip.in_ms), 0);
+  const renderActive = (renders || []).some((item) => item.status === 'queued' || item.status === 'processing' || item.status === 'rendering');
 
   async function addMissing() {
     await run(
@@ -117,11 +152,15 @@ export default function StudioFinalStep({ nav }) {
   }
 
   async function build() {
-    await run('build', () => startStoryRender(projectId, reelId), (render) =>
-      render?.status === 'completed'
+    await run('build', () => startStoryRender(projectId, reelId), (render) => {
+      if (render?.queued) {
+        setWatching(render.id);
+        return 'Rendering in the background. You can keep working; we’ll notify you.';
+      }
+      return render?.status === 'completed'
         ? 'Your final video is built. Preview it below, then send it for review.'
-        : `The build did not finish: ${failureReason(render?.error_code)}`,
-    );
+        : `The build did not finish: ${failureReason(render?.error_code)}`;
+    });
   }
 
   return (
@@ -219,12 +258,13 @@ export default function StudioFinalStep({ nav }) {
                 <h3 className="h5 mb-0" id="build-heading">
                   Final video
                 </h3>
-                <BusyButton busy={busy === 'build'} busyLabel="Building…" disabled={clips.length === 0 || Boolean(busy)} onClick={build}>
+                <BusyButton busy={busy === 'build'} busyLabel="Building…" disabled={clips.length === 0 || Boolean(busy) || renderActive} onClick={build}>
                   <i className="bi bi-hammer me-1" aria-hidden="true" />
                   {latest ? 'Build again' : 'Build final video'}
                 </BusyButton>
               </div>
               {clips.length === 0 ? <p className="small text-secondary mb-0">Add clips to the timeline before building.</p> : null}
+              {renderActive ? <p className="small text-secondary">A video is already being built. You can keep working; we’ll notify you when it finishes.</p> : null}
               {renders === null ? <StepSkeleton rows={1} /> : null}
               {latest ? <RenderCard render={latest} clips={clips} busy={busy} run={run} /> : null}
               {renders && renders.length > 1 ? (
@@ -234,7 +274,7 @@ export default function StudioFinalStep({ nav }) {
                     {renders.slice(1).map((render) => (
                       <li key={render.id} className="d-flex flex-wrap gap-2 align-items-center small">
                         <span>{formatDateTime(render.created_at)}</span>
-                        <StatusBadge tone={jobTone(render.status)}>{jobStatusLabel(render.status)}</StatusBadge>
+                        <StatusBadge tone={jobTone(render.status)}>{renderStatusLabel(render.status)}</StatusBadge>
                         <StatusBadge tone={reviewTone(render.review_status)}>{reviewStatusLabel(render.review_status)}</StatusBadge>
                         <span className="text-secondary">{formatTimecode(render.duration_ms)}</span>
                       </li>
@@ -492,7 +532,7 @@ function RenderCard({ render, clips, busy, run }) {
   return (
     <div className="studio-render">
       <div className="studio-render-facts">
-        <StatusBadge tone={jobTone(render.status)}>{render.has_file ? 'Built' : jobStatusLabel(render.status)}</StatusBadge>
+        <StatusBadge tone={jobTone(render.status)}>{render.has_file ? 'Built' : renderStatusLabel(render.status)}</StatusBadge>
         <StatusBadge tone={reviewTone(review)}>{reviewStatusLabel(review)}</StatusBadge>
         <span>{formatDateTime(render.created_at)}</span>
         <span>{formatTimecode(render.duration_ms)} long</span>

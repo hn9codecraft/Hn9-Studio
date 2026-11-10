@@ -62,6 +62,8 @@ class StorySceneAudio extends Model
         'checksum',
         'error_code',
         'error_message',
+        'language',
+        'voice_model',
     ];
 
     protected function casts(): array

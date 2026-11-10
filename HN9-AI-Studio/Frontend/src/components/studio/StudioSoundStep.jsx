@@ -13,7 +13,6 @@ import {
 } from '../../services/storyService';
 import {
   formatSeconds,
-  friendlyError,
   isJobActive,
   reviewStatusLabel,
   sceneName,
@@ -23,6 +22,9 @@ import {
   soundFailure,
   soundState,
 } from '../../services/studioMessages';
+import { friendlyErrorM19 } from '../../services/studioMessagesM19';
+import { STORY_LANGUAGES } from '../../services/storyConstants';
+import { listVoiceLanguages } from '../../services/storyVoiceService';
 import { CostConfirm } from './CostEstimate';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, MediaPreview, NotConnectedNote, reviewTone, StatusBadge, StepFooter, StepHeader, StepSkeleton } from './StudioUi';
@@ -174,7 +176,16 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
   const [showVersions, setShowVersions] = useState(false);
   const [busy, setBusy] = useState('');
   const [quote, setQuote] = useState(null);
+  const [language, setLanguage] = useState('');
+  const [languages, setLanguages] = useState(null);
   const voices = connections?.sound?.voices || [];
+  useEffect(() => {
+    listVoiceLanguages().then(setLanguages).catch(() => setLanguages(null));
+  }, []);
+  const catalog = (languages?.languages || []).filter((item) => STORY_LANGUAGES.some((row) => row.value === item.code));
+  const bibleCode = catalog.some((item) => item.code === bible?.language) ? bible.language : languages?.default_language || 'en';
+  const bibleLabel = STORY_LANGUAGES.find((row) => row.value === bibleCode)?.label || 'English';
+  const chosen = catalog.find((item) => item.code === (language || bibleCode));
   const latest = versions[0] || null;
   const inVideo = versions.find((item) => item.selected) || null;
   const active = latest && isJobActive(latest.status);
@@ -190,7 +201,7 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
       announce = () => onDone(result);
       setPanel('');
     } catch (err) {
-      feedback.error(friendlyError(err, fallback, 'sound'));
+      feedback.error(friendlyErrorM19(err, fallback, 'sound'));
     } finally {
       await Promise.all([onChanged(), refresh(['status'])]);
       setBusy('');
@@ -213,6 +224,7 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
   function generate() {
     const body = { prompt: prompt.trim() };
     if (voices.length > 0 && voice) body.voice = voice;
+    if (language) body.language = language;
     if (!quote) {
       estimateStoryCost(projectId, { kind: 'audio', text: body.prompt })
         .then((estimate) => setQuote(estimate))
@@ -264,7 +276,7 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
       else if (result?.has_file) feedback.success(SOUND_MESSAGES.ready);
       else feedback.info(SOUND_MESSAGES.generating);
     } catch (err) {
-      feedback.error(friendlyError(err, 'Progress could not be checked. Please try again.', 'sound'));
+      feedback.error(friendlyErrorM19(err, 'Progress could not be checked. Please try again.', 'sound'));
     } finally {
       setBusy('');
     }
@@ -351,6 +363,25 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
               </select>
             </div>
           ) : null}
+          <div className="mt-2">
+            <label className="form-label" htmlFor={`${inputId}-language`}>
+              Voice language
+            </label>
+            <select id={`${inputId}-language`} className="form-select form-select-sm w-auto" value={language} onChange={(event) => setLanguage(event.target.value)}>
+              <option value="">{`Story default (${bibleLabel})`}</option>
+              {catalog.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            {chosen?.model ? <p className="small text-secondary mb-0 mt-1">Voice model: {chosen.model}</p> : null}
+            {chosen && chosen.voice_configured === false ? (
+              <p className="small text-warning mb-0 mt-1">
+                No voice set for {chosen.label}; the default voice will be used. Set ELEVENLABS_VOICE_{chosen.code.toUpperCase()} or pick a voice in AI services.
+              </p>
+            ) : null}
+          </div>
           <div className="d-flex flex-wrap gap-2 mt-2">
             {quote ? null : (
               <BusyButton type="submit" className="btn btn-primary btn-sm" busy={busy === 'generate'} busyLabel="Generating sound…" disabled={!prompt.trim()}>
@@ -397,6 +428,9 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
                 <span className="fw-semibold">{item.version_label}</span>
                 <StatusBadge tone={itemState.tone}>{itemState.label}</StatusBadge>
                 {item.review_comment ? <span className="small text-secondary">“{item.review_comment}”</span> : null}
+                {item.language || item.voice_model ? (
+                  <span className="small text-secondary">{[item.language, item.voice_model].filter(Boolean).join(' · ')}</span>
+                ) : null}
                 <span className="studio-sound-actions">
                   {item.has_file && item.id !== latest?.id ? (
                     <MediaPreview kind="audio" load={() => getStorySceneAudioFileUrl(projectId, reelId, scene.id, item.id)} label={`${label}, ${item.version_label}`} />

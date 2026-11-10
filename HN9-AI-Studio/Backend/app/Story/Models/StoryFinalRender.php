@@ -43,6 +43,9 @@ class StoryFinalRender extends Model
         'checksum',
         'error_code',
         'error_message',
+        'requested_by',
+        'queued_at',
+        'started_at',
     ];
 
     protected function casts(): array
@@ -50,6 +53,8 @@ class StoryFinalRender extends Model
         return [
             'timeline_snapshot' => 'array',
             'size_bytes' => 'integer',
+            'queued_at' => 'datetime',
+            'started_at' => 'datetime',
         ];
     }
 

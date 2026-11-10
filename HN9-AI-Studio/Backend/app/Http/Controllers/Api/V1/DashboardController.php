@@ -119,6 +119,20 @@ final class DashboardController extends Controller
             }
         }
 
-        return ApiResponse::success([]);
+        $user = $request->user();
+        $notifications = $user->notifications()->latest()->limit(20)->get()->map(static function ($notification): array {
+            return [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'data' => $notification->data,
+                'read_at' => $notification->read_at?->toIso8601String(),
+                'created_at' => $notification->created_at?->toIso8601String(),
+            ];
+        })->values()->all();
+
+        return ApiResponse::success([
+            'notifications' => $notifications,
+            'unread_count' => $user->unreadNotifications()->count(),
+        ]);
     }
 }

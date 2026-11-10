@@ -11,6 +11,7 @@ use App\Story\Models\StoryWorkspace;
 use App\Story\Services\StoryRenderService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StoryRenderController extends Controller
@@ -20,13 +21,16 @@ class StoryRenderController extends Controller
         private ProjectServiceInterface $projects,
     ) {}
 
-    public function store(string $uuid, string $reelUuid): JsonResponse
+    public function store(Request $request, string $uuid, string $reelUuid): JsonResponse
     {
         $project = $this->projects->getByUuid($uuid);
         $this->authorize('select', [StoryWorkspace::class, $project]);
         $this->authorize('update', $this->reel($project->id, $reelUuid));
 
-        return ApiResponse::success($this->renders->start($project, $reelUuid), 201);
+        $result = $this->renders->start($project, $reelUuid, $request->user());
+        $status = ($result['queued'] ?? false) === true ? 202 : 201;
+
+        return ApiResponse::success($result, $status);
     }
 
     public function index(string $uuid, string $reelUuid): JsonResponse

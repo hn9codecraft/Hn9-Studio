@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import BrandLogo from '../ui/BrandLogo';
 import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 
 export default function Header({ title }) {
   const { user, logout } = useAuth();
@@ -39,6 +40,7 @@ export default function Header({ title }) {
       </div>
 
       <div className="d-flex align-items-center gap-2 gap-md-3">
+        <NotificationBell />
         <ThemeToggle />
         <div className="header-user d-none d-sm-flex align-items-center gap-2">
           <span className="header-avatar" aria-hidden="true">
