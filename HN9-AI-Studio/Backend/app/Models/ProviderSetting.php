@@ -58,6 +58,6 @@ class ProviderSetting extends Model
             return $this->value;
         }
 
-        return $this->value === null ? null : str_repeat('*', 8);
+        return \App\Services\ProviderCredentialService::mask(is_string($this->value) ? $this->value : null);
     }
 }

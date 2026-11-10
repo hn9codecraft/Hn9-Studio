@@ -58,7 +58,7 @@ class ModelRelationshipsTest extends TestCase
 
         $this->assertNotSame('sk-secret-value', $rawValue);
         $this->assertSame('sk-secret-value', $setting->fresh()->value);
-        $this->assertSame('********', $setting->fresh()->maskedValue());
+        $this->assertSame('••••alue', $setting->fresh()->maskedValue());
     }
 
     public function test_soft_deletes_hide_records_but_retain_them(): void

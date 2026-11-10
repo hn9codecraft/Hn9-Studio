@@ -53,8 +53,8 @@ final class ProviderApiTest extends TestCase
 
         $this->actingAs($admin, 'sanctum')
             ->postJson('/api/v1/providers/'.$provider->uuid.'/test')
-            ->assertStatus(501)
-            ->assertJsonPath('error_code', 'not_implemented');
+            ->assertStatus(422)
+            ->assertJsonPath('error_code', 'provider_test_unsupported');
 
         $this->assertDatabaseHas('ai_providers', [
             'id' => $provider->id,
@@ -158,7 +158,7 @@ final class ProviderApiTest extends TestCase
             ->assertJsonPath('data.0.id', $provider->uuid)
             ->assertJsonPath('data.0.settings.0.id', $setting->uuid)
             ->assertJsonPath('data.0.settings.0.is_secret', true)
-            ->assertJsonPath('data.0.settings.0.value', '********');
+            ->assertJsonPath('data.0.settings.0.value', '••••'.substr($secret, -4));
 
         $this->assertStringNotContainsString($secret, $list->getContent());
         $this->assertDoesNotMatchRegularExpression('/"id"\s*:\s*\d+/', $list->getContent());
@@ -169,7 +169,7 @@ final class ProviderApiTest extends TestCase
                 'is_secret' => true,
             ])
             ->assertStatus(200)
-            ->assertJsonPath('data.value', '********')
+            ->assertJsonPath('data.value', '••••alue')
             ->assertJsonPath('data.is_secret', true);
 
         $this->assertStringNotContainsString('replacement-secret-value', $updated->getContent());
@@ -178,7 +178,7 @@ final class ProviderApiTest extends TestCase
         $reload = $this->actingAs($admin, 'sanctum')
             ->getJson('/api/v1/providers/'.$provider->uuid)
             ->assertStatus(200)
-            ->assertJsonPath('data.settings.0.value', '********');
+            ->assertJsonPath('data.settings.0.value', '••••alue');
 
         $this->assertStringNotContainsString('replacement-secret-value', $reload->getContent());
     }

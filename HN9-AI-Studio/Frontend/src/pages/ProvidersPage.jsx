@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ApiKeysPanel from '../components/providers/ApiKeysPanel';
 import ProviderRegistryCard from '../components/providers/ProviderRegistryCard';
 import AlertMessage from '../components/ui/AlertMessage';
 import EmptyState from '../components/ui/EmptyState';
@@ -75,11 +76,13 @@ export default function ProvidersPage() {
 
       {loading ? <LoadingSpinner label="Loading providers…" /> : null}
 
+      {!loading && !forbidden ? <ApiKeysPanel /> : null}
+
       {!loading && forbidden ? (
         <EmptyState
           icon="bi-shield-lock"
           title="Administrator access required"
-          description="Provider management is limited to administrators. Your account can still use the rest of the studio."
+          description="Provider management is limited to administrators. Ask an admin, or run php artisan hn9:user-role <email> admin."
         />
       ) : null}
 

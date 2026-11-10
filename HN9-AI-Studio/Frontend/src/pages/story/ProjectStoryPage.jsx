@@ -19,6 +19,7 @@ import {
   getStoryProjectRevision,
   getStoryReelSceneStatus,
   getStoryWorkspace,
+  markStoryProjectChanged,
   listStoryCharacters,
   listStoryReels,
 } from '../../services/storyService';
@@ -263,6 +264,14 @@ function StudioWorkspace({ projectId }) {
   /** Re-reads shared data after a step changed it. Keys: bible, characters, reels, status. */
   const refresh = useCallback(
     async (keys) => {
+      if (keys.includes('connections') || keys.includes('workspace')) {
+        try {
+          markStoryProjectChanged(projectId);
+          setWorkspace(await getStoryWorkspace(projectId));
+        } catch {
+          // The card keeps the last connections if the refresh fails.
+        }
+      }
       const loaders = {
         bible: () => getStoryBible(projectId),
         characters: () => listStoryCharacters(projectId),
