@@ -2,6 +2,7 @@
 // a status code, an internal id or a raw server message to the person using it.
 
 import { m17Message } from './studioMessagesM17';
+import { m18Message } from './studioMessagesM18';
 
 export const NOT_CONNECTED = {
   video: 'Video creation is not connected yet. An administrator needs to connect a video service before videos can be made.',
@@ -121,6 +122,8 @@ export function friendlyError(error, fallback = 'Something went wrong. Please tr
 
   const m17 = m17Message(error);
   if (m17) return m17;
+  const m18 = m18Message(error);
+  if (m18) return m18;
 
   if (
     code === 'GENERATION_NOT_ENABLED' ||

@@ -19,6 +19,7 @@ export default function PromptPreviewModal({
   onGenerate,
   onCancel,
   busy = false,
+  mode = 'generate',
 }) {
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState('');
@@ -86,7 +87,12 @@ export default function PromptPreviewModal({
   }
 
   const price = preview?.idempotent_repeat ? 'no charge' : formatEstimate(preview?.estimate);
-  const button = preview?.idempotent_repeat ? 'Show existing generation (no charge)' : `Generate (${price})`;
+  const retryBlocked = preview?.retry?.allowed === false;
+  const button = preview?.idempotent_repeat
+    ? 'Show existing generation (no charge)'
+    : mode === 'retry'
+      ? `Retry (${price})`
+      : `Generate (${price})`;
   const final = preview?.prompt?.final || '';
   const limit = preview?.prompt?.limit;
 
@@ -107,22 +113,26 @@ export default function PromptPreviewModal({
           {preview.routing?.matched === false ? (
             <p className="small mb-2">No video service can make this yet. Nothing will be sent.</p>
           ) : null}
-          <p className="small mb-1">
-            Prompt
-            {limit ? ` · ${preview.prompt.length}/${limit}` : ` · ${preview.prompt.length} characters`}
-          </p>
-          <pre className="small border rounded p-2 mb-2" style={{ whiteSpace: 'pre-wrap' }}>
-            {preview.prompt.lock_block && final.includes(preview.prompt.lock_block) ? (
-              <>
-                {final.slice(0, final.indexOf(preview.prompt.lock_block))}
-                <mark>{preview.prompt.lock_block}</mark>
-              </>
-            ) : (
-              final
-            )}
-          </pre>
-          {preview.prompt.trimmed?.length ? (
-            <p className="small text-secondary mb-2">Shortened to fit: {preview.prompt.trimmed.join(', ')}.</p>
+          {preview.prompt ? (
+            <>
+              <p className="small mb-1">
+                Prompt
+                {limit ? ` · ${preview.prompt.length}/${limit}` : ` · ${preview.prompt.length} characters`}
+              </p>
+              <pre className="small border rounded p-2 mb-2" style={{ whiteSpace: 'pre-wrap' }}>
+                {preview.prompt.lock_block && final.includes(preview.prompt.lock_block) ? (
+                  <>
+                    {final.slice(0, final.indexOf(preview.prompt.lock_block))}
+                    <mark>{preview.prompt.lock_block}</mark>
+                  </>
+                ) : (
+                  final
+                )}
+              </pre>
+              {preview.prompt.trimmed?.length ? (
+                <p className="small text-secondary mb-2">Shortened to fit: {preview.prompt.trimmed.join(', ')}.</p>
+              ) : null}
+            </>
           ) : null}
           {preview.warnings?.includes('edit_based_on_old_scene_text') ? (
             <p className="small mb-2">This saved text is based on an older scene. The automatic text is now: {preview.prompt.automatic_base}</p>
@@ -149,6 +159,12 @@ export default function PromptPreviewModal({
           {preview.budget?.would_exceed ? (
             <p className="small text-danger mb-2">This would go over the project budget, so nothing will be sent.</p>
           ) : null}
+          {preview.retry ? (
+            <p className="small mb-2">
+              Attempt {preview.retry.attempt_number_next}. Retries left: {preview.retry.retries_left}.
+              {retryBlocked && preview.retry.reason ? ` ${preview.retry.reason}` : ''}
+            </p>
+          ) : null}
           {allowEdit && editing ? (
             <div className="mb-2">
               <label className="form-label small" htmlFor="prompt-edit">
@@ -173,7 +189,7 @@ export default function PromptPreviewModal({
         </>
       ) : null}
       <div className="d-flex gap-2">
-        <BusyButton type="button" className="btn btn-primary btn-sm" busy={busy} busyLabel="Sending…" onClick={generate} disabled={!preview || busy}>
+        <BusyButton type="button" className="btn btn-primary btn-sm" busy={busy} busyLabel="Sending…" onClick={generate} disabled={!preview || busy || retryBlocked || !preview.preview_hash}>
           {button}
         </BusyButton>
         <button type="button" className="btn btn-link btn-sm" onClick={onCancel} disabled={busy}>

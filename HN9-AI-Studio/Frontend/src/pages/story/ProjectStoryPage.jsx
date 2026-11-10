@@ -4,6 +4,7 @@ import ImageStudio from '../../components/images/ImageStudio';
 import AlertMessage from '../../components/ui/AlertMessage';
 import EmptyState from '../../components/ui/EmptyState';
 import { SpendChip } from '../../components/studio/CostEstimate';
+import StudioProgressBar from '../../components/studio/StudioProgressBar';
 import { StudioContext, StudioFeedbackProvider } from '../../components/studio/StudioContext';
 import { StepSkeleton } from '../../components/studio/StudioUi';
 import { listProjects } from '../../services/projectService';
@@ -495,6 +496,7 @@ function StudioWorkspace({ projectId }) {
               </Link>
             </div>
           </div>
+          <StudioProgressBar projectId={projectId} onNavigate={goTo} />
         </header>
 
         <nav className="studio-stepper" aria-label="Production steps">

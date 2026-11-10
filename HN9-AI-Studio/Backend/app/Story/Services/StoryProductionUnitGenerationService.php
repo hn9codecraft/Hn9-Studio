@@ -21,6 +21,7 @@ use App\Story\Enums\StoryVideoInputType;
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Exceptions\StoryException;
 use App\Story\Exceptions\StoryPromptPreviewException;
+use App\Story\Exceptions\StoryUnitRetryException;
 use App\Story\Exceptions\StoryVideoEngineException;
 use App\Story\Media\StoryMediaException;
 use App\Story\Media\StoryMediaToolkit;
@@ -30,7 +31,9 @@ use App\Story\Models\StoryScene;
 use App\Story\Models\StoryUnitPromptEdit;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Support\StoryComposedPrompt;
+use App\Story\Support\StoryFailureReason;
 use App\Story\Support\StoryGenerationUnitCalculator;
+use App\Story\Support\StoryLockStatus;
 use App\Story\Support\StoryPromptHash;
 use App\Story\Support\StoryVideoPromptComposer;
 use App\Story\Video\StoryVideoAssetResolver;
@@ -68,6 +71,8 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
     public const EVENT_FAILED = 'story.unit_generation.failed';
 
     public const EVENT_RETRIED = 'story.unit_generation.retried';
+
+    public const EVENT_RETRY_REQUESTED = 'story.unit_generation.retry_requested';
 
     /**
      * Container timing may differ from the requested whole second by less than this.
@@ -126,9 +131,7 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
 
         $existing = $this->findIntent($plan, $key);
         if ($existing instanceof StoryVideoGenerationJob) {
-            $existing = $this->attachUnit($existing, $unit);
-
-            return ['job' => $this->continueJob($existing, $unit), 'unit' => $unit, 'created' => false];
+            return $this->reuseIntent($existing, $unit, $intent);
         }
 
         $this->assertPreviewCurrent($project, $planUuid, $unitUuid, $input);
@@ -155,7 +158,7 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
                 throw StoryVideoEngineException::invalidInput('This generation is already being started. Check its status and try again.');
             }
 
-            return ['job' => $this->continueJob($existing, $unit), 'unit' => $unit, 'created' => false];
+            return $this->reuseIntent($existing, $unit, $intent);
         }
 
         $job = $this->attachUnit($prepared['job'], $unit);
@@ -198,6 +201,143 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         [, $unit] = $this->ownedUnit($project, $planUuid, $unitUuid);
 
         return $this->attemptQuery($unit)->orderBy('id')->get();
+    }
+
+    /**
+     * A new attempt for a failed or cancelled unit. The intent and idempotency key are new.
+     * The request itself is the current generate() path, including the budget guard and the prompt preview hash.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array{job: StoryVideoGenerationJob, unit: StoryProductionUnit, created: bool, attempt_number: int, retries_used: int, max_retries: int}
+     */
+    public function retry(Project $project, string $planUuid, string $unitUuid, User $actor, array $input): array
+    {
+        [, $unit] = $this->ownedUnit($project, $planUuid, $unitUuid);
+        $latest = $this->latest($project, $planUuid, $unitUuid);
+        if (! $latest instanceof StoryVideoGenerationJob || ! $this->terminal($latest)) {
+            throw StoryUnitRetryException::notAllowed($latest instanceof StoryVideoGenerationJob ? (string) $latest->status : 'none');
+        }
+        $failure = StoryFailureReason::forJob($latest);
+        if (! $failure['retryable']) {
+            throw StoryUnitRetryException::notRetryable($failure['reason']);
+        }
+        $max = $this->maxRetries();
+        $used = $this->retriesUsed($unit);
+        if ($max < 1 || $used >= $max) {
+            throw StoryUnitRetryException::limit($max);
+        }
+
+        $input['intent'] = self::retryIntent($latest);
+        if (! is_string($input['capability'] ?? null) || $input['capability'] === '') {
+            $input['capability'] = $latest->capability;
+        }
+
+        $result = $this->generate($project, $planUuid, $unitUuid, $actor, $input);
+        $job = $result['job'];
+        if ($result['created']) {
+            $metadata = (array) $job->provider_metadata;
+            $metadata['retry_of'] = [
+                'job_uuid' => $latest->uuid,
+                'attempt_number' => $this->attemptNumber($unit, $latest),
+            ];
+            $job->forceFill(['provider_metadata' => $metadata])->save();
+            $this->activity->log(self::EVENT_RETRY_REQUESTED, $job, $actor, 'Retry requested', [
+                'unit_uuid' => $unit->uuid,
+                'from_job_uuid' => $latest->uuid,
+                'attempt_number' => $this->attemptNumber($unit, $job->fresh() ?? $job),
+                'reason_code' => (string) $latest->error_code,
+            ]);
+            $job = $job->fresh() ?? $job;
+        }
+
+        return [
+            'job' => $job,
+            'unit' => $unit,
+            'created' => (bool) $result['created'],
+            'attempt_number' => $this->attemptNumber($unit, $job),
+            'retries_used' => $this->retriesUsed($unit),
+            'max_retries' => $max,
+        ];
+    }
+
+    /**
+     * Read-only retry state for the prompt preview. It does not spend or create a job.
+     *
+     * @return array{allowed: bool, reason: string|null, intent: string, capability: string|null, attempt_number_next: int, retries_left: int, retries_used: int, max_retries: int}
+     */
+    public function retryContext(Project $project, string $planUuid, string $unitUuid): array
+    {
+        [, $unit] = $this->ownedUnit($project, $planUuid, $unitUuid);
+        $latest = $this->latest($project, $planUuid, $unitUuid);
+        $max = $this->maxRetries();
+        $used = $this->retriesUsed($unit);
+        $total = $this->attemptQuery($unit)->count();
+        $failure = $latest instanceof StoryVideoGenerationJob && $this->terminal($latest)
+            ? StoryFailureReason::forJob($latest)
+            : null;
+        $allowed = $failure !== null && $failure['retryable'] && $max >= 1 && $used < $max;
+        $reason = null;
+        if (! $latest instanceof StoryVideoGenerationJob) {
+            $reason = 'There is no failed attempt to retry.';
+        } elseif (! $this->terminal($latest)) {
+            $reason = 'This unit cannot be retried while its latest attempt is '.$latest->status.'.';
+        } elseif ($failure !== null && ! $failure['retryable']) {
+            $reason = $failure['reason'];
+        } elseif ($max < 1 || $used >= $max) {
+            $reason = 'This unit has used all of its retries.';
+        }
+
+        return [
+            'allowed' => $allowed,
+            'reason' => $allowed ? null : $reason,
+            'intent' => $latest instanceof StoryVideoGenerationJob ? self::retryIntent($latest) : 'retry-none',
+            'capability' => $latest instanceof StoryVideoGenerationJob ? (string) $latest->capability : null,
+            'attempt_number_next' => $total + 1,
+            'retries_left' => max(0, $max - $used),
+            'retries_used' => $used,
+            'max_retries' => $max,
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function attemptHistory(Project $project, string $planUuid, string $unitUuid): array
+    {
+        [, $unit] = $this->ownedUnit($project, $planUuid, $unitUuid);
+        $ordered = $this->attemptQuery($unit)->orderBy('id')->pluck('id');
+        $numbers = [];
+        foreach ($ordered as $index => $id) {
+            $numbers[(int) $id] = $index + 1;
+        }
+        $jobs = $this->attemptQuery($unit)->orderByDesc('id')->limit(20)->get();
+        $rows = [];
+        foreach ($jobs as $job) {
+            $terminal = $this->terminal($job);
+            $finished = $job->completed_at ?? $job->failed_at;
+            $retryOf = is_array($job->provider_metadata['retry_of'] ?? null) ? $job->provider_metadata['retry_of'] : null;
+            $rows[] = [
+                'job_uuid' => $job->uuid,
+                'attempt_number' => $numbers[(int) $job->id] ?? 1,
+                'intent_kind' => $this->intentKind($job->idempotency_key),
+                'status' => $job->status,
+                'failure' => $terminal ? StoryFailureReason::forJob($job) : null,
+                'provider_retries' => (int) $job->retry_count,
+                'retry_of' => $retryOf,
+                'created_at' => $job->created_at?->toIso8601String(),
+                'finished_at' => $finished?->toIso8601String(),
+                'lock_status' => StoryLockStatus::forProvenance(
+                    is_array($job->provider_metadata['lock_provenance'] ?? null) ? $job->provider_metadata['lock_provenance'] : null,
+                ),
+            ];
+        }
+
+        return $rows;
+    }
+
+    public static function retryIntent(StoryVideoGenerationJob $failedJob): string
+    {
+        return 'retry-'.substr(str_replace('-', '', $failedJob->uuid), 0, 24);
     }
 
     public function cancel(Project $project, string $planUuid, string $unitUuid, string $jobUuid, User $actor): StoryVideoGenerationJob
@@ -838,6 +978,68 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         }
 
         return $job;
+    }
+
+    /**
+     * @return array{job: StoryVideoGenerationJob, unit: StoryProductionUnit, created: bool}
+     */
+    private function reuseIntent(StoryVideoGenerationJob $existing, StoryProductionUnit $unit, string $intent): array
+    {
+        $existing = $this->attachUnit($existing, $unit);
+        if ($this->terminal($existing) && ! str_starts_with($intent, 'retry-')) {
+            $failure = StoryFailureReason::forJob($existing);
+            $used = $this->retriesUsed($unit);
+            $max = $this->maxRetries();
+
+            throw StoryUnitRetryException::failed(
+                $existing,
+                $failure,
+                $failure['retryable'] && $max >= 1 && $used < $max,
+            );
+        }
+
+        return ['job' => $this->continueJob($existing, $unit), 'unit' => $unit, 'created' => false];
+    }
+
+    private function terminal(StoryVideoGenerationJob $job): bool
+    {
+        return in_array($job->statusEnum(), [StoryVideoJobStatus::Failed, StoryVideoJobStatus::Cancelled], true);
+    }
+
+    private function maxRetries(): int
+    {
+        return max(0, (int) config('story_retry.max_user_retries_per_unit', 5));
+    }
+
+    private function retriesUsed(StoryProductionUnit $unit): int
+    {
+        return $this->attemptQuery($unit)->get()->filter(function (StoryVideoGenerationJob $job): bool {
+            return is_array($job->provider_metadata['retry_of'] ?? null);
+        })->count();
+    }
+
+    private function attemptNumber(StoryProductionUnit $unit, StoryVideoGenerationJob $job): int
+    {
+        $ids = $this->attemptQuery($unit)->orderBy('id')->pluck('id');
+        $index = $ids->search($job->id);
+
+        return $index === false ? 1 : ((int) $index) + 1;
+    }
+
+    private function intentKind(?string $key): string
+    {
+        $intent = '';
+        if (is_string($key) && preg_match('/:([^:]+)$/', $key, $match) === 1) {
+            $intent = $match[1];
+        }
+        if (str_starts_with($intent, 'retry-')) {
+            return 'retry';
+        }
+        if (str_starts_with($intent, 'clip-')) {
+            return 'clip';
+        }
+
+        return 'initial';
     }
 
     private function attachUnit(StoryVideoGenerationJob $job, StoryProductionUnit $unit): StoryVideoGenerationJob

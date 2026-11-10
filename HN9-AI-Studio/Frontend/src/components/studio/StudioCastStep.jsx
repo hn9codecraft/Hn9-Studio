@@ -359,7 +359,7 @@ function CharacterEditor({ character, onOpen, onClose }) {
                   Pictures of {character.name}
                 </h3>
                 <p className="small text-secondary">The approved picture is used whenever this character appears in a scene.</p>
-                <StudioReferencePictures subject={character.name} api={pictureApi} onChanged={() => refresh(['characters'])} />
+                <StudioReferencePictures subject={character.name} api={pictureApi} bulkKind="character_reference" onChanged={() => refresh(['characters'])} />
               </div>
             </section>
           </div>
@@ -503,7 +503,7 @@ function LookAndFeel() {
             <div className="col-lg-6">
               <h4 className="h6 mb-1">Style pictures</h4>
               <p className="small text-secondary">An approved picture shows the video service exactly how your video should look.</p>
-              <StudioReferencePictures subject="the look & feel" api={pictureApi} />
+              <StudioReferencePictures subject="the look & feel" api={pictureApi} bulkKind="style_reference" />
             </div>
           </div>
         )}

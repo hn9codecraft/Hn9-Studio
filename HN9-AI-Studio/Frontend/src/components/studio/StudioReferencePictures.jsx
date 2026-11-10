@@ -4,6 +4,7 @@ import { friendlyError } from '../../services/studioMessages';
 import { CostConfirm } from './CostEstimate';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, StatusBadge, StoredPicture } from './StudioUi';
+import BulkApproveBar from './BulkApproveBar';
 
 const ACCEPT = 'image/png,image/jpeg,image/webp';
 
@@ -20,7 +21,7 @@ function pictureStatus(reference) {
  * Upload, create, approve and remove reference pictures for a character or the
  * look & feel. `api` adapts the character/style endpoints to one shape.
  */
-export default function StudioReferencePictures({ subject, api, onChanged }) {
+export default function StudioReferencePictures({ subject, api, onChanged, bulkKind = '' }) {
   const { projectId, connections, canApprove } = useStudio();
   const feedback = useFeedback();
   const fileInput = useRef(null);
@@ -28,6 +29,7 @@ export default function StudioReferencePictures({ subject, api, onChanged }) {
   const [busy, setBusy] = useState('');
   const [quote, setQuote] = useState(null);
   const [rejecting, setRejecting] = useState(null);
+  const [selected, setSelected] = useState([]);
   const [rejectNote, setRejectNote] = useState('');
   const canGenerate = Boolean(connections?.reference_images);
 
@@ -88,6 +90,7 @@ export default function StudioReferencePictures({ subject, api, onChanged }) {
   }
 
   const visible = (references || []).filter((reference) => reference.status !== 'archived');
+  const eligibleIds = visible.filter((reference) => reference.status === 'pending_review').map((reference) => reference.id);
 
   return (
     <div className="studio-pictures">
@@ -138,6 +141,17 @@ export default function StudioReferencePictures({ subject, api, onChanged }) {
         <p className="small text-secondary mb-0">No pictures yet. Add one so {subject} looks the same in every scene.</p>
       ) : null}
 
+      {bulkKind && canApprove ? (
+        <BulkApproveBar
+          projectId={projectId}
+          kind={bulkKind}
+          selected={selected}
+          eligibleIds={eligibleIds}
+          onChange={setSelected}
+          onDone={() => run('bulk', () => api.list().then(setReferences), 'Selected pictures approved.')}
+        />
+      ) : null}
+
       {visible.length > 0 ? (
         <ul className="studio-picture-grid list-unstyled mb-0">
           {visible.map((reference) => {
@@ -148,6 +162,14 @@ export default function StudioReferencePictures({ subject, api, onChanged }) {
               <li key={reference.id} className={`studio-picture-card${isCurrent ? ' is-current' : ''}`}>
                 <StoredPicture load={() => api.file(reference.id)} pictureKey={reference.id} alt={`Picture ${reference.version} of ${subject}`} />
                 <div className="d-flex flex-wrap justify-content-between align-items-center gap-1 mt-2">
+                  {canApprove && reference.status === 'pending_review' ? (
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(reference.id)}
+                      onChange={() => setSelected((current) => (current.includes(reference.id) ? current.filter((id) => id !== reference.id) : [...current, reference.id]))}
+                      aria-label={`Select picture ${reference.version} of ${subject}`}
+                    />
+                  ) : null}
                   <span className="small fw-semibold">Picture {reference.version}</span>
                   <StatusBadge tone={status.tone}>{status.text}</StatusBadge>
                 </div>

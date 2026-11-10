@@ -49,6 +49,38 @@ export function nextClipIntent(versionCount) {
   return `clip-${count + 1}`;
 }
 
+/**
+ * Newest-first attempt history for one unit. A failed latest attempt can be retried
+ * until the configured limit. Provider retries are not counted as user retries.
+ */
+export function unitAttemptState(attempts, maxRetries = 5) {
+  const list = (Array.isArray(attempts) ? attempts : [])
+    .slice()
+    .sort((left, right) => (Number(right?.attempt_number) || 0) - (Number(left?.attempt_number) || 0));
+  const latest = list[0] || null;
+  const limit = Number.isFinite(Number(maxRetries)) ? Math.max(0, Number(maxRetries)) : 5;
+  const retriesUsed = list.filter((item) => item?.intent_kind === 'retry' || item?.retry_of).length;
+  const failed = latest?.status === 'failed' || latest?.status === 'cancelled';
+  const retryable = Boolean(latest?.failure?.retryable);
+  const retryAllowed = failed && retryable && limit >= 1 && retriesUsed < limit;
+  let blockedReason = '';
+  if (failed && !retryable) blockedReason = latest?.failure?.hint || latest?.failure?.reason || 'Change the prompt and generate again.';
+  else if (failed && !retryAllowed) blockedReason = 'This unit has used its retries.';
+
+  return {
+    latest,
+    attempts: list,
+    attemptNumber: latest ? Number(latest.attempt_number) || list.length : 0,
+    attemptsTotal: list.reduce((max, item) => Math.max(max, Number(item?.attempt_number) || 0), 0),
+    retriesUsed,
+    retriesLeft: Math.max(0, limit - retriesUsed),
+    failed,
+    retryAllowed,
+    blockedReason,
+    reason: latest?.failure?.reason || '',
+  };
+}
+
 export function availableModes(connections, pictureCount) {
   return CLIP_MODES.filter((mode) => {
     if (!connections?.video?.[mode.flag]) return false;
