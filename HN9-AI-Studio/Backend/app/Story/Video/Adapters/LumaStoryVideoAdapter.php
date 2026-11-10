@@ -37,6 +37,16 @@ final class LumaStoryVideoAdapter extends HttpStoryVideoAdapter
         return self::VENDOR;
     }
 
+    public function maxPromptLength(): ?int
+    {
+        return self::MAX_PROMPT;
+    }
+
+    public function referenceImageLimit(StoryVideoCapability $capability): int
+    {
+        return $capability === StoryVideoCapability::ImageToVideo ? 1 : 0;
+    }
+
     public function supportedDurations(StoryVideoCapability $capability): array
     {
         if (in_array($capability, [StoryVideoCapability::ImageToVideo, StoryVideoCapability::VideoExtend], true)) {

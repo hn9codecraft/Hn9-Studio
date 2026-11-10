@@ -249,6 +249,8 @@ final readonly class StoryCharacterReferenceService implements StoryCharacterRef
     ): StoryCharacterReference {
         $reference = $this->getForCharacter($project, $characterUuid, $referenceUuid);
 
+        app(StoryCharacterLockService::class)->assertReferenceMutable($reference);
+
         if (! $reference->statusEnum()->isReviewable()) {
             throw StoryCharacterException::invalidTransition($reference->status, 'rejected');
         }
@@ -273,6 +275,8 @@ final readonly class StoryCharacterReferenceService implements StoryCharacterRef
         if ($reference === null) {
             throw StoryException::notFound('Character reference');
         }
+
+        app(StoryCharacterLockService::class)->assertReferenceMutable($reference);
 
         if (! $reference->statusEnum()->isArchivable()) {
             throw StoryCharacterException::invalidTransition($reference->status, 'archived');

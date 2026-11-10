@@ -8,6 +8,7 @@ use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * One timeline slot inside a planned scene. The row is the slot's lasting identity:
@@ -65,5 +66,11 @@ class StoryProductionUnit extends Model
     public function selectedVersion(): BelongsTo
     {
         return $this->belongsTo(StoryProductionUnitVersion::class, 'selected_version_id');
+    }
+
+    /** @return HasOne<StoryUnitPromptEdit, $this> */
+    public function promptEdit(): HasOne
+    {
+        return $this->hasOne(StoryUnitPromptEdit::class, 'story_production_unit_id');
     }
 }

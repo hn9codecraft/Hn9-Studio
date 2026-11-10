@@ -2,7 +2,6 @@ import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import {
   approveProductionUnitVersion,
   assembleProductionScene,
-  estimateStoryCost,
   generateProductionUnit,
   getProductionSceneAssemblyFileUrl,
   getProductionUnitGeneration,
@@ -15,7 +14,8 @@ import {
 } from '../../services/storyService';
 import { formatDateTime, formatSeconds, friendlyError, isJobActive } from '../../services/studioMessages';
 import VersionsDrawer from './VersionsDrawer';
-import { CostConfirm } from './CostEstimate';
+import PromptPreviewModal from './PromptPreviewModal';
+import { previewUnitPrompt, resetUnitPrompt, saveUnitPrompt } from '../../services/storyPromptPreviewService';
 import {
   availableModes,
   BUILD_FAILED,
@@ -27,8 +27,6 @@ import {
   NOT_CONFIGURED,
   PARTS_NOT_READY,
   plainFailure,
-  REGENERATE_ACTION,
-  REGENERATE_BODY,
   REGENERATE_UNIT,
   regenerateConfirmTitle,
   sceneHistory,
@@ -432,8 +430,7 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
   const [instruction, setInstruction] = useState('');
   const [asking, setAsking] = useState(null);
   const [note, setNote] = useState('');
-  const [confirming, setConfirming] = useState(false);
-  const [quote, setQuote] = useState(null);
+  const [previewing, setPreviewing] = useState(false);
   const state = clipState(clip);
   const versions = Array.isArray(clip.versions) ? clip.versions : [];
   const title = unitTitle(clip);
@@ -442,9 +439,9 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
   const canGenerate = modes.length > 0 && canApprove && !generating;
   const regenerating = versions.length > 0;
 
-  function generate() {
+  function clipPayload() {
     const capability = modes.some((item) => item.value === mode) ? mode : modes[0]?.value;
-    if (!capability) return;
+    if (!capability) return null;
     const payload = { capability, intent: nextClipIntent(versions.length) };
     const extra = instruction.trim();
     if (extra) payload.instruction = extra.slice(0, 500);
@@ -452,20 +449,19 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
     if (capability === 'reference_to_video' && pictures.length) {
       payload.inputs = pictures.slice(0, 8).map((id) => ({ type: 'reference_image', asset_id: id }));
     }
-    if (!quote) {
-      estimateStoryCost(projectId, { kind: 'unit_video', plan_uuid: planId, unit_uuid: clip.id })
-        .then((estimate) => setQuote(estimate))
-        .catch(() => setQuote({ available: false }));
-      return;
-    }
+    return payload;
+  }
+
+  function generate(preview) {
+    const payload = clipPayload();
+    if (!payload || !preview?.preview_hash) return;
     onRun(
       `generate-${clip.id}`,
-      () => generateProductionUnit(projectId, planId, clip.id, payload),
+      () => generateProductionUnit(projectId, planId, clip.id, { ...payload, preview_hash: preview.preview_hash }),
       regenerating ? `${title} is being regenerated.` : `${title} is being created.`,
     ).then((ok) => {
       if (!ok) return;
-      setConfirming(false);
-      setQuote(null);
+      setPreviewing(false);
       setInstruction('');
     });
   }
@@ -506,56 +502,35 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
           instruction={instruction}
           setInstruction={setInstruction}
           busy={busy === `generate-${clip.id}`}
-          submitLabel={quote ? 'Review price' : 'Generate clip'}
-          onSubmit={generate}
+          submitLabel="Generate clip"
+          onSubmit={() => setPreviewing(true)}
         />
       ) : null}
-      {quote && canGenerate && !regenerating ? (
-        <CostConfirm estimate={quote} busy={busy === `generate-${clip.id}`} onConfirm={generate} onCancel={() => setQuote(null)} />
-      ) : null}
 
-      {canGenerate && regenerating && !confirming ? (
+      {canGenerate && regenerating && !previewing ? (
         <div className="studio-production-actions mb-2">
           <button
             type="button"
             className="btn btn-outline-primary btn-sm"
             disabled={Boolean(busy)}
-            onClick={() => setConfirming(true)}
+            onClick={() => setPreviewing(true)}
           >
             {REGENERATE_UNIT}
           </button>
         </div>
       ) : null}
 
-      {confirming && canGenerate ? (
-        <div className="studio-unit-confirm mb-2" role="dialog" aria-labelledby={`regen-title-${clip.id}`}>
-          <p className="fw-semibold mb-1" id={`regen-title-${clip.id}`}>
-            {regenerateConfirmTitle(clip)}
-          </p>
-          <p className="small mb-2">{REGENERATE_BODY}</p>
-          {quote ? (
-            <CostConfirm
-              estimate={quote}
-              busy={busy === `generate-${clip.id}`}
-              confirmLabel={REGENERATE_ACTION}
-              onConfirm={generate}
-              onCancel={() => setQuote(null)}
-            />
-          ) : (
-            <GenerateForm
-              clip={clip}
-              modes={modes}
-              mode={mode}
-              setMode={setMode}
-              instruction={instruction}
-              setInstruction={setInstruction}
-              busy={busy === `generate-${clip.id}`}
-              submitLabel="See price"
-              onSubmit={generate}
-              onCancel={() => setConfirming(false)}
-            />
-          )}
-        </div>
+      {previewing && canGenerate ? (
+        <PromptPreviewModal
+          title={regenerating ? regenerateConfirmTitle(clip) : `Generate ${title}`}
+          load={() => previewUnitPrompt(projectId, planId, clip.id, clipPayload())}
+          allowEdit
+          busy={busy === `generate-${clip.id}`}
+          onCancel={() => setPreviewing(false)}
+          onSave={(text) => saveUnitPrompt(projectId, planId, clip.id, text)}
+          onReset={() => resetUnitPrompt(projectId, planId, clip.id)}
+          onGenerate={generate}
+        />
       ) : null}
 
       {versions.length > 0 ? <h6 className="small text-uppercase text-secondary mb-2">Versions</h6> : null}
@@ -570,6 +545,9 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
                   {version.status_label || version.status}
                 </StatusBadge>
                 {version.selected ? <StatusBadge tone="success">Selected</StatusBadge> : null}
+                {version.lock_status === 'applied' ? <StatusBadge tone="success">Lock applied</StatusBadge> : null}
+                {version.lock_status === 'changed_since' ? <StatusBadge tone="warning">Lock changed since</StatusBadge> : null}
+                {version.lock_status === 'none' ? <StatusBadge>Made without lock</StatusBadge> : null}
               </div>
               {actions.preview ? (
                 <div className="mt-2">

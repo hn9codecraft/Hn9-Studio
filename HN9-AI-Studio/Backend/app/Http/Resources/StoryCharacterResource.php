@@ -53,6 +53,9 @@ class StoryCharacterResource extends JsonResource
                     'size' => $approved->size,
                     'created_at' => $approved->created_at?->toIso8601String(),
                 ],
+            'lock' => app(\App\Story\Services\StoryCharacterLockService::class)->present(
+                $this->relationLoaded('activeLock') ? $this->activeLock : $this->activeLock()->first(),
+            ),
             'workspace' => $workspace === null ? null : [
                 'id' => $workspace->uuid,
                 'status' => $workspace->status,

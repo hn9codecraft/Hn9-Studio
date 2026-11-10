@@ -6,6 +6,7 @@ namespace App\Http\Resources;
 
 use App\Story\Enums\StoryVideoJobStatus;
 use App\Story\Models\StoryVideoGenerationJob;
+use App\Story\Support\StoryLockStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -43,6 +44,12 @@ class StoryProductionUnitGenerationResource extends JsonResource
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
             'cost_estimate' => $this->costEstimate(),
+            'lock_provenance' => is_array($this->provider_metadata['lock_provenance'] ?? null)
+                ? $this->provider_metadata['lock_provenance']
+                : null,
+            'lock_status' => StoryLockStatus::forProvenance(
+                is_array($this->provider_metadata['lock_provenance'] ?? null) ? $this->provider_metadata['lock_provenance'] : null,
+            ),
         ];
     }
 

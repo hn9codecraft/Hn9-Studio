@@ -56,6 +56,8 @@ final readonly class StoryCharacterService implements StoryCharacterServiceInter
             throw StoryCharacterException::archived();
         }
 
+        app(StoryCharacterLockService::class)->assertLookEditable($character, $attributes);
+
         return $this->characters->update($character, $attributes);
     }
 
@@ -66,6 +68,8 @@ final readonly class StoryCharacterService implements StoryCharacterServiceInter
         if ($character->statusEnum() === StoryCharacterStatus::Archived) {
             return $character;
         }
+
+        app(StoryCharacterLockService::class)->assertCanArchive($character);
 
         return $this->characters->update($character, [
             'status' => StoryCharacterStatus::Archived->value,

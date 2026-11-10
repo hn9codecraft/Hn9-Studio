@@ -39,6 +39,10 @@ final class ContractStoryVideoAdapter implements LiveStoryVideoProviderAdapterIn
     /** poll, callback, or sync */
     public string $completion = 'poll';
 
+    public ?int $maxPrompt = null;
+
+    public int $referenceLimit = 0;
+
     public int $pollsUntilReady = 1;
 
     public bool $callbackReceived = false;
@@ -73,6 +77,16 @@ final class ContractStoryVideoAdapter implements LiveStoryVideoProviderAdapterIn
     public function displayName(): string
     {
         return 'Contract video';
+    }
+
+    public function maxPromptLength(): ?int
+    {
+        return $this->maxPrompt;
+    }
+
+    public function referenceImageLimit(StoryVideoCapability $capability): int
+    {
+        return $capability === StoryVideoCapability::TextToVideo ? 0 : $this->referenceLimit;
     }
 
     public function enabled(): bool

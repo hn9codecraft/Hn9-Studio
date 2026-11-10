@@ -12,6 +12,7 @@ use App\Story\Enums\StoryReviewStatus;
 use App\Story\Enums\StorySceneStatus;
 use App\Story\Enums\StoryVideoInputType;
 use App\Story\Exceptions\StoryException;
+use App\Story\Exceptions\StoryPromptPreviewException;
 use App\Story\Exceptions\StoryReviewException;
 use App\Story\Exceptions\StoryVideoEngineException;
 use App\Story\Models\StoryReel;
@@ -23,7 +24,11 @@ use App\Story\Models\StorySceneComment;
 use App\Story\Models\StorySceneVersion;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Models\StoryVideoGenerationJob;
+use App\Story\Support\StoryPromptHash;
+use App\Story\Support\StoryVideoPromptComposer;
+use App\Story\Video\StoryVideoAssetResolver;
 use App\Story\Video\StoryVideoGenerationRequest;
+use App\Story\Video\StoryVideoProviderOrchestrator;
 use App\Story\Video\StoryVideoInput;
 use Illuminate\Support\Facades\Storage;
 
@@ -45,6 +50,8 @@ final readonly class StoryReviewService
         private StoryContinuityService $continuity,
         private StoryVideoDispatchService $dispatch,
         private StoryTimelineService $timelines,
+        private StoryVideoPromptComposer $composer,
+        private StoryVideoAssetResolver $assets,
     ) {}
 
     /**
@@ -142,8 +149,73 @@ final readonly class StoryReviewService
         string $mode = self::MODE_TEXT,
         ?string $prompt = null,
         ?string $referenceUuid = null,
+        ?string $previewHash = null,
     ): array {
         $scene = $this->scene($project, $reelUuid, $sceneUuid);
+        $capability = match ($mode) {
+            self::MODE_IMAGE => StoryVideoCapability::ImageToVideo,
+            self::MODE_REFERENCE => StoryVideoCapability::ReferenceToVideo,
+            default => StoryVideoCapability::TextToVideo,
+        };
+        if ($capability !== StoryVideoCapability::TextToVideo && ($referenceUuid === null || $referenceUuid === '')) {
+            throw StoryVideoEngineException::invalidInput('Choose a character or style picture for this video.');
+        }
+        if (is_string($previewHash) && $previewHash !== '') {
+            $check = $this->regenerateDraft($project, $scene, $reelUuid, $mode, $prompt, $referenceUuid);
+            if (strlen($previewHash) !== 64 || ! hash_equals($check['preview_hash'], strtolower($previewHash))) {
+                throw StoryPromptPreviewException::stale();
+            }
+        }
+
+        app(StoryBudgetGuard::class)->assertWithinBudget(
+            $project,
+            app(StoryCostEstimator::class)->estimate($project, 'scene_regenerate', [
+                'reel_uuid' => $reelUuid,
+                'scene_uuid' => $sceneUuid,
+            ]),
+        );
+        // No version is opened unless a provider can actually take the request.
+        $this->dispatch->assertLive($project, $capability, $reelUuid, $sceneUuid);
+        $draft = $this->regenerateDraft($project, $scene, $reelUuid, $mode, $prompt, $referenceUuid);
+
+        $parent = $this->latestSceneVersion($scene);
+        $package = $this->continuity->packageForScene($project, $reelUuid, $sceneUuid);
+        if ($comment !== null && $comment !== '') {
+            $package['review_comment'] = $comment;
+        }
+
+        $version = $this->openSceneVersion($scene, $parent, $comment, $package);
+        $request = $draft['request'];
+        $request = new StoryVideoGenerationRequest(
+            capability: $request->capability,
+            reelUuid: $request->reelUuid,
+            sceneUuid: $request->sceneUuid,
+            prompt: $request->prompt,
+            durationSeconds: $request->durationSeconds,
+            aspectRatio: $request->aspectRatio,
+            inputs: $request->inputs,
+            idempotencyKey: 'scene-version-'.$version->uuid,
+            metadata: ['version_id' => $version->uuid],
+        );
+
+        $started = $this->dispatch->start($project, $request);
+
+        $job = $started['job'];
+        $metadata = is_array($job->provider_metadata) ? $job->provider_metadata : [];
+        $metadata['version_id'] = $version->uuid;
+        $metadata['lock_provenance'] = $draft['provenance'];
+        $job->forceFill(['provider_metadata' => $metadata])->save();
+
+        return $this->revisionPayload($version->fresh(['comments.author', 'parentVersion']), $job->fresh() ?? $job, true);
+    }
+
+    /**
+     * Read-only view of a scene regenerate. No version, job, guard, or provider call.
+     *
+     * @return array<string, mixed>
+     */
+    public function regenerateDraft(Project $project, StoryScene $scene, string $reelUuid, string $mode, ?string $prompt, ?string $referenceUuid): array
+    {
         $capability = match ($mode) {
             self::MODE_IMAGE => StoryVideoCapability::ImageToVideo,
             self::MODE_REFERENCE => StoryVideoCapability::ReferenceToVideo,
@@ -162,44 +234,71 @@ final readonly class StoryReviewService
             );
         }
 
-        app(StoryBudgetGuard::class)->assertWithinBudget(
-            $project,
-            app(StoryCostEstimator::class)->estimate($project, 'scene_regenerate', [
-                'reel_uuid' => $reelUuid,
-                'scene_uuid' => $sceneUuid,
-            ]),
-        );
-        // No version is opened unless a provider can actually take the request.
-        $this->dispatch->assertLive($project, $capability, $reelUuid, $sceneUuid);
-
-        $parent = $this->latestSceneVersion($scene);
-        $package = $this->continuity->packageForScene($project, $reelUuid, $sceneUuid);
-        if ($comment !== null && $comment !== '') {
-            $package['review_comment'] = $comment;
-        }
-        $prompt = trim((string) $prompt);
+        $scene->loadMissing('reel');
+        $package = $scene->reel === null ? [] : $this->continuity->packageForScene($project, $reelUuid, $scene->uuid);
         $aspectRatio = $package['story_bible']['aspect_ratio'] ?? null;
-
-        $version = $this->openSceneVersion($scene, $parent, $comment, $package);
-
-        $started = $this->dispatch->start($project, new StoryVideoGenerationRequest(
+        $aspect = is_string($aspectRatio) && $aspectRatio !== '' ? $aspectRatio : null;
+        $request = new StoryVideoGenerationRequest(
             capability: $capability,
             reelUuid: $reelUuid,
-            sceneUuid: $sceneUuid,
-            prompt: $prompt !== '' ? $prompt : (string) ($scene->visual_prompt ?: $scene->story ?: $scene->title),
+            sceneUuid: $scene->uuid,
+            prompt: $this->composer->sceneBase($scene, $prompt),
             durationSeconds: (int) $scene->duration_seconds,
-            aspectRatio: is_string($aspectRatio) && $aspectRatio !== '' ? $aspectRatio : null,
+            aspectRatio: $aspect,
             inputs: $inputs,
-            idempotencyKey: 'scene-version-'.$version->uuid,
-            metadata: ['version_id' => $version->uuid],
-        ));
+        );
+        $decision = app(StoryVideoProviderOrchestrator::class)->route($request);
+        $provider = $decision->matched ? $decision->providerKey : null;
+        $model = $decision->matched ? $decision->modelKey : null;
+        if (is_string($provider) && $provider !== '') {
+            $request = new StoryVideoGenerationRequest(
+                capability: $request->capability,
+                reelUuid: $request->reelUuid,
+                sceneUuid: $request->sceneUuid,
+                prompt: $request->prompt,
+                durationSeconds: $request->durationSeconds,
+                aspectRatio: $request->aspectRatio,
+                inputs: $request->inputs,
+                preferredProvider: $provider,
+                preferredModel: $model,
+            );
+        }
+        $composed = $this->composer->composeScene($scene, $capability, $provider, $request->inputs, $prompt, $project->uuid);
+        if ($composed->final !== (string) $request->prompt || count($composed->inputs) !== count($request->inputs)) {
+            $request = new StoryVideoGenerationRequest(
+                capability: $request->capability,
+                reelUuid: $request->reelUuid,
+                sceneUuid: $request->sceneUuid,
+                prompt: $composed->final,
+                durationSeconds: $request->durationSeconds,
+                aspectRatio: $request->aspectRatio,
+                inputs: $composed->inputs,
+                preferredProvider: $request->preferredProvider,
+                preferredModel: $request->preferredModel,
+            );
+            $request = $this->assets->resolve($project, $request);
+        }
+        $estimate = app(StoryCostEstimator::class)->estimate($project, 'scene_regenerate', [
+            'reel_uuid' => $reelUuid,
+            'scene_uuid' => $scene->uuid,
+        ]);
+        $ids = array_map(static fn (StoryVideoInput $row): string => (string) $row->assetId, $request->inputs);
+        $hash = StoryPromptHash::make($provider, $model, $capability->value, (int) $scene->duration_seconds, $aspect, $composed->final, $ids, $estimate);
 
-        $job = $started['job'];
-        $metadata = is_array($job->provider_metadata) ? $job->provider_metadata : [];
-        $metadata['version_id'] = $version->uuid;
-        $job->forceFill(['provider_metadata' => $metadata])->save();
-
-        return $this->revisionPayload($version->fresh(['comments.author', 'parentVersion']), $job->fresh() ?? $job, true);
+        return [
+            'request' => $request,
+            'capability' => $capability,
+            'decision' => $decision,
+            'composed' => $composed,
+            'estimate' => $estimate,
+            'preview_hash' => $hash,
+            'provenance' => [
+                'locks' => $composed->provenanceLocks,
+                'prompt_hash' => $hash,
+                'edited' => false,
+                'references_sent' => $composed->referencesSent,
+            ],
+        ];
     }
 
     /**
@@ -568,6 +667,12 @@ final readonly class StoryReviewService
             'capability' => $job->capability,
             'status' => $job->status,
             'operation_id' => $job->operation_id,
+            'lock_provenance' => is_array($job->provider_metadata['lock_provenance'] ?? null)
+                ? $job->provider_metadata['lock_provenance']
+                : null,
+            'lock_status' => \App\Story\Support\StoryLockStatus::forProvenance(
+                is_array($job->provider_metadata['lock_provenance'] ?? null) ? $job->provider_metadata['lock_provenance'] : null,
+            ),
         ];
     }
 

@@ -51,6 +51,16 @@ final readonly class GeminiStoryVideoAdapter implements LiveStoryVideoProviderAd
         return $this->catalog->key();
     }
 
+    public function maxPromptLength(): ?int
+    {
+        return null;
+    }
+
+    public function referenceImageLimit(StoryVideoCapability $capability): int
+    {
+        return in_array($capability, [StoryVideoCapability::ImageToVideo, StoryVideoCapability::ReferenceToVideo], true) ? 1 : 0;
+    }
+
     public function displayName(): string
     {
         return $this->catalog->displayName();
