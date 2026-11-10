@@ -74,6 +74,41 @@ class StoryProductionUnitGenerationController extends Controller
         ]);
     }
 
+    public function attempts(string $uuid, string $planUuid, string $unitUuid): JsonResponse
+    {
+        $project = $this->authorizeProject($uuid, $planUuid);
+
+        return ApiResponse::success($this->generation->attemptHistory($project, $planUuid, $unitUuid));
+    }
+
+    public function retry(Request $request, string $uuid, string $planUuid, string $unitUuid): JsonResponse
+    {
+        $project = $this->authorizeProject($uuid, $planUuid);
+        $actor = $request->user();
+        if (! $actor instanceof User) {
+            abort(401);
+        }
+        $payload = $request->validate([
+            'capability' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'aspect_ratio' => ['sometimes', 'nullable', 'string', 'max:16'],
+            'instruction' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'inputs' => ['sometimes', 'array', 'max:8'],
+            'inputs.*.type' => ['required', 'string', 'max:32'],
+            'inputs.*.asset_id' => ['required', 'uuid'],
+            'preview_hash' => ['sometimes', 'nullable', 'string', 'size:64'],
+        ]);
+        $result = $this->generation->retry($project, $planUuid, $unitUuid, $actor, $payload);
+        $job = $result['job']->loadMissing('productionUnit');
+
+        return ApiResponse::success([
+            'created' => $result['created'],
+            'attempt_number' => $result['attempt_number'],
+            'retries_used' => $result['retries_used'],
+            'max_retries' => $result['max_retries'],
+            'generation' => (new StoryProductionUnitGenerationResource($job))->resolve(),
+        ], $result['created'] ? 201 : 200);
+    }
+
     private function authorizeProject(string $uuid, string $planUuid): Project
     {
         $project = $this->projects->getByUuid($uuid);

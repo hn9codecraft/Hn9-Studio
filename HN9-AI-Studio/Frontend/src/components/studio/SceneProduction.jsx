@@ -16,6 +16,8 @@ import { formatDateTime, formatSeconds, friendlyError, isJobActive } from '../..
 import VersionsDrawer from './VersionsDrawer';
 import PromptPreviewModal from './PromptPreviewModal';
 import { previewUnitPrompt, resetUnitPrompt, saveUnitPrompt } from '../../services/storyPromptPreviewService';
+import { getUnitAttempts, previewUnitRetry, retryProductionUnit } from '../../services/storyRetryService';
+import BulkApproveBar from './BulkApproveBar';
 import {
   availableModes,
   BUILD_FAILED,
@@ -24,6 +26,7 @@ import {
   clipWindow,
   GENERATE_FAILED,
   nextClipIntent,
+  unitAttemptState,
   NOT_CONFIGURED,
   PARTS_NOT_READY,
   plainFailure,
@@ -82,6 +85,7 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
   const [notice, setNotice] = useState('');
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [busy, setBusy] = useState('');
+  const [selectedVersions, setSelectedVersions] = useState([]);
   const [style, setStyle] = useState(null);
   const [history, setHistory] = useState([]);
   const watchRef = useRef({ jobs: [], assembly: false, planId: null });
@@ -341,6 +345,21 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
         <p className="small text-secondary mb-2">Each clip is generated on its own. Regenerating one clip does not change the others.</p>
       </div>
 
+      <BulkApproveBar
+        projectId={projectId}
+        kind="unit_version"
+        scope={{ plan_uuid: workspace?.plan_id }}
+        selected={selectedVersions}
+        eligibleIds={(workspace?.clips || []).flatMap((clip) =>
+          (clip.versions || []).filter((version) => version.status === 'pending_review' && version.preview_available).map((version) => version.id),
+        )}
+        onChange={setSelectedVersions}
+        onDone={() => {
+          load().catch(() => {});
+          onChanged?.();
+        }}
+      />
+
       <div className="d-grid gap-3">
         {(workspace?.clips || []).map((clip) => (
           <ClipBoundary key={clip.id}>
@@ -352,6 +371,10 @@ export default function SceneProduction({ scene, status, planId, planReady = tru
               canApprove={canApprove}
               busy={busy}
               onRun={run}
+              selectedIds={selectedVersions}
+              onToggleVersion={(id) =>
+                setSelectedVersions((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
+              }
             />
           </ClipBoundary>
         ))}
@@ -424,25 +447,42 @@ function SceneContext({ scene, styleName, pictureCount }) {
   );
 }
 
-function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun }) {
+function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun, selectedIds = [], onToggleVersion }) {
   const { projectId } = useStudio();
   const [mode, setMode] = useState(modes[0]?.value || '');
   const [instruction, setInstruction] = useState('');
   const [asking, setAsking] = useState(null);
   const [note, setNote] = useState('');
   const [previewing, setPreviewing] = useState(false);
+  const [attempts, setAttempts] = useState([]);
   const state = clipState(clip);
+  const attempt = unitAttemptState(attempts);
   const versions = Array.isArray(clip.versions) ? clip.versions : [];
   const title = unitTitle(clip);
   const windowLabel = clipWindow(clip);
   const generating = state.key === 'generating';
   const canGenerate = modes.length > 0 && canApprove && !generating;
   const regenerating = versions.length > 0;
+  const retrying = attempt.failed && canApprove && !generating;
 
-  function clipPayload() {
+  useEffect(() => {
+    let cancelled = false;
+    getUnitAttempts(projectId, planId, clip.id)
+      .then((rows) => {
+        if (!cancelled) setAttempts(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, planId, clip.id, clip.active_generation?.status, versions.length]);
+
+  function clipPayload(forRetry = false) {
     const capability = modes.some((item) => item.value === mode) ? mode : modes[0]?.value;
-    if (!capability) return null;
-    const payload = { capability, intent: nextClipIntent(versions.length) };
+    if (!capability && !forRetry) return null;
+    const payload = {};
+    if (capability) payload.capability = capability;
+    if (!forRetry) payload.intent = nextClipIntent(versions.length);
     const extra = instruction.trim();
     if (extra) payload.instruction = extra.slice(0, 500);
     if (capability === 'image_to_video' && pictures[0]) payload.inputs = [{ type: 'image', asset_id: pictures[0] }];
@@ -450,6 +490,20 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
       payload.inputs = pictures.slice(0, 8).map((id) => ({ type: 'reference_image', asset_id: id }));
     }
     return payload;
+  }
+
+  function startRetry(preview) {
+    const payload = clipPayload(true);
+    if (!payload || !preview?.preview_hash) return;
+    onRun(
+      `retry-${clip.id}`,
+      () => retryProductionUnit(projectId, planId, clip.id, { ...payload, preview_hash: preview.preview_hash }),
+      `${title} is being retried.`,
+    ).then((ok) => {
+      if (!ok) return;
+      setPreviewing(false);
+      setInstruction('');
+    });
   }
 
   function generate(preview) {
@@ -479,6 +533,13 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
       </div>
       <p className="small mb-2">
         {state.detail ? <span>{state.detail}</span> : null}
+        {attempt.failed ? (
+          <span>
+            {state.detail ? ' · ' : ''}
+            Attempt {attempt.attemptNumber}. Retries left: {attempt.retriesLeft}.
+            {attempt.reason ? ` ${attempt.reason}` : ''}
+          </span>
+        ) : null}
         {state.versions > 0 ? (
           <span className="text-secondary">
             {state.detail ? ' · ' : ''}
@@ -493,7 +554,7 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
         </p>
       ) : null}
 
-      {canGenerate && !regenerating ? (
+      {canGenerate && !regenerating && !retrying ? (
         <GenerateForm
           clip={clip}
           modes={modes}
@@ -507,7 +568,27 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
         />
       ) : null}
 
-      {canGenerate && regenerating && !previewing ? (
+      {attempt.attempts.length > 0 ? (
+        <ul className="small text-secondary mb-2">
+          {attempt.attempts.slice(0, 5).map((item) => (
+            <li key={item.job_uuid || item.attempt_number}>
+              Attempt {item.attempt_number}: {item.status}
+              {item.failure?.reason ? ` — ${item.failure.reason}` : ''}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {retrying && !previewing ? (
+        <div className="studio-production-actions mb-2">
+          <button type="button" className="btn btn-outline-primary btn-sm" disabled={Boolean(busy) || !attempt.retryAllowed} onClick={() => setPreviewing(true)}>
+            Retry
+          </button>
+          {!attempt.retryAllowed && attempt.blockedReason ? <span className="small text-secondary">{attempt.blockedReason}</span> : null}
+        </div>
+      ) : null}
+
+      {canGenerate && regenerating && !retrying && !previewing ? (
         <div className="studio-production-actions mb-2">
           <button
             type="button"
@@ -520,16 +601,17 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
         </div>
       ) : null}
 
-      {previewing && canGenerate ? (
+      {previewing && (retrying || canGenerate) ? (
         <PromptPreviewModal
-          title={regenerating ? regenerateConfirmTitle(clip) : `Generate ${title}`}
-          load={() => previewUnitPrompt(projectId, planId, clip.id, clipPayload())}
+          title={retrying ? `Retry ${title}` : regenerating ? regenerateConfirmTitle(clip) : `Generate ${title}`}
+          load={() => (retrying ? previewUnitRetry(projectId, planId, clip.id, clipPayload(true)) : previewUnitPrompt(projectId, planId, clip.id, clipPayload()))}
           allowEdit
-          busy={busy === `generate-${clip.id}`}
+          mode={retrying ? 'retry' : 'generate'}
+          busy={busy === `generate-${clip.id}` || busy === `retry-${clip.id}`}
           onCancel={() => setPreviewing(false)}
           onSave={(text) => saveUnitPrompt(projectId, planId, clip.id, text)}
           onReset={() => resetUnitPrompt(projectId, planId, clip.id)}
-          onGenerate={generate}
+          onGenerate={retrying ? startRetry : generate}
         />
       ) : null}
 
@@ -540,6 +622,14 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
           return (
             <div key={version.id} className={`studio-unit-version${version.selected ? ' is-selected' : ''}`}>
               <div className="d-flex flex-wrap align-items-center gap-2">
+                {canApprove && actions.approve ? (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(version.id)}
+                    onChange={() => onToggleVersion?.(version.id)}
+                    aria-label={`Select ${version.label} of ${title}`}
+                  />
+                ) : null}
                 <span className="fw-semibold">{version.label}</span>
                 <StatusBadge tone={version.status === 'approved' ? 'success' : version.status === 'needs_rework' ? 'warning' : 'progress'}>
                   {version.status_label || version.status}

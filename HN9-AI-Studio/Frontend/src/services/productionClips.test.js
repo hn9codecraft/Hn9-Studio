@@ -10,6 +10,7 @@ import {
   GENERATE_FAILED,
   historyText,
   nextClipIntent,
+  unitAttemptState,
   NOT_CONFIGURED,
   PARTS_NOT_READY,
   plainFailure,
@@ -184,6 +185,45 @@ test('generation modes stay within what the server says is connected', () => {
   assert.equal(nextClipIntent(0), 'clip-1');
   assert.equal(nextClipIntent(2), 'clip-3');
   assert.equal(nextClipIntent(8), 'clip-9');
+});
+
+test('a failed attempt can be retried and a finished one keeps the next clip intent', () => {
+  const failed = unitAttemptState([
+    { job_uuid: 'a', attempt_number: 1, intent_kind: 'initial', status: 'failed', failure: { retryable: true, reason: 'The video service had a problem.' }, provider_retries: 2 },
+  ]);
+  assert.equal(failed.failed, true);
+  assert.equal(failed.retryAllowed, true);
+  assert.equal(failed.attemptNumber, 1);
+  assert.equal(failed.retriesLeft, 5);
+  assert.equal(failed.reason, 'The video service had a problem.');
+  assert.equal(nextClipIntent(1), 'clip-2');
+
+  const blocked = unitAttemptState([
+    { attempt_number: 2, intent_kind: 'retry', status: 'failed', retry_of: { job_uuid: 'a' }, failure: { retryable: false, reason: 'This prompt was blocked.', hint: 'Change the prompt and generate again.' } },
+    { attempt_number: 1, intent_kind: 'initial', status: 'failed', failure: { retryable: true, reason: 'The video service had a problem.' } },
+  ]);
+  assert.equal(blocked.retryAllowed, false);
+  assert.equal(blocked.attemptNumber, 2);
+  assert.equal(blocked.blockedReason, 'Change the prompt and generate again.');
+  assert.equal(blocked.retriesUsed, 1);
+
+  const limited = unitAttemptState(
+    Array.from({ length: 6 }, (_, index) => ({
+      attempt_number: index + 1,
+      intent_kind: index === 0 ? 'initial' : 'retry',
+      status: 'failed',
+      retry_of: index === 0 ? null : { job_uuid: 'older' },
+      failure: { retryable: true, reason: 'The video service had a problem.' },
+    })),
+    5,
+  );
+  assert.equal(limited.retryAllowed, false);
+  assert.equal(limited.retriesLeft, 0);
+
+  const done = unitAttemptState([{ attempt_number: 1, intent_kind: 'initial', status: 'completed', failure: null }]);
+  assert.equal(done.failed, false);
+  assert.equal(done.retryAllowed, false);
+  assert.equal(nextClipIntent(done.attemptsTotal), 'clip-2');
 });
 
 test('unit labels and regenerate copy stay clip-scoped with no regeneration limit', () => {

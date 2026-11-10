@@ -11,6 +11,7 @@ use App\Story\Contracts\StoryProductionPlanServiceInterface;
 use App\Story\Enums\StoryVideoCapability;
 use App\Story\Models\StoryScene;
 use App\Story\Models\StoryWorkspace;
+use App\Story\Services\StoryProductionUnitGenerationService;
 use App\Story\Services\StoryPromptPreviewService;
 use App\Story\Services\StoryReviewService;
 use App\Support\ApiResponse;
@@ -24,6 +25,7 @@ class StoryPromptPreviewController extends Controller
         private ProjectServiceInterface $projects,
         private StoryProductionPlanServiceInterface $plans,
         private StoryPromptPreviewService $previews,
+        private StoryProductionUnitGenerationService $generation,
     ) {}
 
     public function unit(Request $request, string $uuid, string $planUuid, string $unitUuid): JsonResponse
@@ -44,6 +46,44 @@ class StoryPromptPreviewController extends Controller
         ]);
 
         return ApiResponse::success($this->previews->previewUnit($project, $planUuid, $unitUuid, $payload));
+    }
+
+    public function retryPreview(Request $request, string $uuid, string $planUuid, string $unitUuid): JsonResponse
+    {
+        $project = $this->authorizeUnit($uuid, $planUuid);
+        $context = $this->generation->retryContext($project, $planUuid, $unitUuid);
+        $payload = $request->validate([
+            'capability' => ['sometimes', 'nullable', 'string', Rule::in([
+                StoryVideoCapability::TextToVideo->value,
+                StoryVideoCapability::ImageToVideo->value,
+                StoryVideoCapability::ReferenceToVideo->value,
+            ])],
+            'instruction' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'aspect_ratio' => ['sometimes', 'nullable', 'string', 'max:16'],
+            'inputs' => ['sometimes', 'array', 'max:8'],
+            'inputs.*.type' => ['required', 'string', 'max:32'],
+            'inputs.*.asset_id' => ['required', 'uuid'],
+        ]);
+        $retry = [
+            'allowed' => $context['allowed'],
+            'reason' => $context['reason'],
+            'attempt_number_next' => $context['attempt_number_next'],
+            'retries_left' => $context['retries_left'],
+        ];
+        if (! $context['allowed'] || ! is_string($context['capability']) || $context['capability'] === '') {
+            return ApiResponse::success([
+                'idempotent_repeat' => false,
+                'retry' => $retry,
+            ]);
+        }
+        $payload['intent'] = $context['intent'];
+        $payload['capability'] = is_string($payload['capability'] ?? null) && $payload['capability'] !== ''
+            ? $payload['capability']
+            : $context['capability'];
+        $preview = $this->previews->previewUnit($project, $planUuid, $unitUuid, $payload);
+        $preview['retry'] = $retry;
+
+        return ApiResponse::success($preview);
     }
 
     public function savePrompt(Request $request, string $uuid, string $planUuid, string $unitUuid): JsonResponse

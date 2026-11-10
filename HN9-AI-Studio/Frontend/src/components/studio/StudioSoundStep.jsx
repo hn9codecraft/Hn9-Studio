@@ -26,6 +26,7 @@ import { friendlyErrorM19 } from '../../services/studioMessagesM19';
 import { STORY_LANGUAGES } from '../../services/storyConstants';
 import { listVoiceLanguages } from '../../services/storyVoiceService';
 import { CostConfirm } from './CostEstimate';
+import BulkApproveBar from './BulkApproveBar';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, MediaPreview, NotConnectedNote, reviewTone, StatusBadge, StepFooter, StepHeader, StepSkeleton } from './StudioUi';
 // --- M16 begin ---
@@ -51,6 +52,7 @@ function byNewestVersion(a, b) {
 export default function StudioSoundStep({ nav, focusSceneId = null }) {
   const { projectId, reel, reelId, reels, connections, sceneStatus, selectReel, goTo, project } = useStudio();
   const [audio, setAudio] = useState(null);
+  const [selectedAudio, setSelectedAudio] = useState([]);
   const scenes = sortedScenes(reel);
   const roles = connections?.sound?.roles || [];
 
@@ -73,6 +75,16 @@ export default function StudioSoundStep({ nav, focusSceneId = null }) {
   }, [focusSceneId, audio]);
 
   const statusById = Object.fromEntries(sceneStatus.map((item) => [item.scene_id, item]));
+  const voiceRoles = new Set(['voice', 'narration', 'dialogue']);
+  const newestByRole = new Map();
+  (audio || []).forEach((item) => {
+    const key = `${item.scene_id}:${item.role}`;
+    const current = newestByRole.get(key);
+    if (!current || (item.version_number || 0) > (current.version_number || 0)) newestByRole.set(key, item);
+  });
+  const eligibleAudio = [...newestByRole.values()]
+    .filter((item) => voiceRoles.has(item.role) && item.review_status === 'pending_review' && item.has_file)
+    .map((item) => item.id);
 
   return (
     <div className="studio-step">
@@ -110,19 +122,34 @@ export default function StudioSoundStep({ nav, focusSceneId = null }) {
       ) : audio === null ? (
         <StepSkeleton rows={2} />
       ) : (
-        <ol className="studio-scene-list list-unstyled">
-          {scenes.map((scene) => (
-            <SceneSound
-              key={scene.id}
-              scene={scene}
-              review={statusById[scene.id]?.version?.status || null}
-              items={audio.filter((item) => item.scene_id === scene.id)}
-              roles={roles}
-              highlighted={focusSceneId === scene.id}
-              onChanged={load}
+        <>
+          {reelId ? (
+            <BulkApproveBar
+              projectId={projectId}
+              kind="scene_audio"
+              scope={{ reel_uuid: reelId }}
+              selected={selectedAudio}
+              eligibleIds={eligibleAudio}
+              onChange={setSelectedAudio}
+              onDone={load}
             />
-          ))}
-        </ol>
+          ) : null}
+          <ol className="studio-scene-list list-unstyled">
+            {scenes.map((scene) => (
+              <SceneSound
+                key={scene.id}
+                scene={scene}
+                review={statusById[scene.id]?.version?.status || null}
+                items={audio.filter((item) => item.scene_id === scene.id)}
+                roles={roles}
+                highlighted={focusSceneId === scene.id}
+                onChanged={load}
+                selectedIds={selectedAudio}
+                onToggle={(id) => setSelectedAudio((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))}
+              />
+            ))}
+          </ol>
+        </>
       )}
 
       {/* --- M16 begin --- */}
@@ -133,7 +160,7 @@ export default function StudioSoundStep({ nav, focusSceneId = null }) {
   );
 }
 
-function SceneSound({ scene, review, items, roles, highlighted, onChanged }) {
+function SceneSound({ scene, review, items, roles, highlighted, onChanged, selectedIds = [], onToggle }) {
   return (
     <li id={`sound-${scene.id}`} className={`studio-scene-card card border-0 glass-card${highlighted ? ' is-highlighted' : ''}`}>
       <div className="card-body">
@@ -157,6 +184,8 @@ function SceneSound({ scene, review, items, roles, highlighted, onChanged }) {
               connected={roles.includes(role.value)}
               anyConnected={roles.length > 0}
               onChanged={onChanged}
+              selectedIds={selectedIds}
+              onToggle={onToggle}
             />
           ))}
         </ul>
@@ -165,7 +194,7 @@ function SceneSound({ scene, review, items, roles, highlighted, onChanged }) {
   );
 }
 
-function SoundRow({ scene, role, versions, connected, anyConnected, onChanged }) {
+function SoundRow({ scene, role, versions, connected, anyConnected, onChanged, selectedIds = [], onToggle }) {
   const { projectId, reelId, bible, refresh, connections } = useStudio();
   const feedback = useFeedback();
   const [panel, setPanel] = useState('');
@@ -309,6 +338,14 @@ function SoundRow({ scene, role, versions, connected, anyConnected, onChanged })
         ) : null}
         {latest?.review_status === 'pending_review' && latest.has_file ? (
           <>
+            {['voice', 'narration', 'dialogue'].includes(role.value) ? (
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(latest.id)}
+                onChange={() => onToggle?.(latest.id)}
+                aria-label={`Select ${label}`}
+              />
+            ) : null}
             <BusyButton className="btn btn-primary btn-sm" busy={busy === `approve-${latest.id}`} busyLabel="Approving…" onClick={() => approve(latest)}>
               Approve
               <span className="visually-hidden"> {label}</span>
