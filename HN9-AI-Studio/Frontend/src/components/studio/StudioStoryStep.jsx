@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { STORY_ASPECT_RATIOS, STORY_LANGUAGES, storyFieldError } from '../../services/storyConstants';
 import { updateProject } from '../../services/projectService';
-import { listStoryPlans, readyStoryPlan, storyPlanStage, updateStoryBible } from '../../services/storyService';
+import { listStoryPlans, listStoryTemplates, readyStoryPlan, storyPlanStage, updateStoryBible } from '../../services/storyService';
 import { friendlyError } from '../../services/studioMessages';
 import { useFeedback, useStudio } from './StudioContext';
+import QuickVideoWizard from './QuickVideoWizard';
 import { BusyButton, StatusBadge, StepFooter, StepHeader } from './StudioUi';
 
 const SUGGESTIONS = {
@@ -14,6 +15,7 @@ const SUGGESTIONS = {
 
 const LENGTHS = [
   { value: '', label: 'Decide later' },
+  { value: '40', label: '40 seconds' },
   { value: '30', label: '30 seconds' },
   { value: '60', label: '1 minute' },
   { value: '90', label: '1 minute 30 seconds' },
@@ -95,9 +97,68 @@ export default function StudioStoryStep({ nav }) {
   const [values, setValues] = useState(saved);
   const [errors, setErrors] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [wizard, setWizard] = useState(false);
+  const [confirmWizard, setConfirmWizard] = useState(false);
+  const [hasPlans, setHasPlans] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const skippedWizard = useRef(false);
   const dirty = JSON.stringify(values) !== JSON.stringify(saved);
   const hasIdea = values.concept.trim().length > 0;
   const hasTitle = values.title.trim().length > 0;
+
+  useEffect(() => {
+    let cancelled = false;
+    listStoryPlans(projectId)
+      .then((plans) => {
+        if (cancelled) return;
+        const existing = plans.length > 0;
+        setHasPlans(existing);
+        if (!skippedWizard.current && !bible?.concept && !existing) setWizard(true);
+      })
+      .catch(() => {});
+    listStoryTemplates()
+      .then((payload) => {
+        if (!cancelled) setTemplates(Array.isArray(payload?.templates) ? payload.templates : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [bible?.concept, projectId]);
+
+  function applyTemplate(key) {
+    const template = templates.find((item) => item.key === key);
+    if (!template) return;
+    setValues((current) => {
+      const next = { ...current };
+      const fill = (field, value) => {
+        if (!String(next[field] || '').trim() && value != null && String(value).trim() !== '') {
+          next[field] = String(value);
+        }
+      };
+      fill('genre', template.defaults?.genre);
+      fill('tone', template.defaults?.tone);
+      fill('audience', template.defaults?.audience);
+      fill('language', template.defaults?.language);
+      fill('video_style', template.defaults?.video_style);
+      fill('aspect_ratio', template.defaults?.aspect_ratio);
+      fill('narrative_style', template.defaults?.narrative_style);
+      fill('voice_style', template.audio_defaults?.voice_style);
+      fill('music_mood', template.audio_defaults?.music_mood);
+      if (!next.default_duration && template.defaults?.duration_seconds) {
+        next.default_duration = String(template.defaults.duration_seconds);
+      }
+      return next;
+    });
+  }
+
+  function openWizard() {
+    if (bible?.concept || hasPlans) {
+      setConfirmWizard(true);
+      return;
+    }
+    setWizard(true);
+  }
 
   function setField(field, value) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -183,12 +244,70 @@ export default function StudioStoryStep({ nav }) {
 
   const nextLabel = nav.next?.label || 'Cast & Look';
 
+  if (wizard) {
+    return (
+      <div className="studio-step">
+        <QuickVideoWizard
+          overwrite={Boolean(bible?.concept || hasPlans)}
+          onCancel={() => {
+            skippedWizard.current = true;
+            setWizard(false);
+          }}
+          onDone={() => {
+            skippedWizard.current = true;
+            setWizard(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="studio-step">
       <StepHeader
         title="Story"
         purpose="Describe your video once. Every later step (characters, scenes, video and sound) uses these details, so you never type them again."
-      />
+      >
+        <div className="d-flex flex-wrap gap-2">
+          <label className="d-flex align-items-center gap-2 small mb-0">
+            <span className="visually-hidden">Apply template</span>
+            <select className="form-select form-select-sm" defaultValue="" onChange={(event) => applyTemplate(event.target.value)} aria-label="Apply template">
+              <option value="">Apply template</option>
+              {templates.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="btn btn-outline-primary btn-sm" onClick={openWizard}>
+            Quick start
+          </button>
+        </div>
+      </StepHeader>
+
+      {confirmWizard ? (
+        <div className="card border-0 glass-card mb-3">
+          <div className="card-body">
+            <p className="mb-3">This will update the story settings and add a new plan. Existing characters and plans stay.</p>
+            <div className="d-flex gap-2">
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setConfirmWizard(false);
+                  setWizard(true);
+                }}
+              >
+                Continue
+              </button>
+              <button type="button" className="btn btn-link btn-sm" onClick={() => setConfirmWizard(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <StoryPlanStatus />
 

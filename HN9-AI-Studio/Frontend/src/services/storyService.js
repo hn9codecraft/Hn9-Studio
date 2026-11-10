@@ -254,6 +254,18 @@ export function getStoryStyleReferenceFileUrl(projectId, referenceId) {
   );
 }
 
+export function listStoryTemplates() {
+  return storyGet('/story/templates', CATALOG_TTL_MS);
+}
+
+export function estimateQuickStart(projectId, payload) {
+  return apiRequest(`/story/projects/${projectId}/quick-start/estimate`, { method: 'POST', body: payload });
+}
+
+export function quickStartStory(projectId, payload) {
+  return storyWrite(`/story/projects/${projectId}/quick-start`, { method: 'POST', body: payload });
+}
+
 export function listStoryPlans(projectId) {
   return storyGet(`/story/projects/${projectId}/plans`, CONTEXT_TTL_MS).then((payload) =>
     Array.isArray(payload) ? payload : [],
