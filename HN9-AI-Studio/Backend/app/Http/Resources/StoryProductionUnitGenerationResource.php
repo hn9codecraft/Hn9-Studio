@@ -42,6 +42,24 @@ class StoryProductionUnitGenerationResource extends JsonResource
             'error_message' => $this->error_message,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+            'cost_estimate' => $this->costEstimate(),
+        ];
+    }
+
+    /**
+     * @return array{amount: float|null, currency: string, available: bool}
+     */
+    private function costEstimate(): array
+    {
+        $stored = $this->provider_metadata['cost_estimate'] ?? null;
+        if (! is_array($stored)) {
+            return ['amount' => null, 'currency' => 'USD', 'available' => false];
+        }
+
+        return [
+            'amount' => is_numeric($stored['amount_usd'] ?? null) ? (float) $stored['amount_usd'] : null,
+            'currency' => 'USD',
+            'available' => (bool) ($stored['available'] ?? false),
         ];
     }
 }

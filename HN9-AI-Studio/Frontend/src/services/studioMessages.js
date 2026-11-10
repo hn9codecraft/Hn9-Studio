@@ -165,6 +165,10 @@ export function friendlyError(error, fallback = 'Something went wrong. Please tr
   if (status === 413) return 'That file is too large. Try a smaller one.';
   if (status === 429) return 'Too many requests in a short time. Wait a moment, then try again.';
 
+  if (code === 'story_budget_exceeded') {
+    return 'This would go over the project budget, so nothing was sent.';
+  }
+
   if (code === 'INVALID_INPUT' || status === 422) {
     const fieldMessage = error.errors ? Object.values(error.errors).flat().find(Boolean) : '';
     const text = fieldMessage || raw;

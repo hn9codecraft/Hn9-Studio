@@ -106,6 +106,11 @@ final readonly class StoryStyleReferenceService implements StoryStyleReferenceSe
             ? DispatchOptions::only($provider)
             : null;
 
+        app(StoryBudgetGuard::class)->assertWithinBudget(
+            $project,
+            app(StoryCostEstimator::class)->estimate($project, 'reference_image', ['count' => 1]),
+        );
+
         try {
             $result = $this->dispatcher->dispatch($request, $dispatchOptions);
         } catch (ProviderException $exception) {

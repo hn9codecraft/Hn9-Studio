@@ -5,6 +5,7 @@ import { getProject, updateProject } from '../../services/projectService';
 import { normalizeStudioWorkflows } from '../../services/storyConstants';
 import { friendlyError, SOUND_ROLES } from '../../services/studioMessages';
 import StudioWorkflowPicker from '../projects/StudioWorkflowPicker';
+import StudioBudgetCard from './StudioBudgetCard';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, StatusBadge, StepHeader } from './StudioUi';
 
@@ -61,6 +62,8 @@ export default function StudioSettingsStep() {
   ];
 
   return (
+    <>
+      <StudioBudgetCard />
     <div className="studio-step">
       <StepHeader title="Studio settings" purpose="Choose which steps this project needs and see which creation features are connected." />
       <div className="row g-4">
@@ -107,5 +110,6 @@ export default function StudioSettingsStep() {
         </div>
       </div>
     </div>
+    </>
   );
 }

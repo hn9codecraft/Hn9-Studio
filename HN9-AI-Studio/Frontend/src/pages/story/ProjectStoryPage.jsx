@@ -3,6 +3,7 @@ import { Link, useMatch, useNavigate, useParams, useSearchParams } from 'react-r
 import ImageStudio from '../../components/images/ImageStudio';
 import AlertMessage from '../../components/ui/AlertMessage';
 import EmptyState from '../../components/ui/EmptyState';
+import { SpendChip } from '../../components/studio/CostEstimate';
 import { StudioContext, StudioFeedbackProvider } from '../../components/studio/StudioContext';
 import { StepSkeleton } from '../../components/studio/StudioUi';
 import { listProjects } from '../../services/projectService';
@@ -465,6 +466,7 @@ function StudioWorkspace({ projectId }) {
           </nav>
           <div className="studio-header-row">
             <h1 className="studio-title">{project.name}</h1>
+            <SpendChip />
             <div className="studio-secondary-nav" role="group" aria-label="More studio pages">
               {secondary.map((item) => (
                 <button

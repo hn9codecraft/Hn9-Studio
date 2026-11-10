@@ -90,6 +90,27 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
         private StoryProductionUnitVersionServiceInterface $versions,
     ) {}
 
+    /**
+     * Controller pre-check. An idempotent repeat is not priced again.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public function precheckBudget(Project $project, string $planUuid, string $unitUuid, array $input): void
+    {
+        [$plan, $unit] = $this->ownedUnit($project, $planUuid, $unitUuid);
+        if ($this->findIntent($plan, $this->idempotencyKey($unit, $this->intent($input['intent'] ?? null))) instanceof StoryVideoGenerationJob) {
+            return;
+        }
+
+        app(StoryBudgetGuard::class)->assertWithinBudget(
+            $project,
+            app(StoryCostEstimator::class)->estimate($project, 'unit_video', [
+                'plan_uuid' => $planUuid,
+                'unit_uuid' => $unitUuid,
+            ]),
+        );
+    }
+
     public function generate(Project $project, string $planUuid, string $unitUuid, User $actor, array $input): array
     {
         [$plan, $unit, $scene] = $this->ownedUnit($project, $planUuid, $unitUuid);
@@ -104,6 +125,7 @@ final readonly class StoryProductionUnitGenerationService implements StoryProduc
             return ['job' => $this->continueJob($existing, $unit), 'unit' => $unit, 'created' => false];
         }
 
+        $this->precheckBudget($project, $planUuid, $unitUuid, $input);
         $this->assertReady($plan, $scene, $unit);
         $aspect = $this->requestedAspect($input['aspect_ratio'] ?? null);
         $request = $this->assets->resolve(

@@ -783,6 +783,18 @@ export function getProductionUnitVersionFileUrl(projectId, planId, unitId, versi
   );
 }
 
+export function estimateStoryCost(projectId, body) {
+  return storyWrite(`/story/projects/${projectId}/cost/estimate`, { method: 'POST', body });
+}
+
+export function getStoryCostSummary(projectId) {
+  return storyGet(`/story/projects/${projectId}/cost/summary`);
+}
+
+export function updateStoryBudget(projectId, body) {
+  return storyWrite(`/story/projects/${projectId}/budget`, { method: 'PATCH', body });
+}
+
 export function getStorySceneAudioFileUrl(projectId, reelId, sceneId, audioId) {
   return storyFileUrl(
     `/story/projects/${projectId}/reels/${reelId}/scenes/${sceneId}/audio/${audioId}/file`,

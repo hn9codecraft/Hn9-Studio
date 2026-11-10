@@ -162,6 +162,13 @@ final readonly class StoryReviewService
             );
         }
 
+        app(StoryBudgetGuard::class)->assertWithinBudget(
+            $project,
+            app(StoryCostEstimator::class)->estimate($project, 'scene_regenerate', [
+                'reel_uuid' => $reelUuid,
+                'scene_uuid' => $sceneUuid,
+            ]),
+        );
         // No version is opened unless a provider can actually take the request.
         $this->dispatch->assertLive($project, $capability, $reelUuid, $sceneUuid);
 
@@ -481,6 +488,14 @@ final readonly class StoryReviewService
                 return $this->revisionPayload($existingVersion, $existing, false);
             }
         }
+
+        app(StoryBudgetGuard::class)->assertWithinBudget(
+            $project,
+            app(StoryCostEstimator::class)->estimate($project, $capability === StoryVideoCapability::VideoExtend ? 'scene_extend' : 'scene_edit', [
+                'version_uuid' => $source->uuid,
+                'seconds' => $capability === StoryVideoCapability::VideoExtend ? 8 : null,
+            ]),
+        );
 
         $continuity = is_array($source->continuity) ? $source->continuity : [];
         $continuity['review_comment'] = $instruction;

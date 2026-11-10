@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { estimateStoryCost } from '../../services/storyService';
 import { friendlyError } from '../../services/studioMessages';
+import { CostConfirm } from './CostEstimate';
 import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, StatusBadge, StoredPicture } from './StudioUi';
 
@@ -19,11 +21,12 @@ function pictureStatus(reference) {
  * look & feel. `api` adapts the character/style endpoints to one shape.
  */
 export default function StudioReferencePictures({ subject, api, onChanged }) {
-  const { connections, canApprove } = useStudio();
+  const { projectId, connections, canApprove } = useStudio();
   const feedback = useFeedback();
   const fileInput = useRef(null);
   const [references, setReferences] = useState(null);
   const [busy, setBusy] = useState('');
+  const [quote, setQuote] = useState(null);
   const [rejecting, setRejecting] = useState(null);
   const [rejectNote, setRejectNote] = useState('');
   const canGenerate = Boolean(connections?.reference_images);
@@ -106,15 +109,28 @@ export default function StudioReferencePictures({ subject, api, onChanged }) {
             busy={busy === 'generate'}
             busyLabel="Creating…"
             disabled={Boolean(busy)}
-            onClick={() => run('generate', () => api.generate(), 'A new picture was created. Review it below.', 'images')}
+            onClick={() => {
+              if (!quote) {
+                estimateStoryCost(projectId, { kind: 'reference_image', count: 1 })
+                  .then((estimate) => setQuote(estimate))
+                  .catch(() => setQuote({ available: false }));
+                return;
+              }
+              setQuote(null);
+              run('generate', () => api.generate(), 'A new picture was created. Review it below.', 'images');
+            }}
           >
             <i className="bi bi-stars me-1" aria-hidden="true" />
-            Create a picture with AI
+            {quote ? 'Confirm price' : 'Create a picture with AI'}
           </BusyButton>
         ) : (
           <span className="small text-secondary">AI picture creation is not connected, so upload a JPG, PNG or WebP picture.</span>
         )}
       </div>
+      {quote ? <CostConfirm estimate={quote} busy={busy === 'generate'} onConfirm={() => {
+        setQuote(null);
+        run('generate', () => api.generate(), 'A new picture was created. Review it below.', 'images');
+      }} onCancel={() => setQuote(null)} /> : null}
 
       {references === null ? <p className="small text-secondary mb-0">Loading pictures…</p> : null}
 

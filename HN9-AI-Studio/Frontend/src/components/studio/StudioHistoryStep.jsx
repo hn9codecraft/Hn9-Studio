@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getStoryHistory } from '../../services/storyService';
+import { getStoryCostSummary, getStoryHistory } from '../../services/storyService';
+import { SpendLines } from './CostEstimate';
 import { failureReason, formatDateTime, friendlyError, jobStatusLabel, soundFailure } from '../../services/studioMessages';
 import { useStudio } from './StudioContext';
 import { jobTone, StatusBadge, StepHeader, StepSkeleton } from './StudioUi';
@@ -87,9 +88,13 @@ export default function StudioHistoryStep() {
   const [items, setItems] = useState(null);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [summary, setSummary] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
+    getStoryCostSummary(projectId).then((result) => {
+      if (!cancelled) setSummary(result);
+    }).catch(() => {});
     getStoryHistory(projectId)
       .then((result) => {
         if (!cancelled) setItems(result);
@@ -110,6 +115,12 @@ export default function StudioHistoryStep() {
   return (
     <div className="studio-step">
       <StepHeader title="History" purpose="Everything the studio tried to create for this project, including what failed and why." />
+      {summary ? (
+        <section className="glass-card p-3 mb-3">
+          <h2 className="h6">Project spend</h2>
+          <SpendLines summary={summary} />
+        </section>
+      ) : null}
 
       <div className="btn-group mb-3" role="group" aria-label="Filter history">
         {FILTERS.map((option) => (

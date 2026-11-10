@@ -50,11 +50,21 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
+            $context = ProviderErrorSanitizer::context($exception->context());
+            if ($exception->errorCode() === 'story_budget_exceeded') {
+                return response()->json([
+                    'message' => ProviderErrorSanitizer::message($exception->getMessage(), $exception->getMessage()),
+                    'error_code' => 'story_budget_exceeded',
+                    'meta' => $context,
+                    'context' => $context,
+                ], 422);
+            }
+
             return ApiResponse::error(
                 message: ProviderErrorSanitizer::message($exception->getMessage(), $exception->getMessage()),
                 errorCode: $exception->errorCode(),
                 status: $exception->statusCode(),
-                context: ProviderErrorSanitizer::context($exception->context()),
+                context: $context,
             );
         });
     })->create();

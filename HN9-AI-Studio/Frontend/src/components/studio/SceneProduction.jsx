@@ -2,6 +2,7 @@ import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import {
   approveProductionUnitVersion,
   assembleProductionScene,
+  estimateStoryCost,
   generateProductionUnit,
   getProductionSceneAssemblyFileUrl,
   getProductionUnitGeneration,
@@ -13,6 +14,7 @@ import {
   selectProductionUnitVersion,
 } from '../../services/storyService';
 import { formatDateTime, formatSeconds, friendlyError, isJobActive } from '../../services/studioMessages';
+import { CostConfirm } from './CostEstimate';
 import {
   availableModes,
   BUILD_FAILED,
@@ -423,6 +425,7 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
   const [asking, setAsking] = useState(null);
   const [note, setNote] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [quote, setQuote] = useState(null);
   const state = clipState(clip);
   const versions = Array.isArray(clip.versions) ? clip.versions : [];
   const title = unitTitle(clip);
@@ -441,6 +444,12 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
     if (capability === 'reference_to_video' && pictures.length) {
       payload.inputs = pictures.slice(0, 8).map((id) => ({ type: 'reference_image', asset_id: id }));
     }
+    if (!quote) {
+      estimateStoryCost(projectId, { kind: 'unit_video', plan_uuid: planId, unit_uuid: clip.id })
+        .then((estimate) => setQuote(estimate))
+        .catch(() => setQuote({ available: false }));
+      return;
+    }
     onRun(
       `generate-${clip.id}`,
       () => generateProductionUnit(projectId, planId, clip.id, payload),
@@ -448,6 +457,7 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
     ).then((ok) => {
       if (!ok) return;
       setConfirming(false);
+      setQuote(null);
       setInstruction('');
     });
   }
@@ -488,9 +498,12 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
           instruction={instruction}
           setInstruction={setInstruction}
           busy={busy === `generate-${clip.id}`}
-          submitLabel="Generate clip"
+          submitLabel={quote ? 'Review price' : 'Generate clip'}
           onSubmit={generate}
         />
+      ) : null}
+      {quote && canGenerate && !regenerating ? (
+        <CostConfirm estimate={quote} busy={busy === `generate-${clip.id}`} onConfirm={generate} onCancel={() => setQuote(null)} />
       ) : null}
 
       {canGenerate && regenerating && !confirming ? (
@@ -512,18 +525,28 @@ function ProductionClip({ clip, planId, modes, pictures, canApprove, busy, onRun
             {regenerateConfirmTitle(clip)}
           </p>
           <p className="small mb-2">{REGENERATE_BODY}</p>
-          <GenerateForm
-            clip={clip}
-            modes={modes}
-            mode={mode}
-            setMode={setMode}
-            instruction={instruction}
-            setInstruction={setInstruction}
-            busy={busy === `generate-${clip.id}`}
-            submitLabel={REGENERATE_ACTION}
-            onSubmit={generate}
-            onCancel={() => setConfirming(false)}
-          />
+          {quote ? (
+            <CostConfirm
+              estimate={quote}
+              busy={busy === `generate-${clip.id}`}
+              confirmLabel={REGENERATE_ACTION}
+              onConfirm={generate}
+              onCancel={() => setQuote(null)}
+            />
+          ) : (
+            <GenerateForm
+              clip={clip}
+              modes={modes}
+              mode={mode}
+              setMode={setMode}
+              instruction={instruction}
+              setInstruction={setInstruction}
+              busy={busy === `generate-${clip.id}`}
+              submitLabel="See price"
+              onSubmit={generate}
+              onCancel={() => setConfirming(false)}
+            />
+          )}
         </div>
       ) : null}
 

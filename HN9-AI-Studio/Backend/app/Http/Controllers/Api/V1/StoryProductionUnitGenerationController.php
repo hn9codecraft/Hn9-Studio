@@ -31,6 +31,7 @@ class StoryProductionUnitGenerationController extends Controller
     public function store(GenerateStoryProductionUnitRequest $request, string $uuid, string $planUuid, string $unitUuid): JsonResponse
     {
         $project = $this->authorizeProject($uuid, $planUuid);
+        $this->generation->precheckBudget($project, $planUuid, $unitUuid, $request->validated());
         $result = $this->generation->generate($project, $planUuid, $unitUuid, $request->user(), $request->validated());
         $job = $result['job']->loadMissing('productionUnit');
 

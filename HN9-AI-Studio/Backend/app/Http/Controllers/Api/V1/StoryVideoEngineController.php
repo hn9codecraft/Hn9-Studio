@@ -81,8 +81,25 @@ class StoryVideoEngineController extends Controller
     {
         $project = $this->projects->getByUuid($uuid);
         $this->authorize('select', [StoryWorkspace::class, $project]);
+        $payload = $request->validated();
+        $workspace = StoryWorkspace::query()->where('project_id', $project->id)->first();
+        $repeat = is_string($payload['idempotency_key'] ?? null)
+            && $payload['idempotency_key'] !== ''
+            && $workspace instanceof StoryWorkspace
+            && StoryVideoGenerationJob::query()
+                ->where('story_workspace_id', $workspace->id)
+                ->where('idempotency_key', $payload['idempotency_key'])
+                ->exists();
+        if (! $repeat) {
+            app(\App\Story\Services\StoryBudgetGuard::class)->assertWithinBudget(
+                $project,
+                app(\App\Story\Services\StoryCostEstimator::class)->estimate($project, 'video_generate', [
+                    'seconds' => $payload['duration_seconds'] ?? $payload['seconds'] ?? 0,
+                ]),
+            );
+        }
 
-        $result = $this->dispatch->start($project, $this->toGenerationRequest($request->validated()));
+        $result = $this->dispatch->start($project, $this->toGenerationRequest($payload));
 
         return ApiResponse::success([
             'created' => $result['created'],
