@@ -10,12 +10,13 @@ import { useFeedback, useStudio } from './StudioContext';
 import { BusyButton, StatusBadge, StepHeader } from './StudioUi';
 
 export default function StudioSettingsStep() {
-  const { projectId, project, connections, setWorkflows } = useStudio();
+  const { projectId, project, connections, setWorkflows, refresh } = useStudio();
   const { user } = useAuth();
   const feedback = useFeedback();
   const saved = normalizeStudioWorkflows(project.studio_modules);
   const [draft, setDraft] = useState(saved);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
 
   async function save() {
@@ -80,9 +81,26 @@ export default function StudioSettingsStep() {
         <div className="col-lg-5">
           <section className="card border-0 glass-card h-100" aria-labelledby="connections-heading">
             <div className="card-body">
-              <h3 className="h6" id="connections-heading">
-                Connected features
-              </h3>
+              <div className="d-flex justify-content-between align-items-center gap-2">
+                <h3 className="h6 mb-0" id="connections-heading">
+                  Connected features
+                </h3>
+                <BusyButton
+                  className="btn btn-outline-secondary btn-sm"
+                  busy={refreshing}
+                  busyLabel="Refreshing…"
+                  onClick={async () => {
+                    setRefreshing(true);
+                    try {
+                      await refresh(['connections']);
+                    } finally {
+                      setRefreshing(false);
+                    }
+                  }}
+                >
+                  Refresh
+                </BusyButton>
+              </div>
               <ul className="list-unstyled d-grid gap-2 mb-3">
                 {rows.map((row) => (
                   <li key={row.label} className="d-flex justify-content-between align-items-start gap-2">
@@ -99,7 +117,7 @@ export default function StudioSettingsStep() {
                 {user?.role === 'admin' ? (
                   <>
                     {' '}
-                    <Link to="/providers">Manage AI services</Link>
+                    <Link to="/providers">Manage API keys</Link>
                   </>
                 ) : (
                   ' Ask an administrator to connect a creation service.'

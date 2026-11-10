@@ -104,9 +104,12 @@ final readonly class ProviderRegistryService implements ProviderRegistryServiceI
         return $this->update($provider, ProviderData::fromArray(array_merge($provider->toArray(), ['status' => Status::Inactive->value])), $causer);
     }
 
-    public function markTested(AiProvider $provider, ?User $causer = null): AiProvider
+    public function markTested(AiProvider $provider, ?User $causer = null, ?string $result = null): AiProvider
     {
         $metadata = array_merge((array) ($provider->metadata ?? []), ['last_tested_at' => now()->toIso8601String()]);
+        if ($result !== null && $result !== '') {
+            $metadata['last_test_result'] = $result;
+        }
 
         return $this->update($provider, ProviderData::fromArray(array_merge($provider->toArray(), ['metadata' => $metadata])), $causer);
     }

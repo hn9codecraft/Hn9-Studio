@@ -19,6 +19,7 @@ use App\Http\Resources\ProviderSettingResource;
 use App\Models\AiProvider;
 use App\Repositories\Contracts\ProviderRepositoryInterface;
 use App\Repositories\Contracts\ProviderSettingRepositoryInterface;
+use App\Services\ProviderConnectionTester;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 
@@ -117,11 +118,16 @@ class ProviderController extends Controller
 
         $this->authorize('update', $provider);
 
-        return ApiResponse::error(
-            'Provider connectivity tests are not implemented. The registry was not marked as tested.',
-            'not_implemented',
-            501,
-        );
+        $result = app(ProviderConnectionTester::class)->test($provider->slug, $request->user());
+        if ($result['supported'] === false) {
+            return ApiResponse::error($result['message'], 'provider_test_unsupported', 422);
+        }
+
+        return ApiResponse::success([
+            'slug' => $result['slug'],
+            'result' => $result['result'],
+            'message' => $result['message'],
+        ]);
     }
 
     public function settingsIndex(IndexProviderSettingRequest $request): JsonResponse

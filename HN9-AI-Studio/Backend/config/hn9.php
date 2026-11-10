@@ -93,4 +93,19 @@ return [
         'max_poll_attempts' => (int) env('HN9_VIDEO_MAX_POLL_ATTEMPTS', 60),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Runtime provider credentials
+    |--------------------------------------------------------------------------
+    |
+    | Tests leave this false so existing provider suites keep their env config.
+    | A test opts in with config(['hn9.runtime_credentials.enabled' => true]).
+    | Outside tests the overlay always runs.
+    |
+    */
+
+    'runtime_credentials' => [
+        'enabled' => false,
+    ],
+
 ];

@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\ProjectExportController;
 use App\Http\Controllers\Api\V1\ProjectInputController;
 use App\Http\Controllers\Api\V1\ProjectPromptController;
 use App\Http\Controllers\Api\V1\ProviderController;
+use App\Http\Controllers\Api\V1\ProviderCredentialController;
 use App\Http\Controllers\Api\V1\ScriptController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\StoryAudioController;
@@ -203,6 +204,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('providers/{uuid}/enable', [ProviderController::class, 'enable'])->name('providers.enable');
     Route::post('providers/{uuid}/disable', [ProviderController::class, 'disable'])->name('providers.disable');
     Route::post('providers/{uuid}/test', [ProviderController::class, 'test'])->middleware('throttle:generation')->name('providers.test');
+    Route::get('provider-credentials', [ProviderCredentialController::class, 'index'])->name('provider-credentials.index');
+    Route::put('provider-credentials/{slug}', [ProviderCredentialController::class, 'update'])->middleware('throttle:10,1')->name('provider-credentials.update');
+    Route::delete('provider-credentials/{slug}/key', [ProviderCredentialController::class, 'destroyKey'])->middleware('throttle:10,1')->name('provider-credentials.key.destroy');
+    Route::post('provider-credentials/{slug}/test', [ProviderCredentialController::class, 'test'])->middleware('throttle:generation')->name('provider-credentials.test');
 
     Route::get('provider-settings', [ProviderController::class, 'settingsIndex'])->name('provider-settings.index');
     Route::get('provider-settings/{uuid}', [ProviderController::class, 'showSetting'])->name('provider-settings.show');

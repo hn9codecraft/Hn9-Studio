@@ -28,7 +28,7 @@ interface ProviderRegistryServiceInterface extends ProviderRegistryInterface
 
     public function deactivate(AiProvider $provider, ?User $causer = null): AiProvider;
 
-    public function markTested(AiProvider $provider, ?User $causer = null): AiProvider;
+    public function markTested(AiProvider $provider, ?User $causer = null, ?string $result = null): AiProvider;
 
     /**
      * Create or update a single configuration setting for a provider.
