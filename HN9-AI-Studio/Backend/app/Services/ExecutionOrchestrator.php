@@ -9,6 +9,7 @@ use App\AI\Contracts\ProviderResponseInterface;
 use App\AI\Exceptions\NoProviderAvailableException;
 use App\AI\Exceptions\ProviderNotConfiguredException;
 use App\AI\Execution\DispatchOptions;
+use App\Story\Support\StoryRoleProvider;
 use App\AI\Execution\DispatchResult;
 use App\AI\Requests\ImageRequest;
 use App\AI\Requests\TextRequest;
@@ -135,7 +136,11 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
         $request = new TextRequest(prompt: $renderedPrompt, model: Arr::get($options, 'model'));
 
         try {
-            $dispatchResult = $this->dispatcher->dispatch($request, DispatchOptions::make());
+            $textProvider = StoryRoleProvider::text(is_string($options['provider'] ?? null) ? $options['provider'] : null);
+            $dispatchResult = $this->dispatcher->dispatch(
+                $request,
+                $textProvider !== null ? DispatchOptions::only($textProvider) : DispatchOptions::make(),
+            );
         } catch (NoProviderAvailableException $exception) {
             $this->prompts->markFailed($promptExecution, $exception->getMessage());
 
@@ -270,9 +275,8 @@ final readonly class ExecutionOrchestrator implements ExecutionOrchestratorInter
             count: 1,
         );
 
-        $dispatchOptions = isset($options['provider']) && is_string($options['provider']) && $options['provider'] !== ''
-            ? DispatchOptions::only($options['provider'])
-            : DispatchOptions::make();
+        $imageProvider = StoryRoleProvider::image(is_string($options['provider'] ?? null) ? $options['provider'] : null);
+        $dispatchOptions = $imageProvider !== null ? DispatchOptions::only($imageProvider) : DispatchOptions::make();
 
         try {
             $dispatchResult = $this->dispatcher->dispatch($request, $dispatchOptions);

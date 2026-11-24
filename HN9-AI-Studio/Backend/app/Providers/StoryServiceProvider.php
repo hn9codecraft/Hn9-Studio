@@ -71,6 +71,7 @@ use App\Story\Services\StoryStyleBibleService;
 use App\Story\Services\StoryStyleReferenceService;
 use App\Story\Services\StoryWorkspaceService;
 use App\Story\Video\Adapters\ElevenLabsStoryAudioAdapter;
+use App\Story\Video\Adapters\XaiStoryAudioAdapter;
 use App\Story\Video\Adapters\GeminiStoryVideoAdapter;
 use App\Story\Video\Adapters\LiveStoryVideoAdapterFactory;
 use App\Story\Video\CatalogStoryVideoAdapter;
@@ -135,6 +136,17 @@ class StoryServiceProvider extends ServiceProvider
             );
             if ($sound->enabled()) {
                 $router->register($sound);
+            }
+
+            if ((bool) config('ai.providers.xai.enabled') && $app->make(ProviderRegistryInterface::class)->has('xai')) {
+                $xaiSound = new XaiStoryAudioAdapter(
+                    self::soundCatalogAdapter((array) config('story_video.audio_providers.xai', []), 'grok-tts'),
+                    $app->make(ProviderDispatcherInterface::class),
+                    (array) config('story_video.audio_providers.xai', []),
+                );
+                if ($xaiSound->enabled()) {
+                    $router->register($xaiSound);
+                }
             }
 
             return $router;
@@ -204,7 +216,7 @@ class StoryServiceProvider extends ServiceProvider
      *
      * @param  array<string, mixed>  $config
      */
-    private static function soundCatalogAdapter(array $config): CatalogStoryVideoAdapter
+    private static function soundCatalogAdapter(array $config, ?string $model = null): CatalogStoryVideoAdapter
     {
         $key = (string) ($config['key'] ?? 'audio.elevenlabs');
         $priority = (int) ($config['priority'] ?? 260);
@@ -212,7 +224,7 @@ class StoryServiceProvider extends ServiceProvider
             array_map('strval', (array) ($config['roles'] ?? [])),
             StoryAudioRole::values(),
         ));
-        $model = (string) (config('ai.providers.elevenlabs.default_model') ?: 'configured-voice-model');
+        $model = $model ?? (string) (config('ai.providers.elevenlabs.default_model') ?: 'configured-voice-model');
 
         return new CatalogStoryVideoAdapter(
             adapterKey: $key,

@@ -53,6 +53,22 @@ final class RuntimeProviderCredentials
             'paths' => ['story_video.live_providers.seedance.api_key'],
             'enable' => null,
         ],
+        'xai' => [
+            'secret' => 'api_key',
+            'paths' => ['ai.providers.xai.api_key', 'story_video.live_providers.xai.api_key'],
+            'enable' => 'ai.providers.xai.enabled',
+            'also_enable' => ['story_video.live_providers.xai.enabled'],
+        ],
+        'claude' => [
+            'secret' => 'api_key',
+            'paths' => ['ai.providers.claude.api_key'],
+            'enable' => 'ai.providers.claude.enabled',
+        ],
+        'openrouter' => [
+            'secret' => 'api_key',
+            'paths' => ['ai.providers.openrouter.api_key'],
+            'enable' => 'ai.providers.openrouter.enabled',
+        ],
     ];
 
     /**
@@ -78,6 +94,17 @@ final class RuntimeProviderCredentials
         ],
         'seedance' => [
             'model' => 'story_video.live_providers.seedance.model',
+        ],
+        'xai' => [
+            'default_model' => 'ai.providers.xai.default_model',
+            'image_default_model' => 'ai.providers.xai.image_default_model',
+            'video_model' => 'story_video.live_providers.xai.model',
+        ],
+        'claude' => [
+            'default_model' => 'ai.providers.claude.default_model',
+        ],
+        'openrouter' => [
+            'default_model' => 'ai.providers.openrouter.default_model',
         ],
     ];
 
@@ -160,19 +187,27 @@ final class RuntimeProviderCredentials
     }
 
     /**
-     * @param  array{secret: string, paths: list<string>, enable: string|null}  $map
+     * @param  array{secret: string, paths: list<string>, enable: string|null, also_enable?: list<string>}  $map
      */
     private function overlaySecret(array $map, AiProvider $provider, string $value): void
     {
-        $path = $map['paths'][0];
-        $current = $this->original($path);
-        if (is_string($current) && trim($current) !== '') {
+        $applied = false;
+        foreach ($map['paths'] as $path) {
+            $current = $this->original($path);
+            if (is_string($current) && trim($current) !== '') {
+                continue;
+            }
+            config([$path => $value]);
+            $applied = true;
+        }
+        if (! $applied || $provider->status !== 'active') {
             return;
         }
-
-        config([$path => $value]);
-        if ($map['enable'] !== null && $provider->status === 'active') {
+        if ($map['enable'] !== null) {
             config([$map['enable'] => true]);
+        }
+        foreach ($map['also_enable'] ?? [] as $path) {
+            config([$path => true]);
         }
     }
 
@@ -194,6 +229,9 @@ final class RuntimeProviderCredentials
             }
             if ($map['enable'] !== null) {
                 config([$map['enable'] => $this->original($map['enable'])]);
+            }
+            foreach ($map['also_enable'] ?? [] as $path) {
+                config([$path => $this->original($path)]);
             }
         }
         foreach (self::SETTINGS as $settings) {

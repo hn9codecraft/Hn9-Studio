@@ -27,7 +27,7 @@ Also done in M20, with tests:
 - Queued video estimates that have not been sent are omitted from the public spent total. They stay in `reserved_usd`.
 - Plan text has no price until `STORY_COST_TEXT_PER_1K_TOKENS` is set. The estimator uses `ceil(characters / 4)` as the token count.
 - Luma and Seedance keys are not verifiable by Test connection.
-- Claude and OpenRouter are in the provider catalog and are not editable. They are not in `RuntimeProviderCredentials::MAP`.
+- xAI Grok can be chosen per role. Gujarati official TTS is unconfirmed, so Gujarati stays on ElevenLabs unless `XAI_TTS_GUJARATI_EXPERIMENTAL` is on. Cursor or Grok chat usage is not an API key. Grok lip-sync is unused. Claude and OpenRouter keys can be saved in AI services. A non-empty `.env` value still wins.
 - `eleven_v3` may bill differently from the single configured ElevenLabs audio rate.
 - Voiceovers created before timestamp alignment still use approximate subtitle timing. Forced alignment of stored audio is later.
 - M15 through M18 screens were not click-tested in the browser during those sprints. Use [docs/QA-CHECKLIST.md](docs/QA-CHECKLIST.md).
@@ -38,7 +38,6 @@ Also done in M20, with tests:
 - Provider seeds only where that provider's docs confirm them.
 - Image spend that uses the provider's own reported cost, when a provider returns one.
 - Fold queued-but-unsent estimates into the public total, if the product wants one number.
-- Claude and OpenRouter key editing.
 - A real Test connection for Luma and Seedance.
 - Percent progress from FFmpeg during a render.
 - Forced alignment for voiceovers that have no stored timestamps.

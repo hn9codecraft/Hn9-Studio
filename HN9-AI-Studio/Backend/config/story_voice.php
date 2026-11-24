@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 return [
     'default_language' => env('STORY_VOICE_DEFAULT_LANGUAGE', 'en'),
+    'providers' => [
+        'en' => env('STORY_VOICE_PROVIDER_EN', 'elevenlabs'),
+        'hi' => env('STORY_VOICE_PROVIDER_HI', 'elevenlabs'),
+        'gu' => env('STORY_VOICE_PROVIDER_GU', 'elevenlabs'),
+    ],
+    'xai_gujarati_experimental' => filter_var(env('XAI_TTS_GUJARATI_EXPERIMENTAL', false), FILTER_VALIDATE_BOOLEAN),
     'languages' => [
         'en' => ['label' => 'English', 'model' => env('ELEVENLABS_MODEL_EN'), 'voice_id' => env('ELEVENLABS_VOICE_EN')],
         'hi' => ['label' => 'Hindi', 'model' => env('ELEVENLABS_MODEL_HI'), 'voice_id' => env('ELEVENLABS_VOICE_HI')],

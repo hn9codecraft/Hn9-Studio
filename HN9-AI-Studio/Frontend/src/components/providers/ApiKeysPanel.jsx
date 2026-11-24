@@ -15,6 +15,9 @@ const HELP = {
   runway: 'https://dev.runwayml.com/',
   luma: 'https://lumalabs.ai/dream-machine/api/keys',
   seedance: 'https://console.byteplus.com/',
+  xai: 'https://console.x.ai/',
+  claude: 'https://platform.claude.com/settings/keys',
+  openrouter: 'https://openrouter.ai/settings/keys',
 };
 
 function badge(row) {

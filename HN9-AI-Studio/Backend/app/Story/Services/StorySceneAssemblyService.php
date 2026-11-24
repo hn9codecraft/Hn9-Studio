@@ -349,6 +349,7 @@ final class StorySceneAssemblyService implements StorySceneAssemblyServiceInterf
                 expectedSeconds: (float) ($unit['duration_seconds'] ?? 0),
                 toleranceSeconds: StoryProductionUnitGenerationService::DURATION_TOLERANCE_SECONDS,
                 expectedAspect: $aspect,
+                muteSourceAudio: ($unit['provider_key'] ?? null) === 'video.xai',
             );
         }
 
@@ -509,6 +510,7 @@ final class StorySceneAssemblyService implements StorySceneAssemblyServiceInterf
                     'version_id' => $source['version_id'] ?? null,
                     'disk' => $source['disk'] ?? null,
                     'path' => $source['path'] ?? null,
+                    'provider_key' => $source['provider_key'] ?? null,
                     'output_duration_seconds' => $source['output_duration_seconds'] ?? null,
                 ];
             }, $built['sources']),

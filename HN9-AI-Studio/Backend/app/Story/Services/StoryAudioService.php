@@ -23,6 +23,7 @@ use App\Story\Models\StorySceneAudio;
 use App\Story\Models\StorySceneVersion;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Support\StoryVoiceProfile;
+use App\Story\Support\StoryVoiceProviderSelector;
 use App\Story\Support\StoryVoiceProfileResolver;
 use App\Story\Video\StoryVideoGenerationRequest;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -123,7 +124,10 @@ final readonly class StoryAudioService
         );
         app(StoryBudgetGuard::class)->assertWithinBudget(
             $project,
-            app(StoryCostEstimator::class)->estimate($project, 'audio', ['text' => $prompt]),
+            app(StoryCostEstimator::class)->estimate($project, 'audio', [
+                'text' => $prompt,
+                'language' => $profile->language,
+            ]),
         );
         $this->dispatch->assertLive($project, StoryVideoCapability::Audio, $reelUuid, $sceneUuid);
         $voice = $this->voice($voice);
@@ -384,9 +388,24 @@ final readonly class StoryAudioService
             return $this->payload($this->syncFromJob($project, $existing), false);
         }
 
+        $voiceProvider = app(StoryVoiceProviderSelector::class)->adapterKey($profile->language);
+        $ready = $this->dispatch->liveAdapterFor(StoryVideoCapability::Audio, $voiceProvider);
+        if ($ready === null || $ready->key() !== $voiceProvider) {
+            if ($voiceProvider === 'audio.xai') {
+                throw new StoryException(
+                    'xAI voice is not ready for this language. Save an xAI key and turn xAI on, or switch this language back to ElevenLabs.',
+                    'story_voice_provider_unavailable',
+                    422,
+                );
+            }
+            throw StoryVideoEngineException::generationNotEnabled('Sound generation is not configured yet.');
+        }
         app(StoryBudgetGuard::class)->assertWithinBudget(
             $project,
-            app(StoryCostEstimator::class)->estimate($project, 'audio', ['text' => $prompt]),
+            app(StoryCostEstimator::class)->estimate($project, 'audio', [
+                'text' => $prompt,
+                'language' => $profile->language,
+            ]),
         );
 
         try {
@@ -429,6 +448,7 @@ final readonly class StoryAudioService
         try {
             $started = $this->dispatch->start($project, new StoryVideoGenerationRequest(
                 capability: StoryVideoCapability::Audio,
+                preferredProvider: $voiceProvider,
                 reelUuid: $reelUuid,
                 sceneUuid: $scene->uuid,
                 prompt: $prompt,
@@ -442,6 +462,7 @@ final readonly class StoryAudioService
                     'scene_title' => $scene->title,
                     'characters' => $this->characters($scene),
                     'story_model_id' => $profile->model,
+                    'voice_language' => $profile->language,
                     'story_language_code' => $profile->sendLanguageCode ? $profile->language : null,
                     'story_voice_id' => ($voice === null && $profile->voiceSource === 'language') ? $profile->voiceId : null,
                 ], static fn ($value): bool => $value !== null && $value !== '' && $value !== []),

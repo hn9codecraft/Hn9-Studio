@@ -50,8 +50,11 @@ final class ProviderCredentialSettingsTest extends TestCase
         $this->seed(AiProviderSeeder::class);
         $this->seed(AiProviderSeeder::class);
 
-        $this->assertSame(8, AiProvider::query()->count());
-        $this->assertSame(8, AiProvider::query()->whereNotNull('uuid')->count());
+        $this->assertSame(9, AiProvider::query()->count());
+        $this->assertSame(9, AiProvider::query()->whereNotNull('uuid')->count());
+        $this->assertSame(1, AiProvider::query()->where('slug', 'xai')->count());
+        $this->assertSame(1, AiProvider::query()->where('slug', 'claude')->count());
+        $this->assertSame(1, AiProvider::query()->where('slug', 'openrouter')->count());
         $this->assertSame(0, ProviderSetting::query()->count());
         $this->assertSame($users, User::query()->count());
     }
@@ -249,7 +252,7 @@ final class ProviderCredentialSettingsTest extends TestCase
         $this->actingAs($admin, 'sanctum')->putJson($url, ['api_key' => '••••1234'])->assertStatus(422);
         $this->actingAs($admin, 'sanctum')->putJson($url, ['api_key' => '********'])->assertStatus(422);
         $this->actingAs($admin, 'sanctum')->putJson($url, ['settings' => ['nope' => 'x']])->assertStatus(422);
-        $this->actingAs($admin, 'sanctum')->putJson('/api/v1/provider-credentials/claude', ['api_key' => self::KEY])->assertStatus(422);
+        $this->actingAs($admin, 'sanctum')->putJson('/api/v1/provider-credentials/not-a-provider', ['api_key' => self::KEY])->assertStatus(422);
     }
 
     public function test_credentials_are_admin_only_and_throttled(): void

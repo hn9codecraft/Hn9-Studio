@@ -66,6 +66,15 @@ use App\AI\Providers\OpenRouter\OpenRouterProvider;
 use App\AI\Providers\OpenRouter\OpenRouterResponseNormalizer;
 use App\AI\Providers\OpenRouter\OpenRouterTokenCounter;
 use App\AI\Providers\OpenRouter\OpenRouterUsageCalculator;
+use App\AI\Providers\Xai\XaiClient;
+use App\AI\Providers\Xai\XaiConfig;
+use App\AI\Providers\Xai\XaiImageParameterMap;
+use App\AI\Providers\Xai\XaiModelRegistry;
+use App\AI\Providers\Xai\XaiProvider;
+use App\AI\Providers\Xai\XaiResponseNormalizer;
+use App\AI\Providers\Xai\XaiTimestampMapper;
+use App\AI\Providers\Xai\XaiTokenCounter;
+use App\AI\Providers\Xai\XaiUsageCalculator;
 use App\AI\Registry\ProviderRegistry;
 use App\AI\Requests\ImageRequest;
 use App\AI\Requests\TextRequest;
@@ -314,6 +323,55 @@ class AIServiceProvider extends ServiceProvider
         $this->registerGeminiProvider($resolver);
         $this->registerOpenRouterProvider($resolver);
         $this->registerElevenLabsProvider($resolver);
+        $this->registerXaiProvider($resolver);
+    }
+
+    private function registerXaiProvider(ProviderConfigResolver $resolver): void
+    {
+        $settings = $this->settingsFor('xai');
+        if ($settings === null) {
+            return;
+        }
+
+        try {
+            $config = XaiConfig::fromProviderConfig($resolver->resolve('xai'));
+        } catch (ProviderNotConfiguredException) {
+            return;
+        }
+        $models = new XaiModelRegistry($config);
+
+        $this->registry()->register(
+            'xai',
+            fn (ProviderConfigDTO $providerConfig): XaiProvider => $this->makeXaiProvider(
+                XaiConfig::fromProviderConfig($providerConfig),
+            ),
+            new ProviderCapabilityDTO(
+                key: 'xai',
+                name: 'xAI (Grok)',
+                version: XaiProvider::VERSION,
+                text: true,
+                image: $config->imageModels !== [],
+                voice: true,
+                streaming: $config->supportsStreaming,
+                models: $models->all(),
+            ),
+            priority: (int) ($settings['priority'] ?? 50),
+        );
+    }
+
+    private function makeXaiProvider(XaiConfig $config): XaiProvider
+    {
+        $usage = new XaiUsageCalculator($config);
+
+        return new XaiProvider(
+            new XaiClient($this->app->make(Factory::class), $config),
+            new XaiModelRegistry($config),
+            $usage,
+            new XaiResponseNormalizer($usage, new XaiTimestampMapper),
+            new XaiTokenCounter,
+            $config,
+            new XaiImageParameterMap,
+        );
     }
 
     private function registerElevenLabsProvider(ProviderConfigResolver $resolver): void

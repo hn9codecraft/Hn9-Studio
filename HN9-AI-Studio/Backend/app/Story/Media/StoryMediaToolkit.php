@@ -108,7 +108,7 @@ class StoryMediaToolkit
                     $videoInput, $this->num($in), $this->num($out), $width, $height, $width, $height, $fps, $index,
                 );
 
-                if ($probe['has_audio']) {
+                if ($probe['has_audio'] && ! $segment->muteSourceAudio) {
                     $filters[] = sprintf(
                         '[%d:a]atrim=start=%s:end=%s,asetpts=PTS-STARTPTS,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[a%d]',
                         $videoInput, $this->num($in), $this->num($out), $index,
@@ -235,6 +235,24 @@ class StoryMediaToolkit
     /**
      * @return array{duration: float, has_audio: bool, has_video: bool, width: int, height: int}
      */
+    /**
+     * Drops the audio stream from a clip. Grok videos include their own sound;
+     * the story voiceover is mixed later.
+     */
+    public function stripAudio(string $inputPath, string $outputPath): void
+    {
+        if (! $this->available()) {
+            throw StoryMediaException::unavailable();
+        }
+        $result = Process::timeout(max(30, (int) config('story_video.ffmpeg.timeout_seconds', 900)))->run([
+            $this->ffmpeg(), '-hide_banner', '-nostdin', '-y',
+            '-i', $inputPath, '-an', '-c:v', 'copy', $outputPath,
+        ]);
+        if (! $result->successful() || ! is_file($outputPath) || filesize($outputPath) === 0) {
+            throw StoryMediaException::failed();
+        }
+    }
+
     public function probe(string $localPath): array
     {
         $result = Process::timeout(60)->run([
