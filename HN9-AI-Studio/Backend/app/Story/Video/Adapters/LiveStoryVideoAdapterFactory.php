@@ -34,6 +34,7 @@ final readonly class LiveStoryVideoAdapterFactory
                 SeedanceStoryVideoAdapter::VENDOR => new SeedanceStoryVideoAdapter($this->seedanceCatalog($config), $this->binaries, $config),
                 RunwayStoryVideoAdapter::VENDOR => new RunwayStoryVideoAdapter($this->runwayCatalog($config), $this->binaries, $config),
                 LumaStoryVideoAdapter::VENDOR => new LumaStoryVideoAdapter($this->lumaCatalog($config), $this->binaries, $config),
+                XaiStoryVideoAdapter::VENDOR => new XaiStoryVideoAdapter($this->xaiCatalog($config), $this->binaries, $config),
                 default => null,
             };
             if ($adapter !== null) {
@@ -113,6 +114,27 @@ final readonly class LiveStoryVideoAdapterFactory
             false,
             false,
             (string) ($config['model'] ?? 'gen4.5'),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     */
+    private function xaiCatalog(array $config): CatalogStoryVideoAdapter
+    {
+        $model = (string) ($config['model'] ?? 'grok-imagine-video-1.5-lite');
+        $durations = range(1, 15);
+
+        return $this->catalog(
+            $config,
+            [StoryVideoCapability::TextToVideo, StoryVideoCapability::ImageToVideo],
+            $durations,
+            ['16:9', '9:16', '1:1', '4:3', '3:4', '3:2', '2:3', '21:9'],
+            ['480p', '720p', '1080p'],
+            ['text', 'image', 'reference_image'],
+            false,
+            false,
+            $model,
         );
     }
 

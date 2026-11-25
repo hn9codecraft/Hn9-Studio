@@ -56,6 +56,13 @@ return [
             'roles' => ['voice', 'narration', 'dialogue'],
             'max_characters' => (int) env('ELEVENLABS_STORY_MAX_CHARACTERS', 5000),
         ],
+        'xai' => [
+            'key' => 'audio.xai',
+            'label' => 'xAI voice',
+            'priority' => (int) env('XAI_STORY_PRIORITY', 200),
+            'roles' => ['voice', 'narration', 'dialogue'],
+            'max_characters' => (int) env('XAI_TTS_MAX_CHARACTERS', 15000),
+        ],
     ],
 
     /*
@@ -109,6 +116,19 @@ return [
             'connect_timeout_seconds' => (int) env('LUMA_CONNECT_TIMEOUT', 10),
             'request_timeout_seconds' => (int) env('LUMA_REQUEST_TIMEOUT', 60),
             'download_timeout_seconds' => (int) env('LUMA_DOWNLOAD_TIMEOUT', 180),
+        ],
+        'xai' => [
+            'enabled' => env('XAI_ENABLED', false),
+            'key' => 'video.xai',
+            'label' => 'xAI (Grok)',
+            'priority' => (int) env('XAI_VIDEO_PRIORITY', 100),
+            'api_key' => env('XAI_API_KEY'),
+            'base_url' => env('XAI_BASE_URL', 'https://api.x.ai/v1'),
+            'model' => env('XAI_VIDEO_MODEL', 'grok-imagine-video-1.5-lite'),
+            'resolution' => env('XAI_VIDEO_RESOLUTION', '720p'),
+            'connect_timeout_seconds' => (int) env('XAI_CONNECT_TIMEOUT', 10),
+            'request_timeout_seconds' => (int) env('XAI_REQUEST_TIMEOUT', 120),
+            'download_timeout_seconds' => (int) env('XAI_DOWNLOAD_TIMEOUT', 180),
         ],
         'runway' => [
             'enabled' => env('RUNWAY_ENABLED'),

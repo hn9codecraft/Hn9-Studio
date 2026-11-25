@@ -49,6 +49,7 @@ class AiProviderSeeder extends Seeder
             'seedance' => $this->row('Seedance', 'video', 'story_video.live_providers.seedance', 'story_video.live_providers.seedance.base_url', 'story_video.live_providers.seedance.priority'),
             'claude' => $this->row('Claude', 'llm', 'ai.providers.claude', 'ai.providers.claude.base_url', 'ai.providers.claude.priority'),
             'openrouter' => $this->row('OpenRouter', 'llm', 'ai.providers.openrouter', 'ai.providers.openrouter.base_url', 'ai.providers.openrouter.priority'),
+            'xai' => $this->row('xAI (Grok)', 'multimodal', 'ai.providers.xai', 'ai.providers.xai.base_url', 'ai.providers.xai.priority'),
         ];
     }
 

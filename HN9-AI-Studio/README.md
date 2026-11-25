@@ -52,7 +52,7 @@ If the AI services list is empty on an existing database, add the provider catal
 php artisan db:seed --class=AiProviderSeeder
 ```
 
-That command writes the eight provider rows (OpenAI, Gemini, ElevenLabs, Runway, Luma, Seedance, Claude, OpenRouter). It does not write keys, users, or settings. It is safe to run again.
+That command writes the nine provider rows (OpenAI, Gemini, ElevenLabs, Runway, Luma, Seedance, Claude, OpenRouter, xAI). It does not write keys, users, or settings. It is safe to run again.
 
 Then the frontend:
 
@@ -113,11 +113,13 @@ Log out and log in again after a role change. A seeded `test@example.com` accoun
 
 ## AI services
 
-Open **AI services** in the sidebar (`/providers`). An admin can save, replace, test, and remove keys for OpenAI, Gemini, ElevenLabs, Runway, Luma, and Seedance. The screen shows only the last four characters.
+Open **AI services** in the sidebar (`/providers`). An admin can save, replace, test, and remove keys for OpenAI, Gemini, ElevenLabs, Runway, Luma, Seedance, Claude, OpenRouter, and xAI. The screen shows only the last four characters.
 
-A non-empty key in `Backend/.env` wins. A key saved in the app fills the config only when the `.env` value is empty. Claude and OpenRouter appear in the catalog and are not editable on this screen.
+A non-empty key in `Backend/.env` wins. A key saved in the app fills the config only when the `.env` value is empty. Claude, OpenRouter, and xAI can be saved here. A key in `.env` still wins over the saved key.
 
-Test connection is a small authenticated check for OpenAI, Gemini, ElevenLabs, and Runway. Luma and Seedance have no check. For those two, Test connection stores "Key saved; it will be checked on the first generation."
+Test connection is a small authenticated check for OpenAI, Gemini, ElevenLabs, Runway, Claude, OpenRouter, and xAI. Luma and Seedance have no check. For those two, Test connection stores "Key saved; it will be checked on the first generation."
+
+xAI is off until you turn it on for a role. Gujarati voice stays on ElevenLabs. A Grok video's own sound is removed so the story voiceover stays the soundtrack. Cursor or Grok chat usage is not an xAI API key. Create the key at `https://console.x.ai/`.
 
 ## Environment names
 
@@ -127,7 +129,7 @@ Names only. Values live in `Backend/.env`, which is not committed. See `Backend/
 | --- | --- |
 | App and database | `APP_NAME`, `APP_ENV`, `APP_KEY`, `APP_DEBUG`, `APP_URL`, `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` |
 | Browser access | `CORS_ALLOWED_ORIGINS`, `SANCTUM_TOKEN_EXPIRATION` (10080 minutes in the example), `SANCTUM_STATEFUL_DOMAINS` |
-| Providers | `AI_DEFAULT_PROVIDER`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `RUNWAYML_API_SECRET`, `LUMA_AGENTS_API_KEY`, `ARK_API_KEY`, `CLAUDE_API_KEY`, `OPENROUTER_API_KEY` |
+| Providers | `AI_DEFAULT_PROVIDER`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `RUNWAYML_API_SECRET`, `LUMA_AGENTS_API_KEY`, `ARK_API_KEY`, `CLAUDE_API_KEY`, `CLAUDE_BASE_URL`, `CLAUDE_API_VERSION`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `XAI_ENABLED`, `STORY_TEXT_PROVIDER`, `STORY_IMAGE_PROVIDER`, `STORY_VOICE_PROVIDER_EN`, `STORY_VOICE_PROVIDER_HI`, `STORY_VOICE_PROVIDER_GU`, `XAI_TTS_GUJARATI_EXPERIMENTAL` |
 | Cost (M13) | `STORY_COST_SAFETY_MARGIN`, `STORY_COST_DISPLAY_CURRENCY`, `STORY_COST_USD_INR`, `STORY_COST_TEXT_PER_1K_TOKENS`, `STORY_COST_IMAGE_PER_IMAGE`, `STORY_COST_ELEVENLABS_PER_1K_CHARS`, and the per-second video rates in `.env.example` |
 | Voice and subtitles (M16, M19) | `STORY_VOICE_DEFAULT_LANGUAGE`, `STORY_VOICE_TIMESTAMPS_ENABLED`, `STORY_VOICE_TIMING_LEAD_IN_MS`, `STORY_VOICE_TIMING_TAIL_MS`, `STORY_VOICE_TIMING_MIN_SCENE_SECONDS`, `STORY_VOICE_TIMING_MAX_SCENE_SECONDS`, `STORY_VOICE_TIMING_ROUND_TO`, `ELEVENLABS_MODEL_EN`, `ELEVENLABS_MODEL_HI`, `ELEVENLABS_MODEL_GU`, `ELEVENLABS_VOICE_EN`, `ELEVENLABS_VOICE_HI`, `ELEVENLABS_VOICE_GU`, `STORY_SUBTITLE_DISK`, `STORY_SUBTITLE_FONT_NAME`, `STORY_SUBTITLE_FONT_FILE`, `STORY_SUBTITLE_FONT_SIZE` |
 | Queues and retry | `STORY_RENDER_QUEUE_ENABLED`, `STORY_RENDER_JOB_TIMEOUT`, `STORY_RENDER_STALE_MINUTES`, `STORY_VIDEO_QUEUE_ENABLED`, `STORY_VIDEO_QUEUE_NAME`, `STORY_RETRY_MAX_PER_UNIT` |

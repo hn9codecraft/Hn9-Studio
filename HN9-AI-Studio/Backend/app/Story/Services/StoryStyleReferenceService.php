@@ -18,6 +18,7 @@ use App\Story\Enums\StoryStyleReferenceRole;
 use App\Story\Enums\StoryStyleReferenceSource;
 use App\Story\Enums\StoryStyleReferenceStatus;
 use App\Story\Exceptions\StoryException;
+use App\Story\Support\StoryRoleProvider;
 use App\Story\Exceptions\StoryStyleException;
 use App\Story\Models\StoryStyleReference;
 use App\Story\Support\StyleReferencePromptBuilder;
@@ -91,7 +92,7 @@ final readonly class StoryStyleReferenceService implements StoryStyleReferenceSe
         $style = $this->styles->styleForProject($project);
         $prompt = $this->promptBuilder->build($style);
 
-        $provider = is_string($options['provider'] ?? null) ? $options['provider'] : null;
+        $provider = StoryRoleProvider::image(is_string($options['provider'] ?? null) ? $options['provider'] : null);
         $model = is_string($options['model'] ?? null) ? $options['model'] : null;
 
         $request = new ImageRequest(
@@ -108,7 +109,11 @@ final readonly class StoryStyleReferenceService implements StoryStyleReferenceSe
 
         app(StoryBudgetGuard::class)->assertWithinBudget(
             $project,
-            app(StoryCostEstimator::class)->estimate($project, 'reference_image', ['count' => 1]),
+            app(StoryCostEstimator::class)->estimate($project, 'reference_image', array_filter([
+                'count' => 1,
+                'provider' => $provider,
+                'model' => $model,
+            ])),
         );
 
         try {

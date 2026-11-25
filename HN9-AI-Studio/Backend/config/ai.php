@@ -49,6 +49,10 @@ return [
 
     'default' => env('AI_DEFAULT_PROVIDER'),
 
+    // Empty keeps the existing text and image routes. Set to xai only to opt in.
+    'story_text_provider' => env('STORY_TEXT_PROVIDER', ''),
+    'story_image_provider' => env('STORY_IMAGE_PROVIDER', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Providers
@@ -103,8 +107,8 @@ return [
         'claude' => [
             'enabled' => (bool) env('CLAUDE_ENABLED', false),
             'api_key' => env('CLAUDE_API_KEY'),
-            'base_url' => env('CLAUDE_BASE_URL'),
-            'version' => env('CLAUDE_API_VERSION'),
+            'base_url' => env('CLAUDE_BASE_URL', 'https://api.anthropic.com'),
+            'version' => env('CLAUDE_API_VERSION', '2026-10-21'),
             'default_model' => env('CLAUDE_DEFAULT_MODEL'),
             'timeout' => (int) env('CLAUDE_TIMEOUT', 30),
             'max_retries' => (int) env('CLAUDE_MAX_RETRIES', 2),
@@ -158,6 +162,24 @@ return [
             // Per-million-token USD prices, keyed by configured model identifier.
             'pricing' => [],
             'priority' => (int) env('OPENAI_PRIORITY', 100),
+            'options' => [],
+        ],
+        'xai' => [
+            'enabled' => (bool) env('XAI_ENABLED', false),
+            'api_key' => env('XAI_API_KEY'),
+            'base_url' => env('XAI_BASE_URL', 'https://api.x.ai/v1'),
+            'default_model' => env('XAI_DEFAULT_MODEL', 'grok-4.3'),
+            'timeout' => (int) env('XAI_TIMEOUT', 60),
+            'max_retries' => (int) env('XAI_MAX_RETRIES', 2),
+            'models' => $list('XAI_MODELS', 'grok-4.3'),
+            'image_models' => $list('XAI_IMAGE_MODELS', 'grok-imagine-image,grok-imagine-image-2.0'),
+            'image_default_model' => env('XAI_IMAGE_DEFAULT_MODEL', 'grok-imagine-image'),
+            'tts_voice_en' => env('XAI_TTS_VOICE_EN'),
+            'tts_voice_hi' => env('XAI_TTS_VOICE_HI'),
+            'gujarati_experimental' => filter_var(env('XAI_TTS_GUJARATI_EXPERIMENTAL', false), FILTER_VALIDATE_BOOLEAN),
+            'supports_streaming' => false,
+            'pricing' => [],
+            'priority' => (int) env('XAI_PRIORITY', 50),
             'options' => [],
         ],
         'openrouter' => [

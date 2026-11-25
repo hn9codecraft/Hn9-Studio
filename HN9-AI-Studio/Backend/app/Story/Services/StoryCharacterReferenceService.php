@@ -18,6 +18,7 @@ use App\Story\Enums\StoryCharacterReferenceRole;
 use App\Story\Enums\StoryCharacterReferenceSource;
 use App\Story\Enums\StoryCharacterReferenceStatus;
 use App\Story\Exceptions\StoryCharacterException;
+use App\Story\Support\StoryRoleProvider;
 use App\Story\Exceptions\StoryException;
 use App\Story\Models\StoryCharacter;
 use App\Story\Models\StoryCharacterReference;
@@ -92,7 +93,7 @@ final readonly class StoryCharacterReferenceService implements StoryCharacterRef
         $character = $this->requireEditableCharacter($project, $characterUuid);
         $prompt = $this->promptBuilder->build($character);
 
-        $provider = is_string($options['provider'] ?? null) ? $options['provider'] : null;
+        $provider = StoryRoleProvider::image(is_string($options['provider'] ?? null) ? $options['provider'] : null);
         $model = is_string($options['model'] ?? null) ? $options['model'] : null;
 
         $request = new ImageRequest(
@@ -109,7 +110,11 @@ final readonly class StoryCharacterReferenceService implements StoryCharacterRef
 
         app(StoryBudgetGuard::class)->assertWithinBudget(
             $project,
-            app(StoryCostEstimator::class)->estimate($project, 'reference_image', ['count' => 1]),
+            app(StoryCostEstimator::class)->estimate($project, 'reference_image', array_filter([
+                'count' => 1,
+                'provider' => $provider,
+                'model' => $model,
+            ])),
         );
 
         try {

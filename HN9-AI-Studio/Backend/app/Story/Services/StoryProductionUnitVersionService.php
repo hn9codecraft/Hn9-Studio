@@ -223,6 +223,7 @@ final readonly class StoryProductionUnitVersionService implements StoryProductio
             'output_duration_seconds' => (float) $version->produced_duration_seconds,
             'disk' => $version->disk,
             'path' => $version->path,
+            'provider_key' => $version->provider_key,
             'approved' => true,
             'selected' => true,
         ];

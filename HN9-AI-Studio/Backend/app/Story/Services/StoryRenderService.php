@@ -13,6 +13,7 @@ use App\Story\Media\StoryMediaSegment;
 use App\Story\Media\StoryMediaToolkit;
 use App\Story\Exceptions\StoryException;
 use App\Story\Models\StoryExport;
+use App\Story\Models\StorySceneAssembly;
 use App\Story\Models\StoryFinalRender;
 use App\Story\Models\StoryReel;
 use App\Story\Models\StoryTimeline;
@@ -302,7 +303,18 @@ final class StoryRenderService
             $transition = $segments === [] ? null : ($incoming[$clip->id] ?? null);
             $type = in_array($transition?->type, ['dissolve', 'fade'], true) ? $transition->type : 'cut';
             $fade = $type === 'cut' ? 0.0 : max(0, (int) $transition->duration_ms) / 1000;
-            $segments[] = new StoryMediaSegment($clip->disk, $clip->path, $in, $out > $in ? $out : null, $type, $fade);
+            $segments[] = new StoryMediaSegment(
+                $clip->disk,
+                $clip->path,
+                $in,
+                $out > $in ? $out : null,
+                $type,
+                $fade,
+                null,
+                null,
+                null,
+                $this->clipMutesSourceAudio($clip),
+            );
 
             $currentStart = max(0.0, $elapsed - $fade);
             $elapsed = $currentStart + max(0.0, $out - $in);
@@ -313,6 +325,25 @@ final class StoryRenderService
         }
 
         return [$segments, $overlays];
+    }
+
+    private function clipMutesSourceAudio(StoryTimelineClip $clip): bool
+    {
+        if ($clip->story_scene_assembly_id === null) {
+            return false;
+        }
+        $assembly = StorySceneAssembly::query()->find($clip->story_scene_assembly_id);
+        $units = is_array($assembly?->snapshot) ? ($assembly->snapshot['units'] ?? null) : null;
+        if (! is_array($units) || $units === []) {
+            return false;
+        }
+        foreach ($units as $unit) {
+            if (! is_array($unit) || ($unit['provider_key'] ?? null) !== 'video.xai') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function aspectRatio(StoryReel $reel): string

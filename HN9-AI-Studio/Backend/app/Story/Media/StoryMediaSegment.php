@@ -19,5 +19,6 @@ final readonly class StoryMediaSegment
         public ?float $expectedSeconds = null,
         public ?float $toleranceSeconds = null,
         public ?string $expectedAspect = null,
+        public bool $muteSourceAudio = false,
     ) {}
 }

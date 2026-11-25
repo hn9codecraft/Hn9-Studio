@@ -115,8 +115,30 @@ final class ProviderConnectionTester
                     'X-Runway-Version' => (string) config('story_video.live_providers.runway.api_version', '2024-11-06'),
                 ],
             ],
+            'xai' => [
+                'url' => rtrim((string) config('ai.providers.xai.base_url', 'https://api.x.ai/v1'), '/').'/models',
+                'headers' => ['Authorization' => 'Bearer {key}'],
+            ],
+            'claude' => [
+                'url' => rtrim((string) config('ai.providers.claude.base_url', 'https://api.anthropic.com'), '/').'/v1/models',
+                'headers' => [
+                    'x-api-key' => '{key}',
+                    'anthropic-version' => $this->claudeVersion(),
+                ],
+            ],
+            'openrouter' => [
+                'url' => rtrim((string) config('ai.providers.openrouter.base_url', 'https://openrouter.ai/api/v1'), '/').'/key',
+                'headers' => ['Authorization' => 'Bearer {key}'],
+            ],
             default => null,
         };
+    }
+
+    private function claudeVersion(): string
+    {
+        $version = config('ai.providers.claude.version');
+
+        return is_string($version) && trim($version) !== '' ? $version : '2026-10-21';
     }
 
     private function effectiveKey(string $slug): ?string

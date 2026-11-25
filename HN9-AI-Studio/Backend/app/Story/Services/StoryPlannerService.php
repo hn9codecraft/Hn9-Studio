@@ -23,6 +23,7 @@ use App\Story\Models\StoryPlan;
 use App\Story\Models\StoryPlanVersion;
 use App\Story\Support\StoryPlanDurationCalculator;
 use App\Story\Support\StoryPlannerContextAssembler;
+use App\Story\Support\StoryRoleProvider;
 use App\Story\Support\StoryPlannerPromptBuilder;
 use App\Story\Support\StoryPlanStructuredOutput;
 use Illuminate\Support\Collection;
@@ -128,11 +129,15 @@ final readonly class StoryPlannerService implements StoryPlannerServiceInterface
         $previous = $plan->currentVersion;
         $assembled = $this->context->assemble($project, $plan, $previous);
         $promptParts = $this->prompts->build($assembled, $durationPlan, $instruction);
+        $provider = StoryRoleProvider::text(is_string($options['provider'] ?? null) ? $options['provider'] : null);
+        $estimateParams = ['text' => (string) ($promptParts['prompt'] ?? '')];
+        if ($provider === 'xai') {
+            $estimateParams['provider'] = 'xai';
+            $estimateParams['max_tokens'] = 8000;
+        }
         app(StoryBudgetGuard::class)->assertWithinBudget(
             $project,
-            app(StoryCostEstimator::class)->estimate($project, 'plan_generate', [
-                'text' => (string) ($promptParts['prompt'] ?? ''),
-            ]),
+            app(StoryCostEstimator::class)->estimate($project, 'plan_generate', $estimateParams),
         );
 
         $version = $this->versions->create($plan, [
@@ -151,7 +156,6 @@ final readonly class StoryPlannerService implements StoryPlannerServiceInterface
             'status' => StoryPlanStatus::Generating->value,
         ]);
 
-        $provider = is_string($options['provider'] ?? null) ? $options['provider'] : null;
         $model = is_string($options['model'] ?? null) ? $options['model'] : null;
 
         $request = new TextRequest(

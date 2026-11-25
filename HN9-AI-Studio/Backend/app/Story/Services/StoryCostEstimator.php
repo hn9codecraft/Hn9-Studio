@@ -13,6 +13,7 @@ use App\Story\Models\StoryScene;
 use App\Story\Models\StorySceneVersion;
 use App\Story\Models\StoryVideoGenerationJob;
 use App\Story\Support\StoryCostEstimate;
+use App\Story\Support\StoryVoiceProviderSelector;
 use App\Story\Video\StoryVideoGenerationRequest;
 use App\Story\Video\StoryVideoProviderOrchestrator;
 
@@ -47,6 +48,11 @@ final readonly class StoryCostEstimator
     {
         $edit = in_array($request->capability, [StoryVideoCapability::VideoEdit, StoryVideoCapability::VideoExtend], true);
         if ($request->capability === StoryVideoCapability::Audio) {
+            $language = is_string($request->metadata['story_language_code'] ?? null) ? $request->metadata['story_language_code'] : null;
+            if (app(StoryVoiceProviderSelector::class)->providerFor($language) === 'xai') {
+                return $this->price('audio', 'audio.xai', null, 'characters', mb_strlen((string) $request->prompt), $this->xaiAudioRate(), $connected || $this->xaiConnected());
+            }
+
             return $this->price('audio', 'audio.elevenlabs', null, 'characters', mb_strlen((string) $request->prompt), $this->audioRate(), $connected || $this->audioConnected());
         }
 
@@ -97,6 +103,10 @@ final readonly class StoryCostEstimator
     private function audio(array $params): StoryCostEstimate
     {
         $text = (string) ($params['text'] ?? '');
+        $language = is_string($params['language'] ?? null) ? $params['language'] : null;
+        if (app(StoryVoiceProviderSelector::class)->providerFor($language) === 'xai') {
+            return $this->price('audio', 'audio.xai', null, 'characters', (float) mb_strlen($text), $this->xaiAudioRate(), $this->xaiConnected());
+        }
 
         return $this->price('audio', 'audio.elevenlabs', null, 'characters', (float) mb_strlen($text), $this->audioRate(), $this->audioConnected());
     }
@@ -107,6 +117,16 @@ final readonly class StoryCostEstimator
     private function image(array $params): StoryCostEstimate
     {
         $count = max(1, (int) ($params['count'] ?? 1));
+        if (($params['provider'] ?? null) === 'xai') {
+            $model = is_string($params['model'] ?? null) && $params['model'] !== ''
+                ? $params['model']
+                : (string) config('ai.providers.xai.image_default_model', 'grok-imagine-image');
+            $table = config('story_cost.image.xai');
+            $rate = is_array($table) ? ($table[$model] ?? null) : null;
+            $rate = is_numeric($rate) ? (float) $rate : null;
+
+            return $this->price('reference_image', 'xai', $model, 'images', (float) $count, $rate, $this->xaiConnected());
+        }
         $rate = config('story_cost.image.default');
         $rate = is_numeric($rate) ? (float) $rate : null;
 
@@ -173,6 +193,9 @@ final readonly class StoryCostEstimator
      */
     private function plan(array $params): StoryCostEstimate
     {
+        if (($params['provider'] ?? null) === 'xai') {
+            return $this->xaiText($params);
+        }
         $rate = config('story_cost.text.per_1k_tokens');
         $rate = is_numeric($rate) ? (float) $rate : null;
         $tokens = max(1, (int) ceil(mb_strlen((string) ($params['text'] ?? '')) / 4));
@@ -180,10 +203,39 @@ final readonly class StoryCostEstimator
         return $this->price('plan_generate', 'text', null, 'tokens', (float) $tokens, $rate, $rate !== null);
     }
 
-    private function price(string $kind, ?string $provider, ?string $model, string $units, float $quantity, ?float $rate, bool $connected): StoryCostEstimate
+    /**
+     * Input and output are priced separately. rate_usd stays null so the two
+     * documented per-million rates are not collapsed into one blended number.
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private function xaiText(array $params): StoryCostEstimate
     {
-        $available = $rate !== null;
-        $amount = $available ? $this->amount($units, $quantity, (float) $rate) : null;
+        $inputRate = config('story_cost.xai_text.input_per_1m');
+        $outputRate = config('story_cost.xai_text.output_per_1m');
+        $inputTokens = max(1, (int) ceil(mb_strlen((string) ($params['text'] ?? '')) / 4));
+        $outputTokens = max(0, (int) ($params['max_tokens'] ?? 0));
+        $amount = null;
+        if (is_numeric($inputRate) && is_numeric($outputRate)) {
+            $amount = round(($inputTokens / 1_000_000) * (float) $inputRate + ($outputTokens / 1_000_000) * (float) $outputRate, 4);
+        }
+
+        return $this->price(
+            'plan_generate',
+            'xai',
+            (string) config('ai.providers.xai.default_model', 'grok-4.3'),
+            'tokens',
+            (float) ($inputTokens + $outputTokens),
+            null,
+            $this->xaiConnected(),
+            $amount,
+        );
+    }
+
+    private function price(string $kind, ?string $provider, ?string $model, string $units, float $quantity, ?float $rate, bool $connected, ?float $explicitAmount = null): StoryCostEstimate
+    {
+        $available = $explicitAmount !== null || $rate !== null;
+        $amount = $explicitAmount ?? ($rate !== null ? $this->amount($units, $quantity, (float) $rate) : null);
         $margin = (float) config('story_cost.safety_margin', 0.10);
         $high = $amount === null ? null : round($amount * (1 + $margin), 4);
         $displayCurrency = (string) config('story_cost.display_currency', 'INR');
@@ -243,6 +295,21 @@ final readonly class StoryCostEstimator
     private function audioConnected(): bool
     {
         $key = config('ai.providers.elevenlabs.api_key');
+
+        return is_string($key) && $key !== '';
+    }
+
+    private function xaiAudioRate(): ?float
+    {
+        $audio = config('story_cost.audio');
+        $rate = is_array($audio) ? ($audio['audio.xai'] ?? null) : null;
+
+        return is_numeric($rate) ? (float) $rate : null;
+    }
+
+    private function xaiConnected(): bool
+    {
+        $key = config('ai.providers.xai.api_key');
 
         return is_string($key) && $key !== '';
     }
